@@ -1,0 +1,191 @@
+{% extends "base_admin.html" %}
+{% block title %}과제 관리{% endblock %}
+{% block content %}
+
+<div class="ax-work-page-head">
+    <div>
+        <h3 class="page-title">
+            <span class="page-title-icon bg-gradient-primary text-white me-2">
+                <i class="bi bi-folder2-open"></i>
+            </span>
+            과제 관리
+        </h3>
+        <p class="ax-page-subtitle">평가 시작 전까지 과제를 등록·수정하고 첨부파일과 연결 회차를 관리합니다.</p>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-4 ax-page-actions">
+    <button class="btn btn-primary ax-primary-btn" data-bs-toggle="modal" data-bs-target="#assignmentAddModal" {% if not rounds %}disabled{% endif %}>
+        <i class="bi bi-plus-lg me-2"></i>과제 등록
+    </button>
+</div>
+
+{% if not rounds %}
+<div class="ax-work-notice mb-4"><i class="bi bi-info-circle me-2"></i>현재 과제를 등록할 수 있는 회차가 없습니다. 시작 전 또는 평가 시작 전의 진행 중 회차에서만 등록할 수 있습니다.</div>
+{% endif %}
+
+<div class="ax-work-card">
+    <div class="card-body">
+        <div class="ax-section-head mb-3">
+            <div>
+                <h4 class="card-title mb-1">과제 목록</h4>
+                <p class="card-description mb-0">등록된 과제와 첨부파일, 평가 진행 상태를 확인합니다.</p>
+            </div>
+            <span class="badge badge-gradient-primary">{{ assignments|length }}개 과제</span>
+        </div>
+    <div class="table-responsive">
+        <table class="table ax-work-table align-middle">
+            <thead><tr><th>유형</th><th>과제명</th><th>평가 회차</th><th>과제 마감</th><th>첨부파일</th><th>상태</th><th>관리</th></tr></thead>
+            <tbody>
+            {% for assignment in assignments %}
+                <tr>
+                    <td>{% if assignment.assignment_type == "team" %}<span class="badge bg-primary-subtle text-primary">조별과제</span>{% else %}<span class="badge bg-info-subtle text-info-emphasis">개별과제</span>{% endif %}</td>
+                    <td class="fw-bold">{{ assignment.title }}</td>
+                    <td>{{ assignment.round_name }}</td>
+                    <td>평가 시작 전</td>
+                    <td>{% if assignment.attachment_url %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'assignment_attachment_download' assignment.id %}"><i class="bi bi-download me-1"></i>{{ assignment.attachment_name|default:"첨부파일" }} 다운로드</a>{% else %}-{% endif %}</td>
+                    <td>
+                        {% if assignment.evaluation_round.status == "scheduled" %}<span class="status-badge status-wait">{{ assignment.status_display }}</span>
+                        {% elif assignment.evaluation_round.status == "in_progress" and not assignment.evaluation_round.evaluation_started %}<span class="badge bg-warning-subtle text-warning-emphasis">진행 중 · 평가 전</span>
+                        {% elif assignment.evaluation_round.status == "in_progress" %}<span class="status-badge status-progress">{{ assignment.status_display }}</span>
+                        {% else %}<span class="status-badge status-end">{{ assignment.status_display }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if assignment.can_edit %}
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignmentEditModal{{ assignment.id }}">수정</button>
+                            <form method="post" action="{% url 'admin_assignment_delete' assignment.id %}" onsubmit="return confirm('이 과제를 삭제할까요?');">{% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_assignments' %}"><button class="btn btn-sm btn-outline-danger" type="submit">삭제</button></form>
+                        </div>
+                        {% else %}
+                        <span class="small text-muted"><i class="bi bi-lock-fill me-1"></i>수정 제한</span>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% if assignment.can_edit %}
+                <div class="modal fade" id="assignmentEditModal{{ assignment.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+                        <div class="modal-header"><h5 class="modal-title fw-bold">과제 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <form method="post" enctype="multipart/form-data" action="{% url 'admin_assignment_update' assignment.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'admin_assignments' %}">
+                            <div class="modal-body">
+                                <div class="mb-3"><label class="form-label">평가 회차</label><select name="evaluation_round" class="form-select" required><option value="{{ assignment.evaluation_round.id }}">{{ assignment.evaluation_round.name }}</option></select></div>
+                                <div class="mb-3"><label class="form-label">과제 유형</label><select name="assignment_type" class="form-select" required><option value="team" {% if assignment.assignment_type == "team" %}selected{% endif %}>조별과제</option><option value="individual" {% if assignment.assignment_type == "individual" %}selected{% endif %}>개별과제</option></select></div><div class="mb-3"><label class="form-label">과제명</label><input name="title" value="{{ assignment.title }}" class="form-control" required></div>
+                                <div class="mb-3"><label class="form-label">설명</label><textarea name="description" class="form-control" rows="4">{{ assignment.description }}</textarea></div>
+                                <div class="mb-3"><label class="form-label">첨부파일</label><input name="attachment" type="file" class="form-control">{% if assignment.attachment_name %}<div class="form-text">현재 파일: {{ assignment.attachment_name }}</div>{% endif %}</div>
+                                <div class="assignment-skill-box mb-3" data-assignment-skill-builder>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div><label class="form-label fw-semibold mb-0">역량 반영</label><div class="form-text">평가 종료 후 이 과제 점수를 역량 프로필에 반영합니다.</div></div>
+                                        <div class="d-flex gap-2 align-items-center"><span class="badge bg-light text-primary border" data-assignment-skill-total>{{ assignment.skill_weight_total }}%</span><button type="button" class="btn btn-sm btn-outline-primary" data-add-assignment-skill>+ 역량</button></div>
+                                    </div>
+                                    <div data-assignment-skill-rows>
+                                      {% for item in assignment.skill_items %}
+                                      <div class="assignment-skill-row d-flex gap-2 mb-2">
+                                        <select class="form-select" name="skill_id" required><option value="">역량 선택</option>{% for skill in skills %}<option value="{{ skill.id }}" {% if skill.id == item.skill_id %}selected{% endif %}>{{ skill.name }}</option>{% endfor %}</select>
+                                        <div class="input-group" style="max-width:150px"><input class="form-control" type="number" min="1" max="100" name="skill_weight" value="{{ item.weight }}" required><span class="input-group-text">%</span></div>
+                                        <button type="button" class="btn btn-outline-danger" data-remove-assignment-skill><i class="bi bi-x-lg"></i></button>
+                                      </div>
+                                      {% endfor %}
+                                    </div>
+                                    <template>
+                                      <div class="assignment-skill-row d-flex gap-2 mb-2">
+                                        <select class="form-select" name="skill_id" required><option value="">역량 선택</option>{% for skill in skills %}<option value="{{ skill.id }}">{{ skill.name }}</option>{% endfor %}</select>
+                                        <div class="input-group" style="max-width:150px"><input class="form-control" type="number" min="1" max="100" name="skill_weight" value="100" required><span class="input-group-text">%</span></div>
+                                        <button type="button" class="btn btn-outline-danger" data-remove-assignment-skill><i class="bi bi-x-lg"></i></button>
+                                      </div>
+                                    </template>
+                                </div>
+                                <div class="alert alert-light border mb-0">과제 등록·수정·학생 제출은 관리자가 평가 시작을 누르는 즉시 마감됩니다.</div>
+                            </div>
+                            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">저장</button></div>
+                        </form>
+                    </div></div>
+                </div>
+                {% endif %}
+            {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">등록된 과제가 없습니다.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignmentAddModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+        <div class="modal-header"><h5 class="modal-title fw-bold">과제 등록</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form method="post" enctype="multipart/form-data" action="{% url 'admin_assignment_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'admin_assignments' %}">
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">평가 회차</label><select name="evaluation_round" class="form-select" required><option value="">평가 회차를 선택하세요.</option>{% for round in rounds %}<option value="{{ round.id }}">{{ round.name }}</option>{% endfor %}</select></div>
+                <div class="mb-3"><label class="form-label">과제 유형</label><select name="assignment_type" class="form-select" required><option value="team">조별과제</option><option value="individual">개별과제</option></select></div><div class="mb-3"><label class="form-label">과제명</label><input name="title" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">설명</label><textarea name="description" class="form-control" rows="4"></textarea></div>
+                <div class="mb-3"><label class="form-label">첨부파일</label><input name="attachment" type="file" class="form-control"></div>
+
+                <div class="assignment-skill-box mb-3" data-assignment-skill-builder>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><label class="form-label fw-semibold mb-0">역량 반영</label><div class="form-text">이 과제 평가가 종료되면 역량 프로필에 자동 반영됩니다. 합계 100%.</div></div>
+                        <div class="d-flex gap-2 align-items-center"><span class="badge bg-light text-primary border" data-assignment-skill-total>0%</span><button type="button" class="btn btn-sm btn-outline-primary" data-add-assignment-skill>+ 역량</button></div>
+                    </div>
+                    <div data-assignment-skill-rows></div>
+                    <template>
+                        <div class="assignment-skill-row d-flex gap-2 mb-2">
+                            <select class="form-select" name="skill_id" required><option value="">역량 선택</option>{% for skill in skills %}<option value="{{ skill.id }}">{{ skill.name }}</option>{% endfor %}</select>
+                            <div class="input-group" style="max-width:150px"><input class="form-control" type="number" min="1" max="100" name="skill_weight" value="100" required><span class="input-group-text">%</span></div>
+                            <button type="button" class="btn btn-outline-danger" data-remove-assignment-skill><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </template>
+                </div>
+                <div class="alert alert-light border mb-0">과제 등록·수정·학생 제출은 관리자가 평가 시작을 누르는 즉시 마감됩니다.</div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">등록</button></div>
+        </form>
+    </div></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+
+    document.querySelectorAll('[data-assignment-skill-builder]').forEach((builder) => {
+        const rows = builder.querySelector('[data-assignment-skill-rows]');
+        const template = builder.querySelector('template');
+        const add = builder.querySelector('[data-add-assignment-skill]');
+        const total = builder.querySelector('[data-assignment-skill-total]');
+        const update = () => {
+            let sum = 0;
+            rows.querySelectorAll('input[name="skill_weight"]').forEach((input) => sum += Number(input.value || 0));
+            total.textContent = `${sum}%`;
+            total.classList.toggle('text-success', sum === 100 || sum === 0);
+            total.classList.toggle('text-danger', sum !== 100 && sum !== 0);
+        };
+        add?.addEventListener('click', () => {
+            rows.insertAdjacentHTML('beforeend', template.innerHTML);
+            update();
+        });
+        rows.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-remove-assignment-skill]');
+            if (!button) return;
+            button.closest('.assignment-skill-row')?.remove();
+            update();
+        });
+        rows.addEventListener('input', update);
+        update();
+    });
+
+    if (params.get("open") === "create") {
+        const el = document.getElementById("assignmentAddModal");
+        if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+
+    const editId = params.get("edit");
+    if (editId) {
+        const el = document.getElementById("assignmentEditModal" + editId);
+        if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+});
+</script>
+{% endblock %}

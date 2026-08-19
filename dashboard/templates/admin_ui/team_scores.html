@@ -1,0 +1,12 @@
+{% extends "base_admin.html" %}{% block title %}팀 점수{% endblock %}{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-trophy-fill"></i></span>
+      팀 점수
+    </h3>
+    <p class="ax-page-subtitle">다른 팀에게 받은 평가를 기준으로 팀별 평균과 순위를 확인합니다.</p>
+  </div>
+</div><form method="get" class="mb-4"><select name="round" class="form-select" style="max-width:280px" onchange="this.form.submit()">{% for r in rounds %}<option value="{{ r.id }}" {% if selected_round and r.id == selected_round.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></form>
+<div class="ax-work-card"><div class="card-body"><div class="ax-section-head justify-content-between mb-3"><h5 class="fw-bold">팀별 결과</h5>{% if selected_round %}<form method="post">{% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}"><button class="btn btn-primary ax-primary-btn">다시 계산</button></form>{% endif %}</div><div class="table-responsive"><table class="table ax-work-table align-middle"><thead><tr><th>순위</th><th>팀</th><th>제출 평가 수</th><th>평균 점수</th></tr></thead><tbody>{% for team in team_scores %}<tr><td>{% if team.is_excluded %}제외{% else %}{{ team.rank|default:"-" }}{% endif %}</td><td class="fw-bold">{{ team.name }}</td><td>{{ team.evaluation_count }}</td><td>{{ team.score|default_if_none:"-"|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4" class="text-center text-muted py-4">데이터가 없습니다.</td></tr>{% endfor %}</tbody></table></div></div></div>
+{% endblock %}

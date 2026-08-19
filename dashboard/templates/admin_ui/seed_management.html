@@ -1,0 +1,149 @@
+{% extends "base_admin.html" %}
+{% block title %}누적 Seed 관리 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-shuffle"></i></span>
+      누적 Seed 관리
+    </h3>
+    <p class="ax-page-subtitle">과거 프로젝트의 반영 비중을 조정하고 다음 자동 팀 편성용 Seed를 확인합니다.</p>
+  </div>
+</div>
+
+<div class="ax-work-card mb-4">
+  <div class="card-body">
+    <div class="ax-section-head">
+      <div>
+        <h4 class="card-title mb-1">팀 편성 대상 회차</h4>
+        <p class="card-description mb-0">이 회차보다 이전에 종료된 평가 결과만 Seed에 사용합니다.</p>
+      </div>
+      <form method="get">
+        <select name="round" class="form-select" style="min-width:260px" onchange="this.form.submit()">
+          {% for round in rounds %}
+          <option value="{{ round.id }}" {% if selected_round and round.id == selected_round.id %}selected{% endif %}>{{ round.name }}</option>
+          {% empty %}<option>회차 없음</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if selected_round %}
+<div class="row g-4 mb-4">
+  <div class="col-xl-5">
+    <div class="ax-work-card h-100">
+      <div class="card-body">
+        <div class="ax-section-head mb-3">
+          <div>
+            <h4 class="card-title mb-1">과거 회차 가중치</h4>
+            <p class="card-description mb-0">0%는 Seed 계산에서 해당 회차를 제외합니다.</p>
+          </div>
+        </div>
+
+        <div class="ax-seed-weight-list">
+          {% for round in history_rounds %}
+          <form method="post" class="ax-seed-weight-row">
+            {% csrf_token %}
+            <input type="hidden" name="weight_round_id" value="{{ round.id }}">
+            <input type="hidden" name="next" value="{% url 'admin_seed_management' %}?round={{ selected_round.id }}">
+            <div class="ax-seed-round-copy">
+              <strong>{{ round.name }}</strong>
+              <small>{{ round.start_at|date:"Y-m-d" }} · 종료 회차</small>
+            </div>
+            <div class="ax-seed-input-group">
+              <label>회차 반영</label>
+              <div class="input-group input-group-sm">
+                <input class="form-control" type="number" name="seed_weight" min="0" max="100" value="{{ round.seed_weight }}" required>
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+            <div class="ax-seed-input-group">
+              <label>팀 점수</label>
+              <div class="input-group input-group-sm">
+                <input class="form-control" type="number" name="seed_team_weight" min="0" max="100" value="{{ round.seed_team_weight }}" required>
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+            <div class="ax-seed-input-group">
+              <label>개인 점수</label>
+              <div class="input-group input-group-sm">
+                <input class="form-control" type="number" name="seed_personal_weight" min="0" max="100" value="{{ round.seed_personal_weight }}" required>
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-primary ax-primary-btn" type="submit">저장</button>
+          </form>
+          {% empty %}
+          <div class="ax-empty-state compact">
+            <i class="bi bi-clock-history"></i>
+            <strong>이전 종료 회차가 없습니다.</strong>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="ax-work-notice mt-3 mb-0">
+          예시: 회차 반영은 최근 100% · 직전 80% · 2회 전 60%. 팀/개인 Seed 비율은 40:60 또는 제안안 20:80처럼 설정할 수 있습니다. 실제 성적 산식은 변경되지 않습니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-7">
+    <div class="ax-work-card h-100">
+      <div class="card-body">
+        <div class="ax-section-head mb-3">
+          <div>
+            <h4 class="card-title mb-1">{{ selected_round.name }} 자동편성용 Seed</h4>
+            <p class="card-description mb-0">과거 종료 회차 최종점수의 가중 평균입니다.</p>
+          </div>
+          <span class="ax-status-pill info">{{ seed_rows|length }}명</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table ax-work-table align-middle">
+            <thead><tr><th>Seed</th><th>수강생</th><th>이메일</th><th>가중 누적점수</th></tr></thead>
+            <tbody>
+            {% for row in seed_rows %}
+            <tr>
+              <td><span class="ax-seed-rank-clean">{{ row.seed_rank }}</span></td>
+              <td class="fw-bold">{{ row.student_name }}</td>
+              <td class="text-muted">{{ row.email|default:"-" }}</td>
+              <td class="fw-bold text-primary">{{ row.seed_score|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-5">사용 가능한 이전 성적이 없습니다.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ax-work-card">
+  <div class="card-body">
+    <div class="ax-section-head mb-3">
+      <div>
+        <h4 class="card-title mb-1">{{ selected_round.name }} 현재 결과</h4>
+        <p class="card-description mb-0">이 회차가 종료되면 설정된 Seed 가중치로 다음 회차 누적값에 포함됩니다.</p>
+      </div>
+      <span class="ax-status-pill success">반영 가중치 {{ selected_round.seed_weight }}%</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table ax-work-table align-middle">
+        <thead><tr><th>순위</th><th>수강생</th><th>최종점수</th></tr></thead>
+        <tbody>
+        {% for result in selected_round_results %}
+        <tr><td>{{ result.rank|default:"-" }}</td><td class="fw-bold">{{ result.student.name }}</td><td>{{ result.final_score|floatformat:2 }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-center text-muted py-4">아직 계산된 결과가 없습니다.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="ax-work-card"><div class="card-body text-center text-muted py-5">평가 회차가 없습니다.</div></div>
+{% endif %}
+{% endblock %}

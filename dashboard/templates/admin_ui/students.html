@@ -1,0 +1,704 @@
+{% extends "base_admin.html" %}
+{% block title %}수강생 관리{% endblock %}
+
+{% block content %}
+<div class="ax-work-page-head">
+    <div>
+        <h3 class="page-title">
+            <span class="page-title-icon bg-gradient-primary text-white me-2">
+                <i class="bi bi-people-fill"></i>
+            </span>
+            수강생 관리
+        </h3>
+        <p class="ax-page-subtitle">수강생 등록·검색·Excel 관리와 현재 회차 팀 배정을 한 화면에서 처리합니다.</p>
+    </div>
+</div>
+
+<div class="ax-work-card mb-4"><div class="card-body py-3"><div class="ax-management-toolbar">
+    <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-primary ax-primary-btn" data-bs-toggle="modal" data-bs-target="#studentAddModal">
+            <i class="bi bi-person-plus me-2"></i>수강생 등록
+        </button>
+        <button id="bulkMessageButton" class="btn btn-outline-info" type="button" data-bs-toggle="modal" data-bs-target="#bulkMessageModal" disabled>
+            <i class="bi bi-chat-square-text me-2"></i>선택 메시지 <span id="bulkMessageCount" class="badge text-bg-info ms-1">0</span>
+        </button>
+        <button id="bulkSkillButton" class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#bulkSkillModal">
+            <i class="bi bi-lightning-charge me-2"></i>역량 일괄 입력 <span id="bulkSkillCount" class="badge text-bg-primary ms-1">0</span>
+        </button>
+        <button id="selectMissingStudents" class="btn btn-outline-danger" type="button" {% if not current_round or missing_student_count == 0 %}disabled{% endif %}>
+            <i class="bi bi-exclamation-circle me-2"></i>미제출자 선택 <span class="badge text-bg-danger ms-1">{{ missing_student_count|default:0 }}</span>
+        </button>
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#excelUploadModal">
+            <i class="bi bi-upload me-2"></i>Excel 업로드
+        </button>
+        <a class="btn btn-outline-success" href="{% url 'admin_students_excel_export' %}">
+            <i class="bi bi-file-earmark-excel me-2"></i>Excel 내보내기
+        </a>
+        {% if current_round %}
+            <span class="badge bg-light text-primary border ms-2">팀 배정 기준: {{ current_round.name }}</span>
+        {% else %}
+            <span class="badge bg-light text-secondary border ms-2">등록된 평가 회차 없음</span>
+        {% endif %}
+    </div>
+
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+        <select name="team" class="form-select" style="width:150px;" onchange="this.form.submit()" {% if not current_round %}disabled{% endif %}>
+            <option value="">전체 팀</option>
+            {% for team in teams %}
+            <option value="{{ team.id }}" {% if team_filter == team.id|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
+            {% endfor %}
+            <option value="unassigned" {% if team_filter == "unassigned" %}selected{% endif %}>미배정</option>
+        </select>
+        <div class="input-group" style="width:300px;">
+            <input name="q" value="{{ query|default:'' }}" class="form-control" placeholder="이름·이메일·소속 검색">
+            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+        </div>
+    </form>
+</div></div></div>
+
+<div class="row g-4 mb-4 ax-mini-stat-grid">
+    <div class="col-md-3">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small mb-2">전체 수강생</div>
+                <div class="ax-mini-stat-value">{{ stats.total|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small mb-2">활성</div>
+                <div class="ax-mini-stat-value text-success">{{ stats.active|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small mb-2">비활성</div>
+                <div class="ax-mini-stat-value text-warning">{{ stats.inactive|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small mb-2">현재 회차 미배정</div>
+                <div class="ax-mini-stat-value text-danger">{{ stats.unassigned|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ax-work-card">
+    <div class="ax-work-card mb-4"><div class="card-body py-3"><div class="ax-management-toolbar">
+        <div>
+            <h5 class="fw-bold mb-1">수강생 목록</h5>
+            <div class="text-muted small">등록된 수강생의 실제 DB 정보를 표시합니다.</div>
+        </div>
+        <span class="badge bg-light text-primary border">{{ students|length }}명 표시</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table ax-work-table align-middle">
+            <thead>
+                <tr>
+                    <th style="width:46px;" class="text-center">
+                        <input id="selectAllStudents" class="form-check-input" type="checkbox" aria-label="전체 수강생 선택">
+                    </th>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>소속</th>
+                    <th>소속 팀</th>
+                    <th>상태</th>
+                    <th>배지</th>
+                    <th>등록일</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td class="text-center">
+                        <input class="form-check-input student-select-checkbox" type="checkbox" value="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-missing="{% if student.has_missing_evaluation %}1{% else %}0{% endif %}" aria-label="{{ student.name }} 선택">
+                    </td>
+                    <td>{{ student.id }}</td>
+                    <td class="fw-bold">{{ student.name }}</td>
+                    <td>{{ student.email }}</td>
+                    <td>{{ student.affiliation|default:"-" }}</td>
+                    <td>
+                        {% if student.current_team %}
+                            <span class="badge bg-light text-primary border">{{ student.current_team.name }}</span>
+                        {% else %}
+                            <span class="text-muted">미배정</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.is_active and student.user.is_active %}
+                            <span class="status-badge status-progress">활성</span>
+                            {% if student.has_missing_evaluation %}
+                                <span class="badge text-bg-danger ms-1">평가 미제출 {{ student.evaluation_missing_count }}건</span>
+                            {% elif current_round and student.current_team %}
+                                <span class="badge text-bg-success ms-1">평가 완료</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="status-badge status-wait">비활성</span>
+                        {% endif %}
+                    </td>
+                    <td class="student-badge-cell">
+                        {% if student.badge_summary %}
+                            <div class="admin-student-badges">
+                                {% for badge in student.badge_summary %}
+                                    <span class="admin-student-badge badge-{{ badge.type }}"
+                                          title="{{ badge.round_names|join:', ' }}">
+                                        {% if badge.type == 'mvp' %}
+                                            <i class="bi bi-trophy-fill"></i>
+                                        {% elif badge.type == 'growth' %}
+                                            <i class="bi bi-graph-up-arrow"></i>
+                                        {% else %}
+                                            <i class="bi bi-stars"></i>
+                                        {% endif %}
+                                        {{ badge.label }}
+                                        {% if badge.count > 1 %}<b>×{{ badge.count }}</b>{% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ student.created_at|date:"Y-m-d" }}</td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a class="btn btn-sm btn-primary ax-primary-btn" href="{% url 'admin_student_detail' student.id %}">상세</a>
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#studentEditModal{{ student.id }}">수정</button>
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#studentMessageModal{{ student.id }}">
+                                <i class="bi bi-chat-dots me-1"></i>메시지
+                            </button>
+
+                            <form method="post" action="{% url 'admin_student_toggle_active' student.id %}">
+                                {% csrf_token %}
+                                {% if student.is_active and student.user.is_active %}
+                                    <button class="btn btn-sm btn-outline-warning" type="submit">비활성화</button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-success" type="submit">활성화</button>
+                                {% endif %}
+                            </form>
+
+                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#studentDeleteModal{{ student.id }}">삭제</button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="10" class="text-center text-muted py-5">{% if query %}검색 결과가 없습니다.{% else %}등록된 수강생이 없습니다.{% endif %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    </div>
+</div>
+
+<!-- 선택 학생 일괄 메시지 -->
+
+<div class="modal fade" id="bulkSkillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="small fw-bold text-primary">BULK SKILL PROFILE</div>
+                    <h5 class="modal-title fw-bold">역량 프로필 일괄 입력</h5>
+                    <div class="text-muted small mt-1">선택한 수강생 또는 전체 활성 수강생에게 여러 역량 점수를 한 번에 입력합니다.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="post" action="{% url 'admin_students_bulk_skill_save' %}" id="bulkSkillForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-light border d-flex gap-3 align-items-center flex-wrap">
+                        <strong>적용 대상</strong>
+                        <label class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="target_mode" value="selected" id="bulkSkillTargetSelected" checked>
+                            <span class="form-check-label">선택 수강생 <b id="bulkSkillSelectedLabel">0명</b></span>
+                        </label>
+                        <label class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="target_mode" value="all_active" id="bulkSkillTargetAll">
+                            <span class="form-check-label">전체 활성 수강생 {{ stats.active|default:0 }}명</span>
+                        </label>
+                        <span class="text-muted small ms-auto">기존 점수가 있으면 새 점수로 수정됩니다.</span>
+                    </div>
+
+                    <div id="bulkSkillStudentInputs"></div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>입력할 역량</strong>
+                            <div class="text-muted small">0~100점. 같은 역량은 한 번만 넣을 수 있습니다.</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" type="button" id="addBulkSkillRow">
+                            <i class="bi bi-plus-lg me-1"></i>역량 추가
+                        </button>
+                    </div>
+
+                    <div id="bulkSkillRows" class="d-grid gap-2">
+                        <div class="bulk-skill-row border rounded-3 p-3 bg-light-subtle">
+                            <div class="row g-2 align-items-start">
+                                <div class="col-lg-4">
+                                    <label class="form-label small fw-semibold">역량</label>
+                                    <select class="form-select" name="skill_id" required>
+                                        <option value="">선택</option>
+                                        {% for skill in skills %}
+                                        <option value="{{ skill.id }}">{{ skill.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-lg-2">
+                                    <label class="form-label small fw-semibold">점수</label>
+                                    <input class="form-control" type="number" name="skill_score" min="0" max="100" value="0" required>
+                                </div>
+                                <div class="col-lg">
+                                    <label class="form-label small fw-semibold">메모 <span class="text-muted">(선택)</span></label>
+                                    <input class="form-control" type="text" name="skill_note" maxlength="300" placeholder="예: 사전 테스트 기준">
+                                </div>
+                                <div class="col-auto pt-4">
+                                    <button class="btn btn-outline-danger bulk-skill-remove" type="button" aria-label="역량 행 삭제">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if not skills %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        먼저 <a href="{% url 'admin_skills' %}" class="alert-link">공통 역량 설정</a>에서 역량을 만들어주세요.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary ax-primary-btn" type="submit" {% if not skills %}disabled{% endif %}>
+                        <i class="bi bi-lightning-charge-fill me-1"></i>일괄 적용
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<template id="bulkSkillRowTemplate">
+    <div class="bulk-skill-row border rounded-3 p-3 bg-light-subtle">
+        <div class="row g-2 align-items-start">
+            <div class="col-lg-4">
+                <label class="form-label small fw-semibold">역량</label>
+                <select class="form-select" name="skill_id" required>
+                    <option value="">선택</option>
+                    {% for skill in skills %}
+                    <option value="{{ skill.id }}">{{ skill.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-semibold">점수</label>
+                <input class="form-control" type="number" name="skill_score" min="0" max="100" value="0" required>
+            </div>
+            <div class="col-lg">
+                <label class="form-label small fw-semibold">메모 <span class="text-muted">(선택)</span></label>
+                <input class="form-control" type="text" name="skill_note" maxlength="300" placeholder="예: 사전 테스트 기준">
+            </div>
+            <div class="col-auto pt-4">
+                <button class="btn btn-outline-danger bulk-skill-remove" type="button" aria-label="역량 행 삭제">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<div class="modal fade" id="bulkMessageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold">선택 학생에게 메시지 보내기</h5>
+                    <div class="text-muted small mt-1">선택한 학생들에게 동일한 시스템 메시지를 한 번에 보냅니다.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bulkMessageForm" method="post" action="{% url 'admin_students_bulk_message_send' %}">
+                {% csrf_token %}
+                <div id="bulkRecipientInputs"></div>
+                <div class="modal-body">
+                    <div class="alert alert-light border mb-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <i class="bi bi-people-fill me-1 text-primary"></i>
+                                받는 사람 <strong id="bulkModalCount">0명</strong>
+                            </div>
+                            <small id="bulkRecipientPreview" class="text-muted text-end"></small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">메시지 등급</label>
+                        <select name="priority" class="form-select">
+                            <option value="normal">일반</option>
+                            <option value="important">중요</option>
+                            <option value="urgent">긴급 · 받은 메시지에서 강조 표시</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">제목</label>
+                        <input name="title" class="form-control" maxlength="160" required placeholder="예: 평가 제출 확인 요청">
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold">내용</label>
+                        <textarea name="body" class="form-control" rows="7" maxlength="5000" required placeholder="선택한 학생들에게 전달할 내용을 입력하세요."></textarea>
+                        <div class="form-text">각 학생의 받은 메시지함에 개별 메시지로 저장됩니다.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary ax-primary-btn" type="submit">
+                        <i class="bi bi-send-fill me-1"></i><span id="bulkSubmitLabel">선택 학생에게 보내기</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Excel 업로드 -->
+<div class="modal fade" id="excelUploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold">Excel 수강생 일괄 업로드</h5>
+                    <div class="text-muted small mt-1">이메일을 기준으로 신규 등록 또는 기존 수강생 정보를 수정합니다.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_students_excel_upload' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="excel-upload-dropzone mb-3">
+                        <i class="bi bi-file-earmark-spreadsheet fs-1 text-success"></i>
+                        <label class="form-label fw-semibold d-block mt-2" for="excelFile">.xlsx 파일 선택</label>
+                        <input id="excelFile" name="excel_file" type="file" class="form-control" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                        <div class="form-text">최대 5MB · 첫 번째 시트를 읽습니다.</div>
+                    </div>
+                    <div class="table-responsive border rounded-3">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-light"><tr><th>열</th><th>필수</th><th>설명</th></tr></thead>
+                            <tbody>
+                                <tr><td>이름</td><td><span class="badge text-bg-danger">필수</span></td><td>수강생 이름</td></tr>
+                                <tr><td>이메일</td><td><span class="badge text-bg-danger">필수</span></td><td>로그인 ID이자 기존 계정 구분 기준</td></tr>
+                                <tr><td>임시비밀번호</td><td>신규만</td><td>신규 등록 시 8자 이상. 기존 계정은 비워두면 유지</td></tr>
+                                <tr><td>소속</td><td>선택</td><td>전공/학과</td></tr>
+                                <tr><td>팀명</td><td>선택</td><td>{% if current_round %}현재 회차({{ current_round.name }})의 정확한 팀명{% else %}현재 회차가 없어 팀 배정은 생략{% endif %}</td></tr>
+                                <tr><td>활성상태</td><td>선택</td><td>활성/비활성, O/X, TRUE/FALSE 지원. 빈칸은 활성</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        가장 쉬운 방법은 <strong>Excel 내보내기</strong>로 양식을 받은 뒤 내용을 수정해 다시 업로드하는 것입니다.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary ax-primary-btn" type="submit"><i class="bi bi-cloud-arrow-up me-1"></i>업로드 실행</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 수강생 등록 -->
+<div class="modal fade" id="studentAddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header"><h5 class="modal-title fw-bold">수강생 등록</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="post" action="{% url 'admin_student_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label fw-semibold">이름 *</label><input name="name" class="form-control" required maxlength="150"></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">이메일 <span class="text-muted fw-normal">(선택)</span></label><input name="email" type="email" class="form-control"><div class="form-text">로그인이 필요한 수강생만 입력하세요. 비워두면 관리용 계정으로 등록됩니다.</div></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">임시 비밀번호 <span class="text-muted fw-normal">(선택)</span></label><input name="password" type="password" class="form-control" minlength="8"><div class="form-text">로그인을 허용할 때만 8자 이상 입력하세요.</div></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">소속</label><input name="affiliation" class="form-control" maxlength="100"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">현재 회차 팀</label>
+                        <select name="team_id" class="form-select" {% if not current_round %}disabled{% endif %}>
+                            <option value="">미배정</option>
+                            {% for team in teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" value="on" id="newStudentActive" checked><label class="form-check-label" for="newStudentActive">활성 계정</label></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">등록</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for student in students %}
+<!-- 학생 개인 시스템 메시지 -->
+<div class="modal fade" id="studentMessageModal{{ student.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold">개인 메시지 보내기</h5>
+                    <div class="text-muted small mt-1">{{ student.name }} 학생의 받은 메시지함으로 개인 메시지를 보냅니다.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_student_message_send' student.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-light border small mb-3">
+                        <i class="bi bi-person-check me-1 text-primary"></i>
+                        받는 사람: <strong>{{ student.name }}</strong> · {{ student.email }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">메시지 등급</label>
+                        <select name="priority" class="form-select">
+                            <option value="normal">일반</option>
+                            <option value="important">중요</option>
+                            <option value="urgent">긴급 · 받은 메시지에서 강조 표시</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">제목</label>
+                        <input name="title" class="form-control" maxlength="160" required placeholder="예: 평가 제출 확인 요청">
+                    </div>
+                    <div>
+                        <label class="form-label fw-semibold">내용</label>
+                        <textarea name="body" class="form-control" rows="6" maxlength="5000" required placeholder="학생에게 전달할 내용을 입력하세요."></textarea>
+                        <div class="form-text">해당 학생에게만 표시되며 다른 학생은 볼 수 없습니다.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary ax-primary-btn" type="submit">
+                        <i class="bi bi-send me-1"></i>메시지 보내기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 수강생 수정 -->
+<div class="modal fade" id="studentEditModal{{ student.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header"><h5 class="modal-title fw-bold">수강생 수정</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="post" action="{% url 'admin_student_update' student.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label fw-semibold">이름 *</label><input name="name" value="{{ student.name }}" class="form-control" required maxlength="150"></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">이메일 <span class="text-muted fw-normal">(선택)</span></label><input name="email" type="email" value="{{ student.email }}" class="form-control"><div class="form-text">이름만 수정하려면 이메일은 그대로 두거나 비워도 됩니다. 비운 경우 기존 이메일은 유지됩니다.</div></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">새 비밀번호</label><input name="password" type="password" class="form-control" minlength="8" placeholder="변경할 때만 입력"><div class="form-text">비워두면 기존 비밀번호가 유지됩니다.</div></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">소속</label><input name="affiliation" value="{{ student.affiliation }}" class="form-control" maxlength="100"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">현재 회차 팀</label>
+                        <select name="team_id" class="form-select" {% if not current_round %}disabled{% endif %}>
+                            <option value="">미배정</option>
+                            {% for team in teams %}<option value="{{ team.id }}" {% if student.current_team and student.current_team.id == team.id %}selected{% endif %}>{{ team.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" value="on" id="studentActive{{ student.id }}" {% if student.is_active and student.user.is_active %}checked{% endif %}><label class="form-check-label" for="studentActive{{ student.id }}">활성 계정</label></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">저장</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 수강생 삭제 확인 -->
+<div class="modal fade" id="studentDeleteModal{{ student.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ax-purple-modal">
+            <div class="modal-header"><h5 class="modal-title fw-bold">수강생 삭제</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><strong>{{ student.name }}</strong> 수강생을 삭제하시겠습니까?<div class="text-danger small mt-2">연결된 평가 및 팀 기록도 모델의 삭제 정책에 따라 영향을 받을 수 있습니다.</div></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                <form method="post" action="{% url 'admin_student_delete' student.id %}">{% csrf_token %}<button class="btn btn-danger" type="submit">삭제</button></form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const selectAll = document.getElementById("selectAllStudents");
+    const checkboxes = Array.from(document.querySelectorAll(".student-select-checkbox"));
+    const bulkButton = document.getElementById("bulkMessageButton");
+    const bulkCount = document.getElementById("bulkMessageCount");
+    const bulkSkillButton = document.getElementById("bulkSkillButton");
+    const bulkSkillCount = document.getElementById("bulkSkillCount");
+    const bulkSkillModal = document.getElementById("bulkSkillModal");
+    const bulkSkillSelectedLabel = document.getElementById("bulkSkillSelectedLabel");
+    const bulkSkillStudentInputs = document.getElementById("bulkSkillStudentInputs");
+    const bulkSkillTargetSelected = document.getElementById("bulkSkillTargetSelected");
+    const bulkSkillTargetAll = document.getElementById("bulkSkillTargetAll");
+    const bulkSkillRows = document.getElementById("bulkSkillRows");
+    const bulkSkillRowTemplate = document.getElementById("bulkSkillRowTemplate");
+    const addBulkSkillRow = document.getElementById("addBulkSkillRow");
+    const selectMissingButton = document.getElementById("selectMissingStudents");
+    const bulkModal = document.getElementById("bulkMessageModal");
+    const modalCount = document.getElementById("bulkModalCount");
+    const recipientPreview = document.getElementById("bulkRecipientPreview");
+    const recipientInputs = document.getElementById("bulkRecipientInputs");
+    const submitLabel = document.getElementById("bulkSubmitLabel");
+
+    function selectedStudents() {
+        return checkboxes.filter((checkbox) => checkbox.checked);
+    }
+
+    function updateSelectionUi() {
+        const selected = selectedStudents();
+        const count = selected.length;
+        bulkCount.textContent = String(count);
+        bulkButton.disabled = count === 0;
+        if (bulkSkillCount) bulkSkillCount.textContent = String(count);
+        if (bulkSkillSelectedLabel) bulkSkillSelectedLabel.textContent = `${count}명`;
+
+        if (selectAll) {
+            selectAll.checked = checkboxes.length > 0 && count === checkboxes.length;
+            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener("change", function () {
+            checkboxes.forEach((checkbox) => { checkbox.checked = selectAll.checked; });
+            updateSelectionUi();
+        });
+    }
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", updateSelectionUi);
+    });
+
+    if (selectMissingButton) {
+        selectMissingButton.addEventListener("click", function () {
+            checkboxes.forEach((checkbox) => {
+                checkbox.checked = checkbox.dataset.missing === "1";
+            });
+            updateSelectionUi();
+
+            const selected = selectedStudents();
+            if (selected.length > 0 && bulkButton) {
+                bulkButton.focus();
+            }
+        });
+    }
+
+    if (bulkModal) {
+        bulkModal.addEventListener("show.bs.modal", function (event) {
+            const selected = selectedStudents();
+            if (selected.length === 0) {
+                event.preventDefault();
+                return;
+            }
+
+            recipientInputs.innerHTML = "";
+            selected.forEach((checkbox) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "student_ids";
+                input.value = checkbox.value;
+                recipientInputs.appendChild(input);
+            });
+
+            const names = selected.map((checkbox) => checkbox.dataset.studentName || "학생");
+            modalCount.textContent = `${selected.length}명`;
+            submitLabel.textContent = `${selected.length}명에게 보내기`;
+            recipientPreview.textContent = names.length <= 4
+                ? names.join(", ")
+                : `${names.slice(0, 4).join(", ")} 외 ${names.length - 4}명`;
+        });
+    }
+
+    function rebuildBulkSkillStudentInputs() {
+        if (!bulkSkillStudentInputs) return;
+        bulkSkillStudentInputs.innerHTML = "";
+        selectedStudents().forEach((checkbox) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "student_ids";
+            input.value = checkbox.value;
+            bulkSkillStudentInputs.appendChild(input);
+        });
+    }
+
+    if (bulkSkillModal) {
+        bulkSkillModal.addEventListener("show.bs.modal", function () {
+            const count = selectedStudents().length;
+            rebuildBulkSkillStudentInputs();
+            if (bulkSkillSelectedLabel) bulkSkillSelectedLabel.textContent = `${count}명`;
+
+            // 선택 인원이 없으면 전체 활성 수강생을 기본 대상으로 잡는다.
+            if (count === 0 && bulkSkillTargetAll) {
+                bulkSkillTargetAll.checked = true;
+            } else if (bulkSkillTargetSelected) {
+                bulkSkillTargetSelected.checked = true;
+            }
+        });
+    }
+
+    if (addBulkSkillRow && bulkSkillRowTemplate && bulkSkillRows) {
+        addBulkSkillRow.addEventListener("click", function () {
+            bulkSkillRows.appendChild(bulkSkillRowTemplate.content.cloneNode(true));
+        });
+    }
+
+    if (bulkSkillRows) {
+        bulkSkillRows.addEventListener("click", function (event) {
+            const button = event.target.closest(".bulk-skill-remove");
+            if (!button) return;
+            const rows = bulkSkillRows.querySelectorAll(".bulk-skill-row");
+            if (rows.length <= 1) {
+                const row = button.closest(".bulk-skill-row");
+                if (!row) return;
+                row.querySelector('select[name="skill_id"]').value = "";
+                row.querySelector('input[name="skill_score"]').value = "0";
+                row.querySelector('input[name="skill_note"]').value = "";
+                return;
+            }
+            button.closest(".bulk-skill-row")?.remove();
+        });
+    }
+
+    const bulkSkillForm = document.getElementById("bulkSkillForm");
+    if (bulkSkillForm) {
+        bulkSkillForm.addEventListener("submit", function (event) {
+            const targetSelected = bulkSkillTargetSelected && bulkSkillTargetSelected.checked;
+            if (targetSelected && selectedStudents().length === 0) {
+                event.preventDefault();
+                alert("선택 수강생에게 적용하려면 수강생을 한 명 이상 선택해주세요.");
+                return;
+            }
+
+            const selectedSkillIds = Array.from(
+                bulkSkillForm.querySelectorAll('select[name="skill_id"]')
+            ).map((select) => select.value).filter(Boolean);
+
+            if (new Set(selectedSkillIds).size !== selectedSkillIds.length) {
+                event.preventDefault();
+                alert("같은 역량을 두 번 입력할 수 없습니다.");
+            }
+        });
+    }
+
+    updateSelectionUi();
+});
+</script>
+{% endblock %}

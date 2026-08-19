@@ -1,0 +1,18 @@
+{% extends "base_student.html" %}
+{% block title %}팀 정보{% endblock %}
+{% block content %}
+<div class="ax-student-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-people-fill"></i></span>
+      팀 정보
+    </h3>
+    <p class="ax-page-subtitle">현재 회차의 소속 팀과 팀원 정보를 확인합니다.</p>
+  </div>
+</div>
+{% if evaluation_round %}<div class="text-muted small mb-3">{{ evaluation_round.name }}</div>{% endif %}
+{% if team %}
+<div class="card ax-student-panel mb-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-muted small">현재 팀</div><h3 class="fw-bold mb-1">{{ team.name }}</h3><div class="text-muted">{{ team.project_title|default:"프로젝트 정보 없음" }}</div></div><span class="status-badge {% if team.is_active %}status-progress{% else %}status-end{% endif %}">{{ team.status_display }}</span></div></div>
+<div class="card ax-student-panel"><div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">팀원</h5><span class="badge bg-light text-primary border">{{ team_members|length }}명</span></div><div class="row g-3">{% for member in team_members %}<div class="col-md-6 col-xl-4"><div class="border rounded-4 p-3 h-100"><div class="d-flex justify-content-between gap-2"><div><div class="fw-bold">{{ member.name }}</div><div class="small fw-semibold text-primary mt-1">{{ member.team_role }}</div></div>{% if member.is_team_leader %}<span class="badge text-bg-primary align-self-start">팀장</span>{% endif %}</div><div class="small text-muted mt-2">{{ member.email|default:"이메일 없음" }}</div><div class="small text-muted mt-1"><i class="bi bi-building me-1"></i>{{ member.affiliation|default:"소속 미등록" }}</div></div></div>{% empty %}<div class="col-12"><div class="empty-state">등록된 팀원이 없습니다.</div></div>{% endfor %}</div></div>
+{% else %}<div class="card ax-student-panel"><div class="empty-state">현재 회차에 배정된 팀이 없습니다.</div></div>{% endif %}
+{% endblock %}

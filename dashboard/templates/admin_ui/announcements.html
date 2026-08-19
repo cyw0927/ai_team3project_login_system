@@ -1,0 +1,117 @@
+{% extends "base_admin.html" %}
+{% block title %}공지 관리 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-announcement-page">
+  <div class="admin-dashboard-head ax-announcement-head">
+    <div>
+      <span class="ax-announcement-eyebrow"><i class="bi bi-megaphone"></i> ANNOUNCEMENT CENTER</span>
+      <h1>공지 관리</h1>
+      <p>학생에게 로그인 직후 크게 노출되는 공지를 등록하고 열람 여부를 확인합니다.</p>
+    </div>
+    <button class="sample-blue-btn ax-announcement-create" type="button" data-bs-toggle="modal" data-bs-target="#announcementCreateModal">
+      <i class="bi bi-plus-lg"></i> 새 공지 등록
+    </button>
+  </div>
+
+  <div class="ax-announcement-summary">
+    <div class="ax-announcement-stat">
+      <span><i class="bi bi-files"></i></span>
+      <div><small>전체 공지</small><strong>{{ announcements|length }}<em>개</em></strong></div>
+    </div>
+    <div class="ax-announcement-stat is-live">
+      <span><i class="bi bi-broadcast-pin"></i></span>
+      <div><small>현재 공개</small><strong>{{ live_count }}<em>개</em></strong></div>
+    </div>
+    <div class="ax-announcement-stat">
+      <span><i class="bi bi-people"></i></span>
+      <div><small>활성 수강생</small><strong>{{ student_count }}<em>명</em></strong></div>
+    </div>
+    <div class="ax-announcement-stat is-rate">
+      <span><i class="bi bi-check2-circle"></i></span>
+      <div><small>전체 열람률</small><strong>{{ overall_read_rate }}<em>%</em></strong></div>
+    </div>
+  </div>
+
+  <section class="ax-announcement-list-card">
+    <div class="ax-announcement-card-head">
+      <div>
+        <h2>등록된 공지</h2>
+        <p>공개 상태와 학생 열람 현황을 한 번에 확인할 수 있습니다.</p>
+      </div>
+      <span class="ax-announcement-total">공개 설정 {{ published_count }}건</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="sample-table ax-announcement-table">
+        <thead>
+          <tr><th>상태</th><th>중요도</th><th>공지 내용</th><th>공개 기간</th><th>열람 현황</th><th>관리</th></tr>
+        </thead>
+        <tbody>
+        {% for item in announcements %}
+          <tr>
+            <td>
+              {% if item.is_live %}<span class="ax-ann-status live"><i class="bi bi-circle-fill"></i> 공개 중</span>
+              {% elif item.is_published %}<span class="ax-ann-status scheduled"><i class="bi bi-clock"></i> 예약/종료</span>
+              {% else %}<span class="ax-ann-status hidden"><i class="bi bi-eye-slash"></i> 비공개</span>{% endif %}
+            </td>
+            <td><span class="ax-ann-priority {{ item.priority }}">{{ item.get_priority_display }}</span></td>
+            <td class="ax-ann-copy-cell">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.body|truncatechars:72 }}</p>
+            </td>
+            <td class="ax-ann-period-cell">
+              <span><i class="bi bi-calendar-event"></i>{{ item.publish_at|date:"Y.m.d H:i" }}</span>
+              <small>~ {% if item.expires_at %}{{ item.expires_at|date:"Y.m.d H:i" }}{% else %}종료일 없음{% endif %}</small>
+            </td>
+            <td>
+              <button type="button" class="ax-read-progress" data-bs-toggle="modal" data-bs-target="#read-{{ item.id }}" title="열람자 확인">
+                <span class="ax-read-progress-top"><b>{{ item.read_count }}/{{ item.target_count }}</b><em>{{ item.read_rate }}%</em></span>
+                <span class="ax-read-bar"><i style="width:{{ item.read_rate }}%"></i></span>
+                <small class="ax-read-detail-hint">{% if item.unread_count %}<i class="bi bi-person-exclamation"></i> 미확인 {{ item.unread_count }}명 보기{% else %}<i class="bi bi-check2-all"></i> 전원 확인{% endif %}</small>
+              </button>
+            </td>
+            <td>
+              <div class="row-action-group ax-ann-actions">
+                <button type="button" class="row-action" data-bs-toggle="modal" data-bs-target="#edit-{{ item.id }}"><i class="bi bi-pencil"></i> 수정</button>
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle"><input type="hidden" name="announcement_id" value="{{ item.id }}"><button class="row-action" type="submit">{% if item.is_published %}<i class="bi bi-eye-slash"></i> 숨김{% else %}<i class="bi bi-eye"></i> 공개{% endif %}</button></form>
+                <form method="post" onsubmit="return confirm('이 공지를 삭제할까요?');">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="announcement_id" value="{{ item.id }}"><button class="row-action danger" type="submit"><i class="bi bi-trash3"></i></button></form>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="dashboard-empty-state ax-ann-empty"><i class="bi bi-megaphone"></i><b>아직 등록된 공지가 없습니다.</b><span>새 공지를 등록하면 학생 로그인 화면에 표시됩니다.</span></div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="modal fade" id="announcementCreateModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content sample-modal ax-ann-modal"><form method="post">{% csrf_token %}<input type="hidden" name="action" value="create">
+    <div class="modal-header"><div><small>NEW ANNOUNCEMENT</small><h5 class="modal-title">새 공지 등록</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">{% include "admin_ui/partials/announcement_form.html" %}</div>
+    <div class="modal-footer"><button type="button" class="sample-outline-btn" data-bs-dismiss="modal">취소</button><button type="submit" class="sample-blue-btn"><i class="bi bi-send"></i> 공지 등록</button></div>
+  </form></div></div>
+</div>
+
+{% for item in announcements %}
+<div class="modal fade" id="edit-{{ item.id }}" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content sample-modal ax-ann-modal"><form method="post">{% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="announcement_id" value="{{ item.id }}">
+  <div class="modal-header"><div><small>EDIT ANNOUNCEMENT</small><h5 class="modal-title">공지 수정</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body"><div class="announcement-form-grid"><div class="form-field wide"><label>제목</label><input name="title" value="{{ item.title }}" maxlength="160" required></div><div class="form-field wide"><label>내용</label><textarea name="body" rows="6" required>{{ item.body }}</textarea></div><div class="form-field"><label>중요도</label><select name="priority">{% for value,label in priorities %}<option value="{{ value }}" {% if item.priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="form-field"><label>공개 시각</label><input type="datetime-local" name="publish_at" value="{{ item.publish_at|date:'Y-m-d\TH:i' }}"></div><div class="form-field"><label>종료 시각</label><input type="datetime-local" name="expires_at" value="{% if item.expires_at %}{{ item.expires_at|date:'Y-m-d\TH:i' }}{% endif %}"></div><label class="switch-field"><input type="checkbox" name="is_published" value="1" {% if item.is_published %}checked{% endif %}><span>학생에게 공개</span></label></div></div>
+  <div class="modal-footer"><button type="button" class="sample-outline-btn" data-bs-dismiss="modal">취소</button><button type="submit" class="sample-blue-btn">저장</button></div>
+</form></div></div></div>
+
+<div class="modal fade" id="read-{{ item.id }}" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content sample-modal ax-read-modal">
+  <div class="modal-header"><div><small>READ STATUS</small><h5 class="modal-title">{{ item.title }}</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="ax-read-modal-summary"><div><span>열람</span><strong>{{ item.read_count }}명</strong></div><div><span>미확인</span><strong>{{ item.unread_count }}명</strong></div><div><span>열람률</span><strong>{{ item.read_rate }}%</strong></div></div>
+    <div class="ax-read-columns">
+      <section><h6><i class="bi bi-check-circle-fill"></i> 확인한 학생</h6><div class="ax-student-chip-list">{% for student in item.read_students %}<span class="ax-student-chip read">{{ student.name }}</span>{% empty %}<p class="ax-no-reader">아직 확인한 학생이 없습니다.</p>{% endfor %}</div></section>
+      <section><h6><i class="bi bi-clock"></i> 아직 확인하지 않은 학생</h6><div class="ax-student-chip-list">{% for student in item.unread_students %}<span class="ax-student-chip unread">{{ student.name }}</span>{% empty %}<p class="ax-no-reader complete">모든 학생이 확인했습니다.</p>{% endfor %}</div></section>
+    </div>
+  </div>
+  <div class="modal-footer"><button type="button" class="sample-blue-btn" data-bs-dismiss="modal">확인</button></div>
+</div></div></div>
+{% endfor %}
+{% endblock %}

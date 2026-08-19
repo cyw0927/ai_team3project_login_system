@@ -1,0 +1,106 @@
+<nav class="sidebar sidebar-offcanvas ax-student-sidebar ax-clean-sidebar" id="studentSidebar">
+  <div class="ax-sidebar-scroll">
+    <div class="ax-sidebar-profile">
+      <div class="ax-sidebar-avatar"><i class="bi bi-mortarboard"></i></div>
+      <div class="ax-sidebar-profile-copy">
+        <strong>수강생</strong>
+        <span>AX Evaluation</span>
+      </div>
+    </div>
+
+    <ul class="nav ax-sidebar-nav">
+      <li class="ax-sidebar-section">Overview</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_home' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_home' %}">
+          <i class="bi bi-house-door"></i>
+          <span class="menu-title">홈</span>
+        </a>
+      </li>
+
+      <li class="ax-sidebar-section">Course</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_team_info' or request.resolver_match.url_name == 'student_assignment_info' %}active{% endif %}">
+        <a class="nav-link" data-bs-toggle="collapse" href="#student-info-menu"
+           aria-expanded="{% if request.resolver_match.url_name == 'student_team_info' or request.resolver_match.url_name == 'student_assignment_info' %}true{% else %}false{% endif %}">
+          <i class="bi bi-people"></i>
+          <span class="menu-title">팀·과제 정보</span>
+          <span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {% if request.resolver_match.url_name == 'student_team_info' or request.resolver_match.url_name == 'student_assignment_info' %}show{% endif %}" id="student-info-menu">
+          <ul class="nav flex-column sub-menu">
+            <li class="nav-item"><a class="nav-link" href="{% url 'student_team_info' %}">팀 정보</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'student_assignment_info' %}">과제 정보</a></li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_hr_tasks' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_hr_tasks' %}">
+          <i class="bi bi-briefcase"></i>
+          <span class="menu-title">내 역량 과제</span>
+        </a>
+      </li>
+
+      <li class="ax-sidebar-section">Evaluation</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_team_evaluation' or request.resolver_match.url_name == 'student_personal_evaluation' or request.resolver_match.url_name == 'student_evaluation_status' %}active{% endif %}">
+        <a class="nav-link" data-bs-toggle="collapse" href="#student-evaluation-menu"
+           aria-expanded="{% if request.resolver_match.url_name == 'student_team_evaluation' or request.resolver_match.url_name == 'student_personal_evaluation' or request.resolver_match.url_name == 'student_evaluation_status' %}true{% else %}false{% endif %}">
+          <i class="bi bi-ui-checks-grid"></i>
+          <span class="menu-title">평가</span>
+          <span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {% if request.resolver_match.url_name == 'student_team_evaluation' or request.resolver_match.url_name == 'student_personal_evaluation' or request.resolver_match.url_name == 'student_evaluation_status' %}show{% endif %}" id="student-evaluation-menu">
+          <ul class="nav flex-column sub-menu">
+            <li class="nav-item"><a class="nav-link" href="{% url 'student_team_evaluation' %}">팀 평가</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'student_personal_evaluation' %}">개인 평가</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'student_evaluation_status' %}">평가 현황</a></li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_results' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_results' %}">
+          <i class="bi bi-bar-chart-line"></i>
+          <span class="menu-title">결과 확인</span>
+        </a>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_self_review' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_self_review' %}">
+          <i class="bi bi-journal-check"></i>
+          <span class="menu-title">나의 프로젝트 평가</span>
+        </a>
+      </li>
+
+      <li class="ax-sidebar-section">Account</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_notifications' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_notifications' %}">
+          <i class="bi bi-bell"></i>
+          <span class="menu-title">공지·알림</span>
+        </a>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_feedback' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_feedback' %}">
+          <i class="bi bi-chat-square-heart"></i>
+          <span class="menu-title">튜터 피드백</span>
+          {% if feedback_badge_count %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ feedback_badge_count }}</span>{% endif %}
+        </a>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_messages' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_messages' %}">
+          <i class="bi bi-envelope-paper"></i>
+          <span class="menu-title">받은 메시지</span>
+          {% if message_badge_count %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ message_badge_count }}</span>{% endif %}
+        </a>
+      </li>
+
+      <li class="nav-item {% if request.resolver_match.url_name == 'student_profile' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'student_profile' %}">
+          <i class="bi bi-person-circle"></i>
+          <span class="menu-title">마이페이지</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

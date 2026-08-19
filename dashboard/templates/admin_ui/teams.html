@@ -1,0 +1,106 @@
+{% extends "base_admin.html" %}
+{% block title %}팀 관리{% endblock %}
+{% block content %}
+<div class="team-management-page">
+  <div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-people-fill"></i></span>
+      팀 관리
+    </h3>
+    <p class="ax-page-subtitle">회차별 팀 구성, 미배정 인원, 프로젝트 상태를 관리합니다.</p>
+  </div>
+  <div class="ax-header-actions">
+    <a href="{% url 'admin_team_assignment' %}{% if selected_round %}?round={{ selected_round.id }}{% endif %}" class="btn btn-outline-primary">
+      <i class="bi bi-sliders2 me-2"></i>팀 편성 설정
+    </a>
+    <a href="{% url 'admin_teams_excel_export' %}{% if selected_round %}?round={{ selected_round.id }}{% endif %}" class="btn btn-outline-secondary {% if not selected_round %}disabled{% endif %}">
+      <i class="bi bi-download me-2"></i>팀 내보내기
+    </a>
+  </div>
+</div>{% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}{% endif %}
+
+  <div class="team-stat-grid mb-4">
+    <div class="team-stat-card"><div class="stat-icon"><i class="bi bi-people-fill"></i></div><div><span>전체 팀 수</span><strong>{{ stats.team_count|default:0 }}팀</strong></div></div>
+    <div class="team-stat-card"><div class="stat-icon"><i class="bi bi-person-check-fill"></i></div><div><span>전체 수강생 수</span><strong>{{ stats.active_student_count|default:0 }}명</strong></div></div>
+    <div class="team-stat-card"><div class="stat-icon"><i class="bi bi-diagram-3-fill"></i></div><div><span>평균 팀 인원</span><strong>{{ stats.average_members|default:0 }}명</strong></div></div>
+    <div class="team-stat-card warning"><div class="stat-icon"><i class="bi bi-person-dash-fill"></i></div><div><span>미배정 학생</span><strong>{{ stats.unassigned_count|default:0 }}명</strong><small>{% if stats.active_student_count %}현재 회차 기준{% else %}수강생 없음{% endif %}</small></div></div>
+  </div>
+
+  <div class="ax-work-card team-toolbar-card mb-3">
+    <form method="get" class="team-toolbar">
+      <div class="toolbar-round">
+        <label class="form-label">평가 회차</label>
+        <select name="round" class="form-select" onchange="this.form.submit()">
+          {% for round in rounds %}<option value="{{ round.id }}" {% if selected_round and round.id == selected_round.id %}selected{% endif %}>{{ round.name }}</option>{% empty %}<option>평가 회차 없음</option>{% endfor %}
+        </select>
+      </div>
+      <div class="toolbar-search">
+        <label class="form-label">검색</label>
+        <div class="input-group"><span class="input-group-text bg-white"><i class="bi bi-search"></i></span><input name="q" value="{{ query|default:'' }}" class="form-control border-start-0" placeholder="팀명, 프로젝트, 팀원 이름/이메일"></div>
+      </div>
+      <div class="toolbar-status">
+        <label class="form-label">상태</label>
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>상태 전체</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>활성</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>비활성</option>
+        </select>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-funnel me-1"></i>필터</button>
+        <button class="btn btn-primary ax-primary-btn" type="button" data-bs-toggle="modal" data-bs-target="#createTeamModal" {% if not selected_round %}disabled{% endif %}><i class="bi bi-plus-lg me-1"></i>팀 생성</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="ax-work-card p-0 overflow-hidden">
+    <div class="team-list-heading">
+      <div><strong>팀 목록</strong><span>{% if selected_round %}{{ selected_round.name }} · 활성 {{ stats.active_team_count }}팀{% else %}선택된 회차 없음{% endif %}</span></div>
+      {% if selected_round %}
+      <form method="post" action="{% url 'admin_team_dissolve_all' %}" data-ax-critical data-ax-title="현재 회차 팀 배정을 모두 해체할까요?" data-ax-message="모든 학생이 미배정 상태가 되며 팀 편성을 다시 해야 합니다." data-ax-note="평가 결과와 팀 이름은 유지되지만 운영 중인 회차라면 학생 화면에 즉시 영향을 줄 수 있습니다." data-ax-button="전체 팀 해체">
+        {% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}"><input type="hidden" name="next" value="/management/teams/?round={{ selected_round.id }}">
+        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-people me-1"></i>전체 팀 해체</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+      <table class="table ax-work-table align-middle team-table mb-0">
+        <thead><tr><th>팀명</th><th>팀 인원</th><th>대표</th><th>팀원</th><th>프로젝트</th><th>상태</th><th>관리</th></tr></thead>
+        <tbody>
+        {% for team in teams %}
+          <tr>
+            <td><div class="team-name-cell"><span class="team-number">{{ forloop.counter }}</span><strong>{{ team.name }}</strong></div></td>
+            <td><strong>{{ team.member_count }}명</strong></td>
+            <td>{% if team.leader %}<div class="leader-cell"><strong>{{ team.leader.user.get_full_name|default:team.leader.user.username }}</strong><small>{{ team.leader.user.email|default:'-' }}</small></div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+            <td><div class="member-chip-wrap">{% for member in team.members|slice:":4" %}<span class="member-chip">{{ member.user.get_full_name|default:member.user.username }}</span>{% empty %}<span class="text-muted small">팀원 없음</span>{% endfor %}{% if team.member_count > 4 %}<span class="member-chip more">+{{ team.member_count|add:"-4" }}</span>{% endif %}</div></td>
+            <td><span class="project-cell">{{ team.project_title|default:"-" }}</span></td>
+            <td>{% if team.is_active %}<span class="team-status active">활성</span>{% else %}<span class="team-status inactive">비활성</span>{% endif %}</td>
+            <td><div class="d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#detailTeam{{ team.id }}">상세 보기</button><button class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#editTeam{{ team.id }}" title="수정"><i class="bi bi-pencil"></i></button></div></td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="text-center text-muted py-5">조건에 맞는 팀이 없습니다.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if stats.unassigned_count %}
+  <div class="ax-work-card mt-3 unassigned-preview">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <div><h6 class="fw-bold mb-1">미배정 학생 {{ stats.unassigned_count }}명</h6><p class="small text-muted mb-0">팀 편성 화면에서 바로 배정할 수 있습니다.</p></div>
+      <a href="{% url 'admin_team_assignment' %}{% if selected_round %}?round={{ selected_round.id }}{% endif %}" class="btn btn-sm btn-outline-primary">편성하러 가기 <i class="bi bi-arrow-right ms-1"></i></a>
+    </div>
+    <div class="member-chip-wrap mt-3">{% for student in unassigned_students %}<span class="member-chip unassigned">{{ student.user.get_full_name|default:student.user.username }}</span>{% endfor %}{% if stats.unassigned_count > 8 %}<span class="member-chip more">+{{ stats.unassigned_count|add:"-8" }}</span>{% endif %}</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if selected_round %}
+<div class="modal fade" id="createTeamModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal"><form method="post" action="{% url 'admin_team_create' %}">{% csrf_token %}<div class="modal-header"><h5 class="modal-title fw-bold">새 팀 생성</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="evaluation_round" value="{{ selected_round.id }}"><div class="mb-3"><label class="form-label fw-semibold">팀명</label><input name="name" class="form-control" required placeholder="예: 1팀"></div><div class="mb-3"><label class="form-label fw-semibold">프로젝트명</label><input name="project_title" class="form-control" placeholder="프로젝트명을 입력하세요"></div><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" id="createActive" checked><label class="form-check-label" for="createActive">활성 팀으로 생성</label></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">팀 생성</button></div></form></div></div></div>
+{% endif %}
+
+{% for team in teams %}
+<div class="modal fade" id="detailTeam{{ team.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content ax-purple-modal"><div class="modal-header"><div><h5 class="modal-title fw-bold">{{ team.name }} 상세</h5><small class="text-muted">{{ selected_round.name }}</small></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3 mb-4"><div class="col-md-4"><div class="detail-mini-card"><span>팀 인원</span><strong>{{ team.member_count }}명</strong></div></div><div class="col-md-4"><div class="detail-mini-card"><span>상태</span><strong>{{ team.status_display }}</strong></div></div><div class="col-md-4"><div class="detail-mini-card"><span>프로젝트</span><strong>{{ team.project_title|default:'미지정' }}</strong></div></div></div><h6 class="fw-bold mb-3">팀원</h6><div class="team-detail-members">{% for member in team.members %}<div class="detail-member"><div class="detail-member-avatar"><i class="bi bi-person"></i></div><div><strong>{{ member.user.get_full_name|default:member.user.username }}</strong><small>{{ member.user.email|default:'이메일 없음' }}{% if member.affiliation %} · {{ member.affiliation }}{% endif %}</small></div></div>{% empty %}<div class="text-muted py-3">배정된 팀원이 없습니다.</div>{% endfor %}</div></div><div class="modal-footer justify-content-between"><form method="post" action="{% url 'admin_team_delete' team.id %}" onsubmit="return confirm('이 팀을 삭제하시겠습니까? 팀원이 있으면 삭제되지 않습니다.');">{% csrf_token %}<button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>삭제</button></form><div class="d-flex gap-2"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button><button class="btn btn-primary ax-primary-btn" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#editTeam{{ team.id }}">정보 수정</button></div></div></div></div></div>
+<div class="modal fade" id="editTeam{{ team.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal"><form method="post" action="{% url 'admin_team_update' team.id %}">{% csrf_token %}<div class="modal-header"><h5 class="modal-title fw-bold">{{ team.name }} 수정</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="evaluation_round" value="{{ team.evaluation_round_id }}"><div class="mb-3"><label class="form-label fw-semibold">팀명</label><input name="name" class="form-control" value="{{ team.name }}" required></div><div class="mb-3"><label class="form-label fw-semibold">프로젝트명</label><input name="project_title" class="form-control" value="{{ team.project_title }}"></div><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" id="active{{ team.id }}" {% if team.is_active %}checked{% endif %}><label class="form-check-label" for="active{{ team.id }}">활성 팀</label></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">저장</button></div></form></div></div></div>
+{% endfor %}
+{% endblock %}

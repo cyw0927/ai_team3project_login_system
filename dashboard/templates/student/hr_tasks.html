@@ -1,0 +1,127 @@
+{% extends "base_student.html" %}
+{% block title %}내 역량 과제{% endblock %}
+{% block content %}
+<div class="student-hr-page">
+  <div class="student-page-head">
+    <div>
+      <span class="student-page-kicker">MY GROWTH</span>
+      <h2>내 역량 과제</h2>
+      <p>Step은 자기진도 체크용입니다. 실제 과제 완료는 제출 후 튜터 평가로 확정됩니다.</p>
+    </div>
+  </div>
+
+  <section class="student-hr-summary">
+    <article><span>전체</span><strong>{{ task_stats.total }}</strong></article>
+    <article><span>진행 중</span><strong>{{ task_stats.active }}</strong></article>
+    <article><span>검토 요청</span><strong>{{ task_stats.review }}</strong></article>
+    <article class="{% if task_stats.overdue %}is-alert{% endif %}"><span>지연</span><strong>{{ task_stats.overdue }}</strong></article>
+  </section>
+
+  <div class="student-hr-list">
+    {% for task in tasks %}
+    <article id="task-{{ task.id }}" class="student-hr-card {% if task.is_overdue %}is-overdue{% endif %}">
+      <div class="student-hr-card-head">
+        <div>
+          <div class="student-hr-tags">
+            <span class="hr-state state-{{ task.status }}">{{ task.get_status_display }}</span>
+            <span class="hr-priority priority-{{ task.priority }}">{{ task.get_priority_display }}</span>
+            {% if task.evaluation_round %}
+            <span class="hr-badge-linked"><i class="bi bi-award"></i> {{ task.evaluation_round.name }} 배지 반영</span>
+            {% endif %}
+            {% if task.is_overdue %}<span class="hr-overdue">마감 지연</span>{% endif %}
+          </div>
+          <h3><a class="student-hr-title-link" href="#task-{{ task.id }}">{{ task.title }}</a></h3>
+          <p>{{ task.description|default:"과제 설명이 없습니다." }}</p>
+        </div>
+        <div class="student-hr-due">
+          <small>마감일</small>
+          <strong>{{ task.due_date|default:"미정" }}</strong>
+        </div>
+      </div>
+
+      <div class="student-hr-progress">
+        <div class="student-hr-progress-head">
+          <span>자기진도 · {{ task.completed_step_count }}/{{ task.step_count }} Steps</span>
+          <strong>{{ task.progress_percent }}%</strong>
+        </div>
+        <div class="student-hr-progress-track"><span style="width:{{ task.progress_percent }}%"></span></div>
+      </div>
+
+      {% if task.attachment %}
+      <a class="hr-task-source-attachment" href="{% url 'hr_task_attachment_download' task.id %}">
+        <i class="bi bi-paperclip"></i> 과제 첨부파일 받기
+        <span>{{ task.attachment.name|slice:"13:" }}</span>
+      </a>
+      {% endif %}
+
+      {% if task.skill_items %}
+      <div class="student-hr-skills">
+        {% for item in task.skill_items %}
+        <span><i class="bi bi-lightning-charge-fill"></i>{{ item.skill.name }} <strong>{{ item.weight }}%</strong></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="student-step-guide">
+        <i class="bi bi-info-circle"></i>
+        <div><strong>Step 체크는 자기진도 기록</strong><span>체크했다고 점수나 완료가 확정되지 않습니다. 제출물을 튜터가 검토·평가해야 과제가 최종 완료됩니다.</span></div>
+      </div>
+
+      <div class="student-hr-steps">
+        {% for step in task.step_items %}
+        <form method="post" action="{% url 'student_hr_task_step_toggle' task.id step.id %}" class="student-hr-step {% if step.is_completed %}is-done{% endif %}">
+          {% csrf_token %}
+          <button type="submit" class="step-check"
+                  {% if task.status == 'review' or task.status == 'completed' %}disabled{% endif %}
+                  aria-label="{{ step.title }} 자기진도 체크 변경">
+            <i class="bi {% if step.is_completed %}bi-check-lg{% endif %}"></i>
+          </button>
+          <div class="student-step-copy">
+            <strong>{{ step.order }}. {{ step.title }}</strong>
+            {% if step.detail %}<p>{{ step.detail|linebreaksbr }}</p>{% endif %}
+            {% if step.is_completed and step.completed_at %}<small>{{ step.completed_at|date:"Y.m.d H:i" }} 스스로 완료 체크</small>{% endif %}
+          </div>
+        </form>
+        {% empty %}
+        <div class="student-hr-empty-step">관리자가 아직 수행 Step을 등록하지 않았습니다.</div>
+        {% endfor %}
+      </div>
+
+      {% if task.status == 'review' %}
+      <div class="hr-submit-status is-review">
+        <i class="bi bi-hourglass-split"></i>
+        <div><strong>검토 요청 완료</strong><span>관리자가 제출물을 확인하고 있습니다.</span></div>
+      </div>
+      {% elif task.status == 'completed' and task.evaluation_obj %}
+      <div class="hr-evaluation-result">
+        <div>
+          <span>최종 평가</span>
+          <strong>{{ task.evaluation_obj.score }}<small>/100</small></strong>
+        </div>
+        <p>{{ task.evaluation_obj.comment|default:"관리자 코멘트가 없습니다." }}</p>
+      </div>
+      {% else %}
+      <form method="post" enctype="multipart/form-data" action="{% url 'student_hr_task_submit' task.id %}" class="hr-submit-box">
+        {% csrf_token %}
+        <div class="hr-submit-box-head">
+          <div><strong>과제 제출</strong><span>Step 체크 여부와 관계없이 결과물을 제출할 수 있습니다. 최종 완료는 튜터 평가 후 확정됩니다.</span></div>
+          <span class="ready-chip"><i class="bi bi-send-check"></i> 검토 요청</span>
+        </div>
+        <textarea class="form-control" name="content" rows="3" placeholder="작업 결과, 링크, 참고사항 등을 적어주세요.">{{ task.submission_obj.content|default:'' }}</textarea>
+        <div class="hr-submit-actions">
+          <input class="form-control" type="file" name="attachment">
+          <button class="btn btn-primary" type="submit"><i class="bi bi-send me-1"></i>{% if task.submission_obj %}다시 제출{% else %}검토 요청{% endif %}</button>
+        </div>
+      </form>
+      {% endif %}
+    </article>
+    {% empty %}
+    <div class="student-empty-card">
+      <i class="bi bi-briefcase"></i>
+      <h3>배정된 역량 과제가 없습니다.</h3>
+      <p>새 과제가 배정되면 이곳에서 확인할 수 있습니다.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

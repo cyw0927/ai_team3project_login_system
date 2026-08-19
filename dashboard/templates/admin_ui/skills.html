@@ -1,0 +1,116 @@
+{% extends "base_admin.html" %}
+{% block title %}공통 역량 설정{% endblock %}
+{% block content %}
+<div class="skill-admin-page">
+  <div class="ax-work-page-head">
+    <div>
+      <div class="section-eyebrow">COMMON SKILL CATALOG</div>
+      <h3 class="page-title">
+        <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-sliders2"></i></span>
+        공통 역량 설정
+      </h3>
+      <p class="ax-page-subtitle">역량을 한 번 만들면 모든 활성 수강생에게 0점으로 자동 적용됩니다.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'admin_skill_sync_all' %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-arrow-repeat me-1"></i>누락 역량 동기화</button>
+      </form>
+      <button class="btn btn-primary ax-primary-btn" data-bs-toggle="modal" data-bs-target="#skillCreateModal">
+        <i class="bi bi-plus-lg me-1"></i>새 역량
+      </button>
+    </div>
+  </div>
+
+  <div class="skill-admin-summary">
+    <article><span>공통 역량</span><strong>{{ skills|length }}</strong><small>현재 역량 사전</small></article>
+    <article><span>활성 수강생</span><strong>{{ active_student_count }}</strong><small>자동 적용 대상</small></article>
+    <article><span>초기 점수</span><strong>0</strong><small>모든 신규 역량</small></article>
+  </div>
+
+  <div class="ax-work-card skill-admin-guide">
+    <div class="card-body">
+      <i class="bi bi-lightning-charge-fill"></i>
+      <div>
+        <strong>운영 방식</strong>
+        <p>공통 역량 생성 → 활성 수강생 전체 0점 적용 → 기본/추가 과제 수행으로 점수 상승 → 기초가 있는 학생은 상세 화면에서 튜터가 직접 보정.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="skill-admin-grid mt-4">
+    {% for skill in skills %}
+    <article class="skill-admin-card">
+      <div class="skill-admin-card-head">
+        <div>
+          <span class="skill-admin-icon"><i class="bi bi-lightning-charge"></i></span>
+          <div><h4>{{ skill.name }}</h4><p>{{ skill.description|default:"설명 없음" }}</p></div>
+        </div>
+        <span class="skill-coverage {% if skill.coverage_percent == 100 %}is-complete{% endif %}">{{ skill.coverage_percent }}%</span>
+      </div>
+
+      <div class="skill-admin-metrics">
+        <div><span>수강생 프로필</span><strong>{{ skill.profile_count }}</strong></div>
+        <div><span>기본 과제</span><strong>{{ skill.assignment_count }}</strong></div>
+        <div><span>추가 과제</span><strong>{{ skill.growth_task_count }}</strong></div>
+      </div>
+
+      <div class="skill-admin-actions">
+        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#skillEditModal{{ skill.id }}"><i class="bi bi-pencil-square"></i> 수정</button>
+        <form method="post" action="{% url 'admin_skill_delete' skill.id %}"
+              onsubmit="return confirm('{{ skill.name|escapejs }} 공통 역량을 정말 삭제할까요?\\n수강생의 해당 역량 프로필도 함께 삭제됩니다.');">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash3"></i> 삭제</button>
+        </form>
+      </div>
+    </article>
+
+    <div class="modal fade" id="skillEditModal{{ skill.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ax-purple-modal">
+          <div class="modal-header"><h5 class="modal-title fw-bold">공통 역량 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+          <form method="post" action="{% url 'admin_skill_update' skill.id %}">
+            {% csrf_token %}
+            <div class="modal-body">
+              <label class="form-label fw-semibold">역량명</label>
+              <input class="form-control mb-3" name="name" maxlength="80" value="{{ skill.name }}" required>
+              <label class="form-label fw-semibold">설명</label>
+              <textarea class="form-control" name="description" rows="3" maxlength="240">{{ skill.description }}</textarea>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-light border" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">저장</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="skill-admin-empty">
+      <i class="bi bi-lightning-charge"></i>
+      <strong>공통 역량이 없습니다.</strong>
+      <span>Python, 데이터분석, 발표, 협업처럼 과정에서 계속 추적할 역량을 먼저 만들어보세요.</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="modal fade" id="skillCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content ax-purple-modal">
+      <div class="modal-header">
+        <div><div class="section-eyebrow">NEW COMMON SKILL</div><h5 class="modal-title fw-bold">공통 역량 만들기</h5></div>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'admin_skill_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label fw-semibold">역량명</label>
+          <input class="form-control mb-3" name="name" maxlength="80" required placeholder="예: Python">
+          <label class="form-label fw-semibold">설명</label>
+          <textarea class="form-control" name="description" rows="3" maxlength="240" placeholder="이 역량이 의미하는 기준을 간단히 적어주세요."></textarea>
+          <div class="alert alert-light border mt-3 mb-0"><i class="bi bi-info-circle me-1 text-primary"></i>생성 즉시 모든 활성 수강생에게 <strong>0점</strong>으로 적용됩니다.</div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light border" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">생성·전체 적용</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base_student.html" %}
+{% block title %}마이페이지 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="profile-page">
+  <div class="page-heading d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div>
+      <div class="eyebrow">MY PAGE</div>
+      <h1>마이페이지</h1>
+      <p>내 계정과 평가 이력을 한곳에서 확인할 수 있습니다.</p>
+    </div>
+    {% if current_round %}
+    <div class="profile-round-chip"><i class="bi bi-calendar-check"></i><span>{{ current_round.name }}</span>{% if current_team %}<strong>{{ current_team.name }}</strong>{% endif %}</div>
+    {% endif %}
+  </div>
+
+  <div class="profile-summary-grid">
+    <section class="profile-identity-card{% if student_has_mvp_badge %} has-mvp{% endif %}">
+      <div class="profile-big-avatar{% if student_has_mvp_badge %} has-mvp{% endif %}">{{ request.student.name|first|default:"A" }}</div>
+      <div class="profile-identity-copy">
+        <div class="profile-role-row"><span class="profile-role-badge">수강생</span>{% if student_badges %}{% for badge in student_badges %}<span class="student-achievement-badge badge-{{ badge.badge_type }}"><i class="bi {% if badge.badge_type == 'mvp' %}bi-trophy-fill{% elif badge.badge_type == 'growth' %}bi-graph-up-arrow{% else %}bi-stars{% endif %}"></i>{{ badge.get_badge_type_display }}</span>{% endfor %}{% endif %}</div>
+        <h2>{{ request.student.name }}</h2>
+        <p>{{ request.user.email|default:request.user.username }}</p>
+        <div class="profile-mini-meta">
+          <span><i class="bi bi-mortarboard"></i>{{ request.student.affiliation|default:"소속 미등록" }}</span>
+          <span><i class="bi bi-people"></i>{% if current_team %}{{ current_team.name }}{% else %}현재 미배정{% endif %}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="profile-security-card">
+      <div class="profile-card-title"><span class="profile-icon-box"><i class="bi bi-shield-check"></i></span><div><h3>로그인 연결</h3><p>현재 계정에 연결된 로그인 방식</p></div></div>
+      <div class="social-account-list">
+        {% if request.user.has_usable_password %}<div class="social-account-row"><span class="social-dot local"><i class="bi bi-key"></i></span><div><strong>아이디 / 비밀번호</strong><small>사용 가능</small></div><i class="bi bi-check-circle-fill text-success ms-auto"></i></div>{% endif %}
+        {% for account in social_accounts %}<div class="social-account-row"><span class="social-dot {{ account.provider }}"><i class="bi {% if account.provider == 'google' %}bi-google{% else %}bi-chat-fill{% endif %}"></i></span><div><strong>{{ account.name }}</strong><small>연결됨</small></div><i class="bi bi-check-circle-fill text-success ms-auto"></i></div>{% empty %}{% if not request.user.has_usable_password %}<div class="profile-empty-mini">연결 정보를 확인할 수 없습니다.</div>{% endif %}{% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="profile-main-grid">
+    <div class="profile-column">
+      <section class="profile-panel">
+        <div class="panel-heading"><div><h3>기본 정보</h3><p>이름과 소속 정보를 수정할 수 있습니다.</p></div><i class="bi bi-person-vcard"></i></div>
+        <form method="post" class="profile-form">{% csrf_token %}<input type="hidden" name="action" value="profile">
+          <div class="form-field"><label for="id_name">이름</label>{{ profile_form.name }}{% if profile_form.name.errors %}<div class="field-error">{{ profile_form.name.errors|striptags }}</div>{% endif %}</div>
+          <div class="form-field"><label>이메일</label><input type="email" value="{{ request.user.email }}" disabled><small>소셜 로그인 연결 때문에 이메일은 관리자에게 문의해 변경해 주세요.</small></div>
+          <div class="form-field"><label for="id_affiliation">소속</label>{{ profile_form.affiliation }}{% if profile_form.affiliation.errors %}<div class="field-error">{{ profile_form.affiliation.errors|striptags }}</div>{% endif %}</div>
+          <button class="btn btn-primary profile-save-btn" type="submit"><i class="bi bi-check2"></i>정보 저장</button>
+        </form>
+      </section>
+
+      <section class="profile-panel">
+        <div class="panel-heading"><div><h3>{% if password_mode == 'set' %}비밀번호 설정{% else %}비밀번호 변경{% endif %}</h3><p>{% if password_mode == 'set' %}소셜 로그인 계정에도 일반 로그인용 비밀번호를 만들 수 있습니다.{% else %}현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.{% endif %}</p></div><i class="bi bi-lock"></i></div>
+        <form method="post" class="profile-form">{% csrf_token %}<input type="hidden" name="action" value="password">
+          {% for field in password_form %}<div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}{% if field.errors %}<div class="field-error">{{ field.errors|striptags }}</div>{% endif %}</div>{% endfor %}
+          {% if password_form.non_field_errors %}<div class="alert alert-danger py-2">{{ password_form.non_field_errors|striptags }}</div>{% endif %}
+          <button class="btn btn-outline-primary profile-save-btn" type="submit"><i class="bi bi-shield-lock"></i>{% if password_mode == 'set' %}비밀번호 만들기{% else %}비밀번호 변경{% endif %}</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="profile-panel skill-self-panel">
+      <div class="panel-heading">
+        <div><h3>내 역량 프로필</h3><p>평가와 업무 경험을 통해 관리되는 현재 역량입니다.</p></div>
+        <span class="history-count">{{ skill_profiles|length }}개</span>
+      </div>
+      {% if skill_profiles %}
+      <div class="student-skill-grid">
+        {% for profile in skill_profiles %}
+        <article class="student-skill-card">
+          <div class="student-skill-head">
+            <strong>{{ profile.skill.name }}</strong>
+            <span>{{ profile.score }}</span>
+          </div>
+          <div class="student-skill-track"><span style="width:{{ profile.score }}%"></span></div>
+          {% if profile.note %}<small>{{ profile.note }}</small>{% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="profile-empty-state compact"><i class="bi bi-lightning-charge"></i><h4>아직 등록된 역량이 없습니다.</h4><p>튜터가 역량 프로필을 설정하면 이곳에서 확인할 수 있습니다.</p></div>
+      {% endif %}
+    </section>
+
+    {% if recent_skill_updates %}
+    <section class="profile-panel skill-update-history">
+      <div class="panel-heading">
+        <div><h3>최근 역량 변화</h3><p>완료된 역량 과제 평가가 내 역량 프로필에 반영된 기록입니다.</p></div>
+      </div>
+      <div class="skill-update-history-list">
+        {% for update in recent_skill_updates %}
+        <article>
+          <div>
+            <strong>{{ update.skill.name }}</strong>
+            <span>{{ update.task.title }}</span>
+          </div>
+          <div class="skill-change-score">
+            <em>{{ update.previous_score }}</em>
+            <i class="bi bi-arrow-right"></i>
+            <b>{{ update.new_score }}</b>
+            {% if update.delta > 0 %}<small class="up">+{{ update.delta }}</small>
+            {% elif update.delta < 0 %}<small class="down">{{ update.delta }}</small>
+            {% else %}<small>±0</small>{% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="profile-panel history-panel">
+      <div class="panel-heading"><div><h3>내 평가 이력</h3><p>참여했던 회차와 제출/결과 상태입니다.</p></div><span class="history-count">{{ history|length }}회</span></div>
+      <div class="evaluation-history-list">
+        {% for item in history %}
+        <article class="history-card">
+          <div class="history-card-head">
+            <div><span class="history-status status-{{ item.round.status }}">{{ item.round.get_status_display }}</span><h4>{{ item.round.name }}</h4><p>{{ item.round.start_at|date:"Y.m.d" }} ~ {{ item.round.end_at|date:"Y.m.d" }}</p></div>
+            {% if item.result_published and item.result %}<div class="history-score"><strong>{{ item.result.final_score|floatformat:2 }}</strong><span>최종점수</span></div>{% else %}<div class="history-score muted"><i class="bi bi-eye-slash"></i><span>{% if item.result_published %}집계 전{% else %}미공개{% endif %}</span></div>{% endif %}
+          </div>
+          <div class="history-team"><i class="bi bi-people"></i>{% if item.team %}<strong>{{ item.team.name }}</strong><span>{{ item.team.project_title|default:"프로젝트명 없음" }}</span>{% else %}<span>팀 배정 기록 없음</span>{% endif %}</div>
+          <div class="history-progress-grid">
+            <div><span>팀 평가 제출</span><strong>{{ item.team_submitted }}건</strong>{% if item.team_saved %}<small>임시저장 {{ item.team_saved }}</small>{% endif %}</div>
+            <div><span>개인 평가 제출</span><strong>{{ item.personal_submitted }}건</strong>{% if item.personal_saved %}<small>임시저장 {{ item.personal_saved }}</small>{% endif %}</div>
+            <div><span>결과</span>{% if item.result_published and item.result %}<strong>{% if item.result.rank %}{{ item.result.rank }}위{% else %}-{% endif %}</strong><small>개인 {{ item.result.personal_score|floatformat:2 }} · 팀 {{ item.result.team_score|floatformat:2 }}</small>{% else %}<strong>-</strong><small>{% if item.result_published %}집계 대기{% else %}공개 대기{% endif %}</small>{% endif %}</div>
+          </div>
+        </article>
+        {% empty %}
+        <div class="profile-empty-state"><i class="bi bi-clock-history"></i><h4>아직 평가 이력이 없습니다.</h4><p>평가에 참여하면 이곳에 회차별 기록이 표시됩니다.</p></div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

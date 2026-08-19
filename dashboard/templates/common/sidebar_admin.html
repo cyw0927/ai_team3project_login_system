@@ -1,0 +1,106 @@
+<nav class="sidebar sidebar-offcanvas ax-purple-sidebar ax-clean-sidebar" id="sidebar">
+  <div class="ax-sidebar-scroll">
+    <div class="ax-sidebar-profile">
+      <div class="ax-sidebar-avatar"><i class="bi bi-shield-check"></i></div>
+      <div class="ax-sidebar-profile-copy"><strong>관리자</strong><span>AX Evaluation</span></div>
+    </div>
+
+    <ul class="nav ax-sidebar-nav">
+      <li class="ax-sidebar-section">홈</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_dashboard' %}"><i class="bi bi-grid-1x2"></i><span class="menu-title">관리자 홈</span></a>
+      </li>
+
+      <li class="ax-sidebar-section">운영</li>
+      <li class="nav-item {% if 'admin_student' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_students' %}"><i class="bi bi-people"></i><span class="menu-title">수강생</span></a>
+      </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_operations' or 'admin_round' in request.resolver_match.url_name or 'admin_assignment' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" data-bs-toggle="collapse" href="#ax-operation-menu" aria-expanded="{% if request.resolver_match.url_name == 'admin_operations' or 'admin_round' in request.resolver_match.url_name or 'admin_assignment' in request.resolver_match.url_name %}true{% else %}false{% endif %}">
+          <i class="bi bi-calendar2-week"></i><span class="menu-title">회차·과제</span><span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {% if request.resolver_match.url_name == 'admin_operations' or 'admin_round' in request.resolver_match.url_name or 'admin_assignment' in request.resolver_match.url_name %}show{% endif %}" id="ax-operation-menu">
+          <ul class="nav flex-column sub-menu">
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_operations' %}">운영 현황</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_rounds' %}">평가 회차</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_assignments' %}">과제 관리</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_attendance' %}">발표 출결</a></li>
+          </ul>
+        </div>
+      </li>
+      <li class="nav-item {% if 'admin_team' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" data-bs-toggle="collapse" href="#ax-team-menu" aria-expanded="{% if 'admin_team' in request.resolver_match.url_name %}true{% else %}false{% endif %}">
+          <i class="bi bi-diagram-3"></i><span class="menu-title">팀</span><span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {% if 'admin_team' in request.resolver_match.url_name %}show{% endif %}" id="ax-team-menu">
+          <ul class="nav flex-column sub-menu">
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_teams' %}">팀 목록</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_team_assignment' %}">팀 편성</a></li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="ax-sidebar-section">수강생 성장</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_hr_dashboard' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_hr_dashboard' %}">
+          <i class="bi bi-speedometer2"></i><span class="menu-title">성장 대시보드</span>
+        </a>
+      </li>
+      <li class="nav-item {% if 'admin_skill' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_skills' %}">
+          <i class="bi bi-sliders2"></i><span class="menu-title">공통 역량 설정</span>
+        </a>
+      </li>
+      <li class="nav-item {% if 'admin_hr_task' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_hr_tasks' %}" title="검토 요청 {{ growth_review_count|default:0 }}건 · 지연 {{ growth_overdue_count|default:0 }}건">
+          <i class="bi bi-briefcase"></i>
+          <span class="menu-title">역량 과제 관리</span>
+          {% if growth_attention_count %}
+          <span class="growth-sidebar-alert" aria-label="확인 필요한 역량 과제 {{ growth_attention_count }}건">
+            {{ growth_attention_count }}
+          </span>
+          {% endif %}
+        </a>
+      </li>
+
+      <li class="ax-sidebar-section">평가</li>
+      <li class="nav-item {% if 'evaluation_template' in request.resolver_match.url_name or 'evaluation_criterion' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_evaluation_templates' %}"><i class="bi bi-ui-checks-grid"></i><span class="menu-title">평가 템플릿</span></a>
+      </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_missing_evaluations' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_missing_evaluations' %}"><i class="bi bi-clipboard-check"></i><span class="menu-title">평가 진행 관리</span></a>
+      </li>
+
+      <li class="ax-sidebar-section">결과</li>
+      <li class="nav-item {% if 'score' in request.resolver_match.url_name or 'ranking' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or request.resolver_match.url_name == 'admin_seed_management' %}active{% endif %}">
+        <a class="nav-link" data-bs-toggle="collapse" href="#ax-result-menu" aria-expanded="{% if 'score' in request.resolver_match.url_name or 'ranking' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or request.resolver_match.url_name == 'admin_seed_management' %}true{% else %}false{% endif %}">
+          <i class="bi bi-bar-chart-line"></i><span class="menu-title">결과 관리</span><span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {% if 'score' in request.resolver_match.url_name or 'ranking' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or request.resolver_match.url_name == 'admin_seed_management' %}show{% endif %}" id="ax-result-menu">
+          <ul class="nav flex-column sub-menu">
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_evaluation_results' %}">평가 결과</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_team_scores' %}">팀 점수</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_personal_scores' %}">개인 점수</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_rankings' %}">개인 순위</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_result_settings' %}">결과 공개</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'admin_seed_management' %}">누적 Seed</a></li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="ax-sidebar-section">시스템</li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_announcements' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_announcements' %}"><i class="bi bi-megaphone"></i><span class="menu-title">공지·알림</span></a>
+      </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_messages' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_messages' %}"><i class="bi bi-send-check"></i><span class="menu-title">보낸 메시지</span></a>
+      </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_activity_logs' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_activity_logs' %}"><i class="bi bi-clock-history"></i><span class="menu-title">활동 로그</span></a>
+      </li>
+      <li class="nav-item {% if 'admin_data_' in request.resolver_match.url_name %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_data_management' %}"><i class="bi bi-database-gear"></i><span class="menu-title">데이터 관리</span></a>
+      </li>
+    </ul>
+  </div>
+</nav>

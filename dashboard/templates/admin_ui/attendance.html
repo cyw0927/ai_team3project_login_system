@@ -1,0 +1,77 @@
+{% extends 'base_admin.html' %}
+{% block title %}발표 출결 관리 | AX 평가 시스템{% endblock %}
+{% block content %}
+<section class="att18-page">
+  <header class="att18-head">
+    <div>
+      <span class="att18-eyebrow">PRESENTATION ATTENDANCE</span>
+      <h1>발표 출결 · 평가 권한</h1>
+      <p>발표 당일 결석/공결 학생의 다른 팀 평가 권한을 자동 제한하고, 같은 팀원 개인 평가는 유지합니다.</p>
+    </div>
+    {% if selected_round %}
+    <form method="post" onsubmit="return confirm('전체 학생을 출석으로 초기화할까요?');">
+      {% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}"><input type="hidden" name="action" value="mark_all_present">
+      <button class="btn btn-outline-primary" type="submit"><i class="bi bi-arrow-counterclockwise"></i> 전체 출석 처리</button>
+    </form>
+    {% endif %}
+  </header>
+
+  <section class="att18-roundbar">
+    <form method="get">
+      <label>평가 회차</label>
+      <select name="round" class="form-select" onchange="this.form.submit()">
+        {% for round in rounds %}<option value="{{ round.id }}" {% if selected_round.id == round.id %}selected{% endif %}>{{ round.name }} · {{ round.get_status_display }}</option>{% endfor %}
+      </select>
+    </form>
+    {% if selected_round %}<span class="att18-period"><i class="bi bi-calendar3"></i>{{ selected_round.start_at|date:'Y.m.d H:i' }} ~ {{ selected_round.end_at|date:'Y.m.d H:i' }}</span>{% endif %}
+  </section>
+
+  {% if selected_round %}
+  <div class="att18-stats">
+    <div><span>전체</span><strong>{{ stats.total }}</strong><i class="bi bi-people"></i></div>
+    <div class="present"><span>출석</span><strong>{{ stats.present }}</strong><i class="bi bi-person-check"></i></div>
+    <div class="absent"><span>결석</span><strong>{{ stats.absent }}</strong><i class="bi bi-person-x"></i></div>
+    <div class="excused"><span>공결</span><strong>{{ stats.excused }}</strong><i class="bi bi-file-earmark-check"></i></div>
+  </div>
+
+  <div class="att18-policy">
+    <div><i class="bi bi-check-circle-fill"></i><span><b>출석</b> 다른 팀 평가 + 개인 평가 가능</span></div>
+    <div><i class="bi bi-slash-circle-fill"></i><span><b>결석/공결</b> 다른 팀 평가는 면제·차단, 같은 팀원 개인 평가는 가능</span></div>
+  </div>
+
+  <form method="post" class="att18-card">
+    {% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}"><input type="hidden" name="action" value="save">
+    <div class="att18-table-wrap">
+      <table class="att18-table">
+        <thead><tr><th>수강생</th><th>소속 팀</th><th>출결</th><th>다른 팀 평가</th><th>개인 평가</th><th>비고</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><div class="att18-user"><span>{{ row.student.name|slice:':1' }}</span><div><b>{{ row.student.name }}</b><small>{{ row.student.email }}</small></div></div></td>
+            <td>{% if row.team %}<span class="att18-team">{{ row.team.name }}</span>{% else %}<span class="text-muted">미배정</span>{% endif %}</td>
+            <td>
+              <select name="status_{{ row.student.id }}" class="form-select att18-status-select" data-attendance-select>
+                {% for value,label in attendance_choices %}<option value="{{ value }}" {% if row.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </td>
+            <td><span class="att18-permission team-permission {% if row.team_eval_allowed %}ok{% else %}blocked{% endif %}">{% if row.team_eval_allowed %}<i class="bi bi-check-lg"></i> 가능{% else %}<i class="bi bi-lock-fill"></i> 차단{% endif %}</span></td>
+            <td><span class="att18-permission ok"><i class="bi bi-check-lg"></i> 가능</span></td>
+            <td><input class="form-control" type="text" maxlength="250" name="note_{{ row.student.id }}" value="{{ row.note }}" placeholder="사유 또는 메모"></td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="text-center py-5 text-muted">등록된 활성 수강생이 없습니다.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="att18-savebar"><span><i class="bi bi-info-circle"></i> 저장 즉시 학생의 평가 권한에 반영됩니다.</span><button class="btn btn-gradient-primary" type="submit"><i class="bi bi-check2-circle"></i> 출결 저장</button></div>
+  </form>
+  {% else %}
+  <div class="att18-empty"><i class="bi bi-calendar-x"></i><h2>평가 회차가 없습니다.</h2><p>회차를 생성한 뒤 출결을 관리할 수 있습니다.</p></div>
+  {% endif %}
+</section>
+<script>
+document.querySelectorAll('[data-attendance-select]').forEach(select=>{
+  const sync=()=>{const row=select.closest('tr'); const pill=row.querySelector('.team-permission'); const allowed=select.value==='present'; pill.classList.toggle('ok',allowed); pill.classList.toggle('blocked',!allowed); pill.innerHTML=allowed?'<i class="bi bi-check-lg"></i> 가능':'<i class="bi bi-lock-fill"></i> 차단';};
+  select.addEventListener('change',sync);
+});
+</script>
+{% endblock %}

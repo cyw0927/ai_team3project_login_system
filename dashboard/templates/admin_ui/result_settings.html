@@ -1,0 +1,80 @@
+{% extends "base_admin.html" %}{% block title %}결과 공개 설정{% endblock %}{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-eye-fill"></i></span>
+      결과 공개 설정
+    </h3>
+    <p class="ax-page-subtitle">학생에게 공개할 결과 항목과 공개 시점을 설정합니다.</p>
+  </div>
+</div><form method="get" class="mb-4"><select name="round" class="form-select" style="max-width:280px" onchange="this.form.submit()">{% for r in rounds %}<option value="{{ r.id }}" {% if selected_round and r.id == selected_round.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></form>
+{% if selected_round %}<form method="post">{% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}">
+<div class="ax-work-card mb-4"><div class="card-body"><div class="ax-section-head justify-content-between align-items-center mb-4"><div><h5 class="fw-bold mb-1">{{ selected_round.name }}</h5><div class="text-muted small">현재 상태: {% if effective_published %}<span class="text-success fw-bold">공개 중</span>{% else %}<span class="text-secondary fw-bold">미공개</span>{% endif %}</div></div></div>
+{% for option in publish_options %}<div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="{{ option.key }}" id="{{ option.key }}" {% if option.enabled %}checked{% endif %}><label class="form-check-label" for="{{ option.key }}">{{ option.label }}</label></div>{% endfor %}
+<hr><label class="form-label fw-semibold">예약 공개 시각</label><input type="datetime-local" class="form-control" name="publish_at" style="max-width:320px" {% if setting.publish_at %}value="{{ setting.publish_at|date:'Y-m-d\\TH:i' }}"{% endif %}><div class="form-text">비워두고 즉시 공개 버튼을 누르면 바로 공개됩니다.</div></div></div>
+<div class="d-flex justify-content-end gap-2">
+  <button class="btn btn-outline-secondary" type="submit" name="action" value="save">설정 저장</button>
+  {% if effective_published %}
+    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#resultPublishConfirmModal" data-publish-action="unpublish">
+      <i class="bi bi-eye-slash me-1"></i>공개 중지
+    </button>
+  {% else %}
+    <button class="btn btn-primary ax-primary-btn" type="button" data-bs-toggle="modal" data-bs-target="#resultPublishConfirmModal" data-publish-action="publish">
+      <i class="bi bi-broadcast me-1"></i>즉시 공개
+    </button>
+  {% endif %}
+</div>
+
+<div class="modal fade" id="resultPublishConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <div class="small fw-bold text-primary mb-1">RESULT VISIBILITY</div>
+          <h5 class="modal-title fw-bold" id="resultPublishConfirmTitle">결과 공개 확인</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div class="p-3 rounded-3 border bg-light mb-3">
+          <div class="small text-muted mb-1">대상 회차</div>
+          <strong>{{ selected_round.name }}</strong>
+        </div>
+        <p class="mb-0" id="resultPublishConfirmText">학생에게 결과를 즉시 공개합니다. 공개 항목을 다시 확인해 주세요.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+        <button type="submit" class="btn btn-primary ax-primary-btn" name="action" value="publish" id="resultPublishConfirmSubmit">공개하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+</form>{% else %}<div class="ax-work-card"><div class="empty-state">평가 회차가 없습니다.</div></div>{% endif %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const modal = document.getElementById('resultPublishConfirmModal');
+  if (!modal) return;
+
+  const title = document.getElementById('resultPublishConfirmTitle');
+  const text = document.getElementById('resultPublishConfirmText');
+  const submit = document.getElementById('resultPublishConfirmSubmit');
+
+  modal.addEventListener('show.bs.modal', (event) => {
+    const action = event.relatedTarget?.dataset.publishAction || 'publish';
+    const isUnpublish = action === 'unpublish';
+
+    title.textContent = isUnpublish ? '결과 공개를 중지할까요?' : '결과를 지금 공개할까요?';
+    text.textContent = isUnpublish
+      ? '학생 화면에서 이 회차의 공개 결과가 즉시 숨겨집니다. 데이터 자체는 삭제되지 않습니다.'
+      : '현재 선택한 공개 항목이 학생 화면에 즉시 표시됩니다. 공개 전 점수와 공개 범위를 다시 확인해 주세요.';
+
+    submit.value = action;
+    submit.textContent = isUnpublish ? '공개 중지' : '공개하기';
+    submit.className = isUnpublish ? 'btn btn-danger' : 'btn btn-primary ax-primary-btn';
+  });
+})();
+</script>
+{% endblock %}
+{% endblock %}

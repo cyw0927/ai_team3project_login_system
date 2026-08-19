@@ -1,0 +1,321 @@
+{% extends "base_student.html" %}
+{% block title %}결과 확인{% endblock %}
+
+{% block content %}
+<div class="ax-results-page">
+  <div class="ax-student-page-head">
+    <div>
+      <h3 class="page-title">
+        <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-bar-chart-fill"></i></span>
+        결과 확인
+      </h3>
+      <p class="ax-page-subtitle">관리자가 공개한 점수와 평가 항목별 강점·보완점을 확인합니다.</p>
+    </div>
+  </div>
+
+  {% if result_published %}
+  <section class="card ax-student-panel ax-result-summary mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <div class="text-muted small mb-1">평가 회차</div>
+          <h4 class="fw-bold mb-0">{{ result.round_name }}</h4>
+        </div>
+        <span class="badge bg-light text-primary border px-3 py-2">{{ result.team_name }}</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <section class="card ax-student-panel h-100 ax-result-kpi">
+        <div class="card-body">
+          <div class="text-muted small">팀 순위</div>
+          <div class="display-6 fw-bold mt-1">{{ result.team_rank|default:"-" }}</div>
+        </div>
+      </section>
+    </div>
+    <div class="col-md-4">
+      <section class="card ax-student-panel h-100 ax-result-kpi">
+        <div class="card-body">
+          <div class="text-muted small">개인 점수</div>
+          <div class="display-6 fw-bold text-primary mt-1">{% if result.show_personal_score %}{{ result.personal_score|floatformat:2 }}{% else %}-{% endif %}</div>
+        </div>
+      </section>
+    </div>
+    <div class="col-md-4">
+      <section class="card ax-student-panel h-100 ax-result-kpi">
+        <div class="card-body">
+          <div class="text-muted small">종합 순위</div>
+          <div class="display-6 fw-bold text-success mt-1">{% if result.show_overall_rank %}{{ result.overall_rank|default:"-" }}{% else %}-{% endif %}</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {% if result.show_personal_score and result.radar_chart %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <div class="ax-student-section-head mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">평가 항목별 강점</h5>
+          <p class="text-muted small mb-0">동료에게 받은 개인평가 문항별 평균을 전체 평가 평균과 비교합니다.</p>
+        </div>
+        <div class="ax-radar-series-legend" aria-label="레이더 차트 범례">
+          <span class="is-mine"><i></i>내 점수</span>
+          <span class="is-average"><i></i>전체 평균</span>
+        </div>
+      </div>
+      <div class="ax-radar-layout">
+        <div class="ax-radar-wrap">
+          <canvas id="resultRadarChart" width="520" height="420" aria-label="평가 항목별 레이더 차트"></canvas>
+        </div>
+        <div class="ax-radar-legend-list">
+          {% for item in result.radar_chart.items %}
+          <div class="ax-radar-legend-row">
+            <div class="ax-radar-label">{{ item.label }}</div>
+            <div class="ax-radar-score"><strong>{{ item.score|floatformat:2 }}</strong><span>/ {{ item.max_score|floatformat:0 }}</span></div>
+            <div class="ax-radar-average">전체 평균 {{ item.average|floatformat:2 }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {{ result.radar_chart.items|json_script:"radar-chart-data" }}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.show_personal_score %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <div class="ax-student-section-head">
+        <div>
+          <h5 class="fw-bold mb-1">내 점수 · 전체 평균 비교</h5>
+          <p class="text-muted small mb-0">같은 회차에서 정상 집계된 {{ result.comparison_summary.participant_count }}명의 평균과 비교합니다.</p>
+        </div>
+        {% if result.comparison_summary.final_delta != None %}
+        <span class="ax-average-summary {% if result.comparison_summary.final_delta > 0 %}up{% elif result.comparison_summary.final_delta < 0 %}down{% else %}same{% endif %}">
+          최종 평균 대비 {% if result.comparison_summary.final_delta > 0 %}+{% endif %}{{ result.comparison_summary.final_delta|floatformat:2 }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="ax-score-compare-grid mt-4">
+        {% for item in result.breakdown %}
+        <div class="ax-score-compare-card">
+          <div class="ax-score-compare-head">
+            <span>{{ item.label }}</span>
+            <span class="ax-compare-badge {% if item.delta > 0 %}up{% elif item.delta < 0 %}down{% else %}same{% endif %}">{{ item.compare_label }}</span>
+          </div>
+          <div class="ax-score-pair">
+            <div><small>내 점수</small><strong>{{ item.score|floatformat:2 }}</strong></div>
+            <div class="ax-score-divider"></div>
+            <div><small>전체 평균</small><strong>{{ item.average|floatformat:2 }}</strong></div>
+          </div>
+          {% if item.delta != None %}
+          <div class="ax-score-delta {% if item.delta > 0 %}up{% elif item.delta < 0 %}down{% else %}same{% endif %}">
+            평균 대비 {% if item.delta > 0 %}+{% endif %}{{ item.delta|floatformat:2 }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="table-responsive mt-4 ax-result-table-wrap">
+        <table class="table table-hover ax-student-table ax-result-table">
+          <thead><tr><th>항목</th><th>내 점수</th><th>전체 평균</th><th>차이</th></tr></thead>
+          <tbody>
+          {% for item in result.breakdown %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td class="fw-bold">{{ item.score|floatformat:2 }}</td>
+              <td>{{ item.average|floatformat:2 }}</td>
+              <td class="{% if item.delta > 0 %}text-success{% elif item.delta < 0 %}text-danger{% endif %}">{% if item.delta > 0 %}+{% endif %}{{ item.delta|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.show_personal_score and result.score_history %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <div class="ax-student-section-head mb-3">
+        <div>
+          <h5 class="fw-bold mb-1">회차별 성적 변화</h5>
+          <p class="text-muted small mb-0">공개된 회차의 팀·개인·최종점수 변화를 시간순으로 확인합니다.</p>
+        </div>
+        <span class="badge bg-light text-secondary border">{{ result.score_history|length }}개 회차</span>
+      </div>
+      <div class="ax-history-list">
+        {% for item in result.score_history %}
+        <div class="ax-history-row {% if forloop.last %}current{% endif %}">
+          <div class="ax-history-round">
+            <span class="ax-history-dot"></span>
+            <div><strong>{{ item.round_name }}</strong><small>{{ item.start_at|date:"Y.m.d" }}{% if item.rank %} · {{ item.rank }}위{% endif %}</small></div>
+          </div>
+          <div class="ax-history-scores">
+            <div><small>팀</small><strong>{{ item.team_score|floatformat:2 }}</strong></div>
+            <div><small>개인</small><strong>{{ item.personal_score|floatformat:2 }}</strong></div>
+            <div class="final"><small>최종</small><strong>{{ item.final_score|floatformat:2 }}</strong></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.first_team %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3">팀 1위</h5>
+      <div class="ax-first-team"><i class="bi bi-trophy-fill"></i><strong>{{ result.first_team.team.name }}</strong><span>{{ result.first_team.score|floatformat:2 }}점</span></div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.team_rankings %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3">전체 팀 순위</h5>
+      <div class="table-responsive ax-result-table-wrap">
+        <table class="table table-hover ax-student-table ax-result-table">
+          <thead><tr><th>순위</th><th>팀</th><th>점수</th></tr></thead>
+          <tbody>{% for row in result.team_rankings %}<tr><td>{{ row.rank }}</td><td class="fw-semibold">{{ row.team.name }}</td><td>{{ row.score|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.admin_feedback %}
+  <section class="card ax-student-panel mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="page-title-icon bg-gradient-primary text-white"><i class="bi bi-chat-quote-fill"></i></span>
+        <div><h5 class="fw-bold mb-0">관리자 피드백</h5><small class="text-muted">{{ result.round_name }}에 대한 관리자 코멘트입니다.</small></div>
+      </div>
+      <div class="ax-feedback-box">{{ result.admin_feedback.comment }}</div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.comments %}
+  <section class="card ax-student-panel">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+        <h5 class="fw-bold mb-0">나에게 남긴 코멘트</h5>
+        <span class="badge bg-light text-secondary border">{{ result.comments|length }}개</span>
+      </div>
+      <div class="ax-comment-list">
+        {% for comment in result.comments %}<div class="ax-feedback-box">{{ comment }}</div>{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% else %}
+  <section class="card ax-student-panel"><div class="card-body"><div class="empty-state">아직 공개된 평가 결과가 없습니다.</div></div></section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if result_published and result.radar_chart %}
+<script>
+(() => {
+  const source = document.getElementById('radar-chart-data');
+  const canvas = document.getElementById('resultRadarChart');
+  if (!source || !canvas) return;
+
+  const items = JSON.parse(source.textContent || '[]');
+  if (items.length < 3) return;
+
+  const ctx = canvas.getContext('2d');
+  const ratio = window.devicePixelRatio || 1;
+  const cssWidth = Math.min(520, canvas.parentElement.clientWidth || 520);
+  const cssHeight = Math.max(360, Math.min(440, cssWidth * 0.82));
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+  canvas.width = cssWidth * ratio;
+  canvas.height = cssHeight * ratio;
+  ctx.scale(ratio, ratio);
+
+  const width = cssWidth;
+  const height = cssHeight;
+  const centerX = width / 2;
+  const centerY = height / 2 + 8;
+  const radius = Math.min(width, height) * 0.31;
+  const count = items.length;
+  const start = -Math.PI / 2;
+
+  const point = (index, percent, r = radius) => {
+    const angle = start + (Math.PI * 2 * index / count);
+    const distance = r * (percent / 100);
+    return [centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance];
+  };
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#e7e1ef';
+  ctx.fillStyle = '#faf8fd';
+
+  [20, 40, 60, 80, 100].forEach((level) => {
+    ctx.beginPath();
+    items.forEach((_, i) => {
+      const [x, y] = point(i, level);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    if (level === 100) ctx.fill();
+    ctx.stroke();
+  });
+
+  items.forEach((_, i) => {
+    const [x, y] = point(i, 100);
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  });
+
+  const drawPolygon = (key, stroke, fill, dash = []) => {
+    ctx.beginPath();
+    items.forEach((item, i) => {
+      const [x, y] = point(i, Math.max(0, Math.min(100, Number(item[key]) || 0)));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2.4;
+    ctx.setLineDash(dash);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+
+  // 내 점수는 보라색 실선, 전체 평균은 청록색 점선으로 분리한다.
+  drawPolygon('average_percent', '#14b8a6', 'rgba(20, 184, 166, .13)', [7, 5]);
+  drawPolygon('score_percent', '#6d4aff', 'rgba(109, 74, 255, .20)');
+
+  ctx.font = '600 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = '#55505d';
+  items.forEach((item, i) => {
+    const angle = start + (Math.PI * 2 * i / count);
+    const labelRadius = radius + 34;
+    const x = centerX + Math.cos(angle) * labelRadius;
+    const y = centerY + Math.sin(angle) * labelRadius;
+    const text = item.label.length > 10 ? `${item.label.slice(0, 10)}…` : item.label;
+    ctx.textAlign = Math.cos(angle) > .2 ? 'left' : Math.cos(angle) < -.2 ? 'right' : 'center';
+    ctx.textBaseline = Math.sin(angle) > .55 ? 'top' : Math.sin(angle) < -.55 ? 'bottom' : 'middle';
+    ctx.fillText(text, x, y);
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

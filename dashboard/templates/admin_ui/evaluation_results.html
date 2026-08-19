@@ -1,0 +1,264 @@
+{% extends "base_admin.html" %}
+{% block title %}결과 관리{% endblock %}
+{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-bar-chart-fill"></i></span>
+      평가 결과
+    </h3>
+    <p class="ax-page-subtitle">제출 현황, 점수 집계, 가중치와 관리자 보정을 확인합니다.</p>
+  </div>
+</div><div class="result-toolbar ui-card mb-4">
+  <form method="get" class="result-toolbar-form">
+    <div class="result-field result-field-round">
+      <label>평가 회차</label>
+      <select name="round" class="form-select" onchange="this.form.submit()">
+        {% for r in rounds %}<option value="{{ r.id }}" {% if selected_round and r.id == selected_round.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="result-field result-search">
+      <label>결과 검색</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="수강생, 이메일, 팀 검색">
+      </div>
+    </div>
+    <div class="result-field">
+      <label>집계 상태</label>
+      <select name="status" class="form-select">
+        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>전체</option>
+        <option value="included" {% if status_filter == 'included' %}selected{% endif %}>정상 집계</option>
+        <option value="excluded" {% if status_filter == 'excluded' %}selected{% endif %}>집계 제외</option>
+      </select>
+    </div>
+    <div class="result-toolbar-buttons">
+      <button class="btn btn-dark" type="submit">조회</button>
+      {% if selected_round %}
+        <a class="btn btn-light border" href="{% url 'admin_evaluation_results' %}?round={{ selected_round.id }}">초기화</a>
+        <a class="btn result-export-btn" href="{% url 'admin_evaluation_results_excel_export' %}?round={{ selected_round.id }}">
+          <i class="bi bi-file-earmark-excel-fill"></i> Excel 다운로드
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% if selected_round %}
+<div class="result-control-grid mb-4">
+  <div class="ax-work-card score-control-card">
+    <div class="section-heading-row">
+      <div>
+        <div class="section-eyebrow">SCORING POLICY</div>
+        <h5>최종 점수 가중치</h5>
+        <p>개인/팀 평가 비중을 조정하면 저장 즉시 전체 결과가 다시 계산됩니다.</p>
+      </div>
+      <span class="score-policy-chip">개인 {{ selected_round.personal_weight }}% · 팀 {{ selected_round.team_weight }}%</span>
+    </div>
+    <form method="post" action="{% url 'admin_result_weights_save' %}" class="score-weight-form">
+      {% csrf_token %}
+      <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="weight-field"><label>개인 평가</label><div class="input-group"><input class="form-control" type="number" min="0" max="100" name="personal_weight" value="{{ selected_round.personal_weight }}" required><span class="input-group-text">%</span></div></div>
+      <div class="weight-plus">+</div>
+      <div class="weight-field"><label>팀 평가</label><div class="input-group"><input class="form-control" type="number" min="0" max="100" name="team_weight" value="{{ selected_round.team_weight }}" required><span class="input-group-text">%</span></div></div>
+      <div class="weight-equals">= 100%</div>
+      <button class="btn btn-primary ax-primary-btn" type="submit"><i class="bi bi-calculator me-2"></i>저장·재계산</button>
+    </form>
+    <div class="score-policy-note"><i class="bi bi-info-circle"></i> 튜터는 학생별 보정점수를 제한 없이 입력할 수 있습니다. 0점이 아닌 보정에는 사유 입력이 필수입니다.</div>
+  </div>
+
+  <div class="result-summary-grid">
+    <div class="result-stat-card">
+      <div class="result-stat-icon blue"><i class="bi bi-people"></i></div>
+      <div class="result-stat-copy"><span>팀 평가 제출</span><strong>{{ stats.team_completed }}<small>/ {{ stats.team_required }}</small></strong></div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-icon violet"><i class="bi bi-person-check"></i></div>
+      <div class="result-stat-copy"><span>개인 평가 제출</span><strong>{{ stats.personal_completed }}<small>/ {{ stats.personal_required }}</small></strong></div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-icon green"><i class="bi bi-bar-chart-line"></i></div>
+      <div class="result-stat-copy"><span>집계 완료</span><strong>{{ stats.calculated }}<small>명</small></strong></div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-icon orange"><i class="bi bi-eye"></i></div>
+      <div class="result-stat-copy"><span>공개 상태</span><strong class="result-publish-value">{{ stats.publish_status }}</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="result-overview-grid mb-4">
+  <div class="ax-work-card result-progress-card">
+    <div class="section-heading-row">
+      <div><div class="section-eyebrow">SUBMISSION</div><h5>평가 제출 진행률</h5></div>
+      <strong class="result-progress-number">{{ stats.completion_percent }}%</strong>
+    </div>
+    <div class="result-progress-track"><span style="width:{{ stats.completion_percent }}%"></span></div>
+    <div class="result-progress-caption">
+      <span>팀 {{ stats.team_completed }}/{{ stats.team_required }}</span>
+      <span>개인 {{ stats.personal_completed }}/{{ stats.personal_required }}</span>
+    </div>
+  </div>
+  <div class="ax-work-card result-highlight-card">
+    <div class="section-eyebrow">SUMMARY</div>
+    <div class="result-highlight-row">
+      <div><span>평균 최종 점수</span><strong>{% if stats.average_score != None %}{{ stats.average_score|floatformat:2 }}{% else %}-{% endif %}</strong></div>
+      <div><span>최고 점수</span><strong>{% if stats.top_score != None %}{{ stats.top_score|floatformat:2 }}{% else %}-{% endif %}</strong></div>
+      <div><span>집계 제외</span><strong>{{ stats.excluded }}</strong></div>
+    </div>
+    {% if stats.top_student %}<div class="result-top-student"><i class="bi bi-trophy-fill"></i> 현재 1위 <b>{{ stats.top_student }}</b></div>{% endif %}
+  </div>
+  <div class="ax-work-card result-publish-card {% if stats.publish_status == '공개 중' %}is-live{% elif stats.publish_status == '예약 공개' %}is-scheduled{% endif %}">
+    <div class="section-heading-row">
+      <div><div class="section-eyebrow">PUBLISH</div><h5>학생 공개</h5></div>
+      <span class="publish-pill">{{ stats.publish_status }}</span>
+    </div>
+    <p>{{ stats.publish_detail }}</p>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_result_settings' %}?round={{ selected_round.id }}">공개 설정 열기</a>
+  </div>
+</div>
+
+<div class="ax-work-card result-review-card mb-4 {% if review_flag_count %}has-flags{% else %}is-clear{% endif %}">
+  <div class="result-review-head">
+    <div>
+      <div class="section-eyebrow">QUALITY CHECK</div>
+      <h5>평가 패턴 검토</h5>
+      <p>극단값 또는 모든 항목 동일 점수처럼 확인할 만한 패턴만 표시합니다. 자동 판정이 아니라 관리자 참고용입니다.</p>
+    </div>
+    {% if review_flag_count %}
+      <span class="result-review-count"><i class="bi bi-exclamation-diamond-fill"></i> 검토 {{ review_flag_count }}건</span>
+    {% else %}
+      <span class="result-review-clear"><i class="bi bi-check-circle-fill"></i> 특이 패턴 없음</span>
+    {% endif %}
+  </div>
+  {% if review_flags %}
+    <div class="result-review-list">
+      {% for flag in review_flags %}
+      <div class="result-review-item">
+        <span class="review-type type-{% if flag.kind == '팀' %}team{% else %}personal{% endif %}">{{ flag.kind }}</span>
+        <div class="review-copy">
+          <strong>{{ flag.evaluator }} → {{ flag.target }}</strong>
+          <small>{{ flag.reason }} · 평균 {{ flag.average|floatformat:2 }}점</small>
+        </div>
+        <span class="review-label">검토 권장</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if review_flag_count > 12 %}<div class="result-review-more">외 {{ review_flag_count|add:'-12' }}건이 더 있습니다.</div>{% endif %}
+  {% else %}
+    <div class="result-review-empty"><i class="bi bi-shield-check"></i><span>현재 제출된 평가에서 눈에 띄는 점수 패턴이 없습니다.</span></div>
+  {% endif %}
+</div>
+
+<div class="result-tabs mb-4">
+  <a class="active" href="#overall"><i class="bi bi-list-ol"></i> 종합 결과</a>
+  <a href="#teams"><i class="bi bi-people-fill"></i> 팀 결과</a>
+  <a href="{% url 'admin_personal_scores' %}?round={{ selected_round.id }}"><i class="bi bi-person-lines-fill"></i> 개인 점수 상세</a>
+  <a href="{% url 'admin_rankings' %}?round={{ selected_round.id }}"><i class="bi bi-trophy"></i> 순위 상세</a>
+</div>
+
+<div class="ax-work-card result-table-card mb-4" id="overall">
+  <div class="section-heading-row result-table-heading">
+    <div>
+      <div class="section-eyebrow">OVERALL RESULTS</div>
+      <h5>종합 결과</h5>
+      <p>최종 점수 = 개인 {{ selected_round.personal_weight }}% + 팀 {{ selected_round.team_weight }}% + 관리자 보정점수입니다.</p>
+    </div>
+    <span class="result-count-chip">{{ result_rows|length }}명 표시</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table ax-work-table align-middle result-table">
+      <thead><tr><th>순위</th><th>수강생</th><th>소속 팀</th><th>팀 점수</th><th>개인 점수</th><th>가중 합산</th><th>관리자 보정</th><th>최종 점수</th><th>상태</th></tr></thead>
+      <tbody>
+        {% for row in result_rows %}
+        <tr class="{% if row.is_excluded %}result-excluded{% endif %}">
+          <td><span class="rank-badge {% if row.rank == 1 %}rank-1{% elif row.rank == 2 %}rank-2{% elif row.rank == 3 %}rank-3{% endif %}">{% if row.is_excluded %}-{% else %}{{ row.rank|default:'-' }}{% endif %}</span></td>
+          <td><div class="student-result-cell"><div class="student-result-avatar">{{ row.student_name|slice:':1' }}</div><div><strong>{{ row.student_name }}</strong><small>{{ row.email|default:'이메일 없음' }}</small></div></div></td>
+          <td><span class="team-chip">{{ row.team_name }}</span></td>
+          <td>{{ row.team_score|floatformat:2 }}</td>
+          <td>{{ row.personal_score|floatformat:2 }}</td>
+          <td>{{ row.base_score|floatformat:2 }}</td>
+          <td>
+            <button type="button" class="adjust-score-button {% if row.adjustment_score != 0 %}has-adjustment{% endif %}" data-bs-toggle="modal" data-bs-target="#adjustScoreModal" data-url="{% url 'admin_student_result_adjust' row.result_id %}" data-student="{{ row.student_name|escape }}" data-score="{{ row.adjustment_score }}" data-reason="{{ row.adjustment_reason|escape }}">
+              {% if row.adjustment_score > 0 %}+{% endif %}{{ row.adjustment_score|floatformat:2 }} <i class="bi bi-pencil-square"></i>
+            </button>
+          </td>
+          <td><strong class="final-score">{{ row.final_score|floatformat:2 }}</strong></td>
+          <td>{% if row.is_excluded %}<span class="status-pill excluded">집계 제외</span>{% else %}<span class="status-pill included">정상 집계</span>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9"><div class="empty-state py-5"><i class="bi bi-bar-chart fs-2 d-block mb-2"></i>계산된 결과가 없습니다. 평가 제출 후 <b>전체 재계산</b>을 눌러주세요.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="ax-work-card result-table-card" id="teams">
+  <div class="section-heading-row result-table-heading">
+    <div><div class="section-eyebrow">TEAM RESULTS</div><h5>팀 결과 요약</h5><p>팀별 평가 제출 수와 평균 점수를 빠르게 비교합니다.</p></div>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_team_scores' %}?round={{ selected_round.id }}">상세 화면</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table ax-work-table align-middle result-table">
+      <thead><tr><th>순위</th><th>팀</th><th>인원</th><th>제출 평가 수</th><th>평균 점수</th><th>상태</th></tr></thead>
+      <tbody>
+        {% for team in team_rows %}
+        <tr class="{% if team.is_excluded %}result-excluded{% endif %}">
+          <td><span class="rank-badge {% if team.rank == 1 %}rank-1{% elif team.rank == 2 %}rank-2{% elif team.rank == 3 %}rank-3{% endif %}">{% if team.is_excluded %}-{% else %}{{ team.rank|default:'-' }}{% endif %}</span></td>
+          <td><strong>{{ team.name }}</strong></td><td>{{ team.member_count }}명</td><td>{{ team.evaluation_count }}건</td>
+          <td>{% if team.score != None %}<strong>{{ team.score|floatformat:2 }}</strong>{% else %}-{% endif %}</td>
+          <td>{% if team.is_excluded %}<span class="status-pill excluded">집계 제외</span>{% else %}<span class="status-pill included">정상</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="6"><div class="empty-state py-4">등록된 팀이 없습니다.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="adjustScoreModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content adjustment-modal">
+      <form method="post" id="adjustScoreForm">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="modal-header">
+          <div><div class="section-eyebrow">ADMIN ADJUSTMENT</div><h5 class="modal-title">관리자 점수 보정</h5></div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="adjust-student-banner"><i class="bi bi-person-check"></i><div><small>대상 수강생</small><strong id="adjustStudentName">-</strong></div></div>
+          <label class="form-label fw-semibold">보정점수 <span class="text-muted fw-normal">(제한 없음)</span></label>
+          <input class="form-control form-control-lg mb-3" id="adjustScoreInput" name="adjustment_score" type="number" step="0.01" value="0" required>
+          <label class="form-label fw-semibold">보정 사유</label>
+          <textarea class="form-control" id="adjustReasonInput" name="adjustment_reason" rows="4" maxlength="500" placeholder="점수 보정 근거를 입력하세요. 0점으로 초기화할 때는 비워도 됩니다."></textarea>
+          <div class="adjust-warning"><i class="bi bi-shield-exclamation"></i> 보정점수는 최종 점수와 순위에 즉시 반영됩니다. 감사 추적을 위해 사유를 남겨주세요.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light border" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn btn-primary ax-primary-btn">저장 후 재계산</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('adjustScoreModal');
+  if (!modal) return;
+  modal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const targetUrl = button.getAttribute('data-url');
+    document.getElementById('adjustStudentName').textContent = button.getAttribute('data-student') || '-';
+    document.getElementById('adjustScoreInput').value = button.getAttribute('data-score') || '0';
+    document.getElementById('adjustReasonInput').value = button.getAttribute('data-reason') || '';
+    document.getElementById('adjustScoreForm').action = targetUrl;
+  });
+});
+</script>
+{% else %}
+<div class="ax-work-card"><div class="empty-state py-5">평가 회차가 없습니다.</div></div>
+{% endif %}
+{% endblock %}

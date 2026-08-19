@@ -1,0 +1,142 @@
+{% extends "base_admin.html" %}
+{% block title %}미제출 평가 관리 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-danger text-white me-2"><i class="bi bi-exclamation-triangle-fill"></i></span>
+      미제출 평가 관리
+    </h3>
+    <p class="ax-page-subtitle">누가 어떤 평가를 아직 제출하지 않았는지 평가자·대상 단위로 확인합니다.</p>
+  </div>
+  <div class="ax-header-actions">
+    <a href="{% url 'admin_evaluation_results' %}{% if selected_round %}?round={{ selected_round.id }}{% endif %}" class="btn btn-outline-secondary">
+      <i class="bi bi-bar-chart me-1"></i> 평가 결과
+    </a>
+  </div>
+</div>
+
+<div class="row g-4 mb-4 ax-mini-stat-grid">
+  <div class="col-md-3">
+    <div class="ax-work-card ax-mini-stat h-100"><div class="card-body">
+      <div class="text-muted small">전체 미제출</div>
+      <div class="ax-mini-stat-value text-danger">{{ summary.total_missing }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="ax-work-card ax-mini-stat h-100"><div class="card-body">
+      <div class="text-muted small">팀 평가</div>
+      <div class="ax-mini-stat-value">{{ summary.team_missing }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="ax-work-card ax-mini-stat h-100"><div class="card-body">
+      <div class="text-muted small">개인 평가</div>
+      <div class="ax-mini-stat-value">{{ summary.personal_missing }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="ax-work-card ax-mini-stat h-100"><div class="card-body">
+      <div class="text-muted small">팀 평가 면제</div>
+      <div class="ax-mini-stat-value text-success">{{ summary.exempt_team_count }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="ax-work-card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="ax-management-toolbar">
+      <div class="d-flex gap-2 flex-wrap flex-grow-1">
+        <select name="round" class="form-select" style="max-width:250px" onchange="this.form.submit()">
+          {% for round in rounds %}
+          <option value="{{ round.id }}" {% if selected_round and round.id == selected_round.id %}selected{% endif %}>{{ round.name }}</option>
+          {% empty %}<option>평가 회차 없음</option>{% endfor %}
+        </select>
+
+        <select name="type" class="form-select" style="max-width:180px">
+          <option value="all" {% if evaluation_type == 'all' %}selected{% endif %}>평가 전체</option>
+          <option value="team" {% if evaluation_type == 'team' %}selected{% endif %}>팀 평가만</option>
+          <option value="personal" {% if evaluation_type == 'personal' %}selected{% endif %}>개인 평가만</option>
+        </select>
+
+        <div class="input-group" style="max-width:340px">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input name="q" value="{{ query }}" class="form-control" placeholder="학생·이메일·팀·평가대상 검색">
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary ax-primary-btn" type="submit"><i class="bi bi-funnel me-1"></i>조회</button>
+        {% if selected_round %}
+        <a class="btn btn-light border" href="{% url 'admin_missing_evaluations' %}?round={{ selected_round.id }}">초기화</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="ax-work-card">
+  <div class="card-body">
+    <div class="ax-section-head mb-3">
+      <div>
+        <h4 class="card-title mb-1">미제출 상세</h4>
+        <p class="card-description mb-0">임시저장은 평가 레코드는 있지만 아직 최종 제출하지 않은 상태입니다.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="badge badge-gradient-warning">임시저장 {{ summary.draft_count }}</span>
+        <span class="badge badge-gradient-danger">미시작 {{ summary.not_started_count }}</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table ax-work-table align-middle">
+        <thead>
+          <tr>
+            <th>평가자</th>
+            <th>소속 팀</th>
+            <th>출결</th>
+            <th>평가 종류</th>
+            <th>평가 대상</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <strong>{{ row.evaluator_name }}</strong>
+              <div class="small text-muted">{{ row.evaluator_email|default:"-" }}</div>
+            </td>
+            <td>{{ row.evaluator_team }}</td>
+            <td>{{ row.attendance_label }}</td>
+            <td>
+              {% if row.type == 'team' %}
+                <span class="badge badge-gradient-info">팀 평가</span>
+              {% else %}
+                <span class="badge badge-gradient-primary">개인 평가</span>
+              {% endif %}
+            </td>
+            <td class="fw-semibold">{{ row.target_name }}</td>
+            <td>
+              {% if row.state == 'draft' %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">임시저장</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">미시작</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-5">
+            {% if selected_round %}조건에 맞는 미제출 평가가 없습니다.{% else %}평가 회차가 없습니다.{% endif %}
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="ax-work-notice mt-4">
+  <i class="bi bi-info-circle me-2"></i>
+  결석·공결 학생은 다른 팀 평가에서 면제되며, 같은 팀원 개인 평가는 계속 대상에 포함됩니다.
+</div>
+{% endblock %}

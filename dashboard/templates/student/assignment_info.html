@@ -1,0 +1,114 @@
+{% extends "base_student.html" %}
+{% block title %}과제 정보{% endblock %}
+{% block content %}
+<div class="ax-student-page-head ax-assignment-page-head">
+  <div>
+    <h3 class="page-title"><span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-file-earmark-text-fill"></i></span>과제 정보</h3>
+    <p class="ax-page-subtitle">과제 유형과 제출 상태를 확인하고 필요한 내용만 간단히 등록하세요.</p>
+  </div>
+</div>
+
+{% if assignment_rows %}
+<div class="ax-assignment-list">
+  {% for row in assignment_rows %}
+  <section class="ax-assignment-card {% if row.submission %}is-submitted{% endif %}">
+    <header class="ax-assignment-card-head">
+      <div class="ax-assignment-heading">
+        <div class="ax-assignment-badges">
+          {% if row.is_team %}
+            <span class="ax-assignment-type is-team"><i class="bi bi-people-fill"></i> 조별과제</span>
+          {% else %}
+            <span class="ax-assignment-type is-personal"><i class="bi bi-person-fill"></i> 개별과제</span>
+          {% endif %}
+          {% if row.submission %}
+            <span class="ax-assignment-status is-done"><i class="bi bi-check-circle-fill"></i> 제출 완료</span>
+          {% else %}
+            <span class="ax-assignment-status is-pending"><i class="bi bi-clock"></i> 미제출</span>
+          {% endif %}
+        </div>
+        <h4>{{ row.assignment.title }}</h4>
+        <p>{{ row.assignment.description|default:"등록된 과제 설명이 없습니다." }}</p>
+      </div>
+
+      {% if row.assignment.attachment_url %}
+      <a href="{% url 'assignment_attachment_download' row.assignment.id %}" class="ax-assignment-download">
+        <i class="bi bi-paperclip"></i>
+        <span>{{ row.assignment.attachment_name|default:"과제 첨부파일" }}</span>
+        <i class="bi bi-download"></i>
+      </a>
+      {% endif %}
+    </header>
+
+    {% if row.is_team and not row.can_access %}
+      <div class="ax-assignment-inline-notice is-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span>현재 회차에 팀 배정이 되어 있지 않아 조별과제를 제출할 수 없습니다.</span>
+      </div>
+    {% else %}
+    <div class="ax-assignment-submit-panel">
+      <div class="ax-assignment-submit-copy">
+        <strong>{% if row.submission %}제출 내용 수정{% else %}과제 제출{% endif %}</strong>
+        <span>
+          {% if row.is_team %}팀원 중 한 명이 제출하면 팀 전체 제출물로 저장됩니다.{% else %}본인 계정에만 저장되는 개별 제출물입니다.{% endif %}
+        </span>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="ax-assignment-form">
+        {% csrf_token %}
+        <input type="hidden" name="assignment_id" value="{{ row.assignment.id }}">
+
+        <div class="ax-assignment-form-grid">
+          <div class="ax-field ax-field-url">
+            <label class="form-label" for="submission-url-{{ row.assignment.id }}">제출 링크</label>
+            <div class="ax-input-with-icon">
+              <i class="bi bi-link-45deg"></i>
+              <input id="submission-url-{{ row.assignment.id }}" type="url" class="form-control" name="submission_url" value="{{ row.submission.submission_url|default:'' }}" placeholder="GitHub 또는 배포 URL">
+            </div>
+          </div>
+
+          <div class="ax-field ax-field-file">
+            <label class="form-label" for="attachment-{{ row.assignment.id }}">제출 파일</label>
+            <input id="attachment-{{ row.assignment.id }}" type="file" class="form-control" name="attachment">
+          </div>
+
+          <div class="ax-field ax-field-note">
+            <label class="form-label" for="note-{{ row.assignment.id }}">제출 메모 <span class="ax-label-help">선택</span></label>
+            <textarea id="note-{{ row.assignment.id }}" class="form-control" name="note" rows="2" placeholder="실행 방법이나 참고사항을 간단히 적어주세요.">{{ row.submission.note|default:'' }}</textarea>
+          </div>
+        </div>
+
+        {% if row.submission and row.submission.attachment %}
+        <div class="ax-current-submission-file">
+          <i class="bi bi-file-earmark-check"></i>
+          <span>현재 제출 파일</span>
+          {% if row.is_team %}
+            <a href="{% url 'submission_attachment_download' row.submission.id %}">{{ row.submission.attachment.name }}</a>
+          {% else %}
+            <a href="{% url 'student_submission_attachment_download' row.submission.id %}">{{ row.submission.attachment.name }}</a>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="ax-assignment-actions">
+          {% if not can_submit %}
+          <p class="ax-assignment-locked"><i class="bi bi-lock-fill"></i> 평가가 시작되어 제출 내용이 잠겼습니다.</p>
+          {% endif %}
+          <button class="btn btn-primary ax-student-primary-btn ax-assignment-submit-btn" type="submit" {% if not can_submit %}disabled{% endif %}>
+            <i class="bi bi-cloud-arrow-up"></i>
+            {% if row.submission %}수정 내용 저장{% else %}제출하기{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="ax-assignment-empty">
+  <div class="ax-assignment-empty-icon"><i class="bi bi-inbox"></i></div>
+  <h5>등록된 과제가 없습니다</h5>
+  <p>현재 회차에 과제가 등록되면 이곳에서 확인할 수 있습니다.</p>
+</div>
+{% endif %}
+{% endblock %}

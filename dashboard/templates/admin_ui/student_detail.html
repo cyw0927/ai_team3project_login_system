@@ -1,0 +1,252 @@
+{% extends "base_admin.html" %}
+{% block title %}수강생 상세 | {{ student.name }}{% endblock %}
+{% block content %}
+<div class="student-detail-page">
+  <div class="student-detail-head">
+    <div>
+      <a class="detail-back-link" href="{% url 'admin_students' %}"><i class="bi bi-arrow-left"></i> 수강생 관리</a>
+      <h1>{{ student.name }}</h1>
+      <p>계정, 팀 배정, 평가 진행률과 결과 이력을 한 화면에서 관리합니다.</p>
+    </div>
+    <div class="student-detail-head-actions">
+      <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#studentEditDetailModal"><i class="bi bi-pencil-square me-1"></i>정보 수정</button>
+      <form method="post" action="{% url 'admin_student_toggle_active' student.id %}">
+        {% csrf_token %}
+        {% if student.is_active and student.user.is_active %}
+        <button class="btn btn-outline-warning" type="submit"><i class="bi bi-person-slash me-1"></i>계정 비활성화</button>
+        {% else %}
+        <button class="btn btn-outline-success" type="submit"><i class="bi bi-person-check me-1"></i>계정 활성화</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <div class="student-detail-summary">
+    <section class="student-identity-panel">
+      <div class="student-detail-avatar">{{ student.name|slice:":1" }}</div>
+      <div class="student-detail-identity-copy">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <h2>{{ student.name }}</h2>
+          {% if student.is_active and student.user.is_active %}<span class="student-state active">활성</span>{% else %}<span class="student-state inactive">비활성</span>{% endif %}
+        </div>
+        <p>{{ student.email }}</p>
+        <div class="identity-meta">
+          <span><i class="bi bi-mortarboard"></i>{{ student.affiliation|default:"소속 미등록" }}</span>
+          <span><i class="bi bi-diagram-3"></i>{% if current_team %}{{ current_team.name }}{% else %}현재 회차 미배정{% endif %}</span>
+          <span><i class="bi bi-calendar3"></i>등록 {{ student.created_at|date:"Y.m.d" }}</span>
+        </div>
+        <div class="social-badge-row">
+          {% for account in social_accounts %}<span class="social-login-badge {{ account.provider }}"><i class="bi {% if account.provider == 'google' %}bi-google{% elif account.provider == 'kakao' %}bi-chat-fill{% else %}bi-link-45deg{% endif %}"></i>{{ account.name }}</span>{% empty %}<span class="social-login-badge local"><i class="bi bi-key"></i>일반 계정</span>{% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="student-progress-panel">
+      <div class="panel-mini-title"><span>현재 평가 진행률</span><strong>{{ eval_stats.completion_percent }}%</strong></div>
+      <div class="student-progress-track"><span style="width:{{ eval_stats.completion_percent }}%"></span></div>
+      <div class="student-progress-pairs">
+        <div><span>팀 평가</span><strong>{{ eval_stats.team_submitted }} / {{ eval_stats.team_required }}</strong><small>임시저장 {{ eval_stats.team_saved }}</small></div>
+        <div><span>개인 평가</span><strong>{{ eval_stats.personal_submitted }} / {{ eval_stats.personal_required }}</strong><small>임시저장 {{ eval_stats.personal_saved }}</small></div>
+      </div>
+      {% if current_round %}<div class="current-round-label"><i class="bi bi-clock-history"></i>{{ current_round.name }}</div>{% else %}<div class="current-round-label muted">현재 평가 회차 없음</div>{% endif %}
+    </section>
+  </div>
+
+  <div class="student-detail-grid">
+    <div class="student-detail-main">
+      <section class="detail-panel">
+        <div class="detail-panel-head"><div><h3>평가 결과 이력</h3><p>회차별 최종 점수와 순위를 확인합니다.</p></div><span class="detail-count-chip">{{ results|length }}개 회차</span></div>
+        <div class="table-responsive">
+          <table class="table table-hover ax-purple-table detail-history-table">
+            <thead><tr><th>평가 회차</th><th>개인 점수</th><th>팀 점수</th><th>보정</th><th>최종 점수</th><th>순위</th><th>상태</th></tr></thead>
+            <tbody>
+              {% for result in results %}
+              <tr>
+                <td><strong>{{ result.evaluation_round.name }}</strong><small>{{ result.evaluation_round.start_at|date:"Y.m.d" }}</small></td>
+                <td>{{ result.personal_score|floatformat:2 }}</td><td>{{ result.team_score|floatformat:2 }}</td>
+                <td>{% if result.adjustment_score %}{{ result.adjustment_score|stringformat:"+.2f" }}{% else %}-{% endif %}</td>
+                <td><strong class="score-strong">{{ result.final_score|floatformat:2 }}</strong></td>
+                <td>{% if result.rank %}{{ result.rank }}위{% else %}-{% endif %}</td>
+                <td>{% if result.is_excluded %}<span class="student-state inactive">집계 제외</span>{% else %}<span class="student-state active">정상 집계</span>{% endif %}</td>
+              </tr>
+              {% empty %}<tr><td colspan="7" class="text-center text-muted py-5">아직 집계된 평가 결과가 없습니다.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="detail-panel skill-profile-panel">
+        <div class="detail-panel-head">
+          <div>
+            <h3><i class="bi bi-lightning-charge-fill me-2 text-warning"></i>역량 프로필</h3>
+            <p>과제 추천과 팀 운영에 참고할 수강생 역량 점수입니다. 0~100 기준으로 관리합니다.</p>
+          </div>
+          <span class="detail-count-chip">{{ skill_profiles|length }}개 역량</span>
+        </div>
+
+        <form method="post" action="{% url 'admin_student_skill_save' student.id %}" class="skill-editor">
+          {% csrf_token %}
+          <div class="skill-editor-grid">
+            <div>
+              <label class="form-label fw-semibold">역량</label>
+              <input type="text" name="skill_name" class="form-control" maxlength="80" placeholder="예: Python, 데이터 분석, 커뮤니케이션" required>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">점수</label>
+              <div class="input-group">
+                <input type="number" name="score" class="form-control" min="0" max="100" value="70" required>
+                <span class="input-group-text">/ 100</span>
+              </div>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">관리 메모</label>
+              <input type="text" name="note" class="form-control" maxlength="300" placeholder="선택 사항">
+            </div>
+            <button type="submit" class="btn btn-gradient-primary"><i class="bi bi-plus-lg me-1"></i>저장</button>
+          </div>
+        </form>
+
+        {% if skill_profiles %}
+        <div class="skill-profile-list">
+          {% for profile in skill_profiles %}
+          <article class="skill-profile-item">
+            <div class="skill-profile-top">
+              <div>
+                <strong>{{ profile.skill.name }}</strong>
+                {% if profile.note %}<small>{{ profile.note }}</small>{% endif %}
+              </div>
+              <span class="skill-score">{{ profile.score }}</span>
+            </div>
+            <div class="skill-progress"><span style="width:{{ profile.score }}%"></span></div>
+            <div class="skill-profile-actions">
+              <form method="post" action="{% url 'admin_student_skill_save' student.id %}" class="skill-inline-edit">
+                {% csrf_token %}
+                <input type="hidden" name="skill_name" value="{{ profile.skill.name }}">
+                <input type="number" name="score" min="0" max="100" value="{{ profile.score }}" aria-label="{{ profile.skill.name }} 점수">
+                <input type="text" name="note" maxlength="300" value="{{ profile.note }}" placeholder="메모">
+                <button class="btn btn-sm btn-outline-primary" type="submit">수정</button>
+              </form>
+              <form method="post" action="{% url 'admin_student_skill_delete' student.id profile.id %}" onsubmit="return confirm('{{ profile.skill.name }} 역량을 제거할까요?');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">삭제</button>
+              </form>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="detail-empty skill-empty"><i class="bi bi-stars"></i> 아직 등록된 역량이 없습니다. 첫 역량을 추가해보세요.</div>
+        {% endif %}
+      </section>
+
+      <section class="detail-panel">
+        <div class="detail-panel-head">
+          <div><h3>학생 개인 피드백</h3><p>평가 회차별로 관리자 피드백을 남깁니다. 같은 회차에 다시 저장하면 기존 내용이 수정됩니다.</p></div>
+          <span class="detail-count-chip">{{ admin_comments|length }}개</span>
+        </div>
+        <form method="post" action="{% url 'admin_student_comment_save' student.id %}" class="mb-4">
+          {% csrf_token %}
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">평가 회차</label>
+              <select name="evaluation_round_id" class="form-select" required>
+                <option value="">회차 선택</option>
+                {% for round in comment_rounds %}<option value="{{ round.id }}" {% if current_round and current_round.id == round.id %}selected{% endif %}>{{ round.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">관리자 피드백</label>
+              <textarea name="comment" class="form-control" rows="3" maxlength="2000" required placeholder="학생에게 전달할 구체적인 피드백을 입력하세요."></textarea>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mt-2"><button type="submit" class="btn btn-gradient-primary"><i class="bi bi-chat-left-text me-1"></i>피드백 저장</button></div>
+        </form>
+        <div class="membership-history-list">
+          {% for feedback in admin_comments %}
+          <div class="membership-history-item align-items-start">
+            <div class="membership-icon"><i class="bi bi-chat-quote"></i></div>
+            <div class="flex-grow-1">
+              <strong>{{ feedback.evaluation_round.name }}</strong>
+              <span class="d-block mt-1" style="white-space:pre-wrap;">{{ feedback.comment }}</span>
+              <small class="text-muted">{{ feedback.updated_at|date:"Y.m.d H:i" }}{% if feedback.created_by %} · {{ feedback.created_by.get_username }}{% endif %}</small>
+            </div>
+            <form method="post" action="{% url 'admin_student_comment_delete' student.id feedback.id %}" onsubmit="return confirm('이 관리자 피드백을 삭제할까요?');">
+              {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+            </form>
+          </div>
+          {% empty %}<div class="detail-empty">아직 등록된 관리자 피드백이 없습니다.</div>{% endfor %}
+        </div>
+      </section>
+
+      <section class="detail-panel">
+        <div class="detail-panel-head"><div><h3>프로젝트 자기평가</h3><p>학생이 종료된 프로젝트에 대해 작성한 자기평가/회고입니다. 성적에는 반영되지 않습니다.</p></div><span class="detail-count-chip">{{ self_reviews|length }}개</span></div>
+        <div class="membership-history-list">
+          {% for review in self_reviews %}
+          <div class="membership-history-item align-items-start">
+            <div class="membership-icon"><i class="bi bi-journal-check"></i></div>
+            <div class="flex-grow-1">
+              <strong>{{ review.evaluation_round.name }}</strong>
+              <span class="d-block mt-1">만족도 {{ review.satisfaction }}/5 · 기여도 {{ review.contribution }}/5 · 협업 {{ review.collaboration }}/5 · 난이도 {{ review.difficulty }}/5</span>
+              {% if review.learned %}<small class="d-block mt-2"><b>배운 점</b> · {{ review.learned }}</small>{% endif %}
+              {% if review.regret %}<small class="d-block mt-1"><b>아쉬운 점</b> · {{ review.regret }}</small>{% endif %}
+              {% if review.next_action %}<small class="d-block mt-1"><b>다음 프로젝트</b> · {{ review.next_action }}</small>{% endif %}
+              <small class="text-muted d-block mt-2">{{ review.updated_at|date:"Y.m.d H:i" }}</small>
+            </div>
+          </div>
+          {% empty %}<div class="detail-empty">아직 작성된 프로젝트 자기평가가 없습니다.</div>{% endfor %}
+        </div>
+      </section>
+
+      <section class="detail-panel">
+        <div class="detail-panel-head"><div><h3>팀 배정 이력</h3><p>과거 회차의 팀 배정은 삭제하지 않고 이력으로 보존됩니다.</p></div></div>
+        <div class="membership-history-list">
+          {% for membership in memberships %}
+          <div class="membership-history-item"><div class="membership-icon"><i class="bi bi-diagram-3"></i></div><div><strong>{{ membership.team.name }}</strong><span>{{ membership.team.evaluation_round.name }}{% if membership.team.project_title %} · {{ membership.team.project_title }}{% endif %}</span></div>{% if membership.is_leader %}<span class="leader-chip">팀장</span>{% endif %}</div>
+          {% empty %}<div class="detail-empty">팀 배정 이력이 없습니다.</div>{% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <aside class="student-detail-side">
+      <section class="detail-panel account-control-panel">
+        <div class="detail-panel-head"><div><h3>계정 제어</h3><p>로그인 권한과 비밀번호를 관리합니다.</p></div><i class="bi bi-shield-lock"></i></div>
+        <div class="account-status-row"><span>로그인 상태</span>{% if student.is_active and student.user.is_active %}<strong class="text-success">사용 가능</strong>{% else %}<strong class="text-danger">차단됨</strong>{% endif %}</div>
+        <div class="account-status-row"><span>마지막 로그인</span><strong>{% if student.user.last_login %}{{ student.user.last_login|date:"Y.m.d H:i" }}{% else %}기록 없음{% endif %}</strong></div>
+        <div class="account-status-row"><span>관리자 권한</span><strong class="text-success">없음</strong></div>
+        <hr>
+        <form method="post" action="{% url 'admin_student_reset_password' student.id %}" class="reset-password-form">
+          {% csrf_token %}
+          <label>임시 비밀번호 초기화</label>
+          <input type="password" name="new_password" minlength="8" placeholder="비워두면 자동 생성">
+          <small>직접 입력하거나 비워두면 안전한 12자리 임시 비밀번호가 자동 생성됩니다. 초기화 시 기존 로그인 세션도 종료합니다.</small>
+          <button class="btn btn-dark w-100" type="submit" onclick="return confirm('이 학생의 비밀번호를 초기화할까요?');"><i class="bi bi-key me-1"></i>비밀번호 초기화</button>
+        </form>
+      </section>
+
+      <section class="detail-panel">
+        <div class="detail-panel-head"><div><h3>최근 활동</h3><p>최근 평가 저장·제출 기록입니다.</p></div></div>
+        <div class="recent-activity-list">
+          {% for activity in activities %}<div class="recent-activity-item"><div class="activity-icon"><i class="bi {{ activity.icon }}"></i></div><div><strong>{{ activity.title }}</strong><span>{{ activity.detail }}</span><time>{{ activity.at|date:"m.d H:i" }}</time></div></div>{% empty %}<div class="detail-empty">최근 평가 활동이 없습니다.</div>{% endfor %}
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="modal fade" id="studentEditDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal">
+    <div class="modal-header"><h5 class="modal-title fw-bold">{{ student.name }} 정보 수정</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form method="post" action="{% url 'admin_student_update' student.id %}">{% csrf_token %}
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label fw-semibold">이름 *</label><input name="name" value="{{ student.name }}" class="form-control" required maxlength="150"></div>
+        <div class="mb-3"><label class="form-label fw-semibold">이메일 *</label><input name="email" type="email" value="{{ student.email }}" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label fw-semibold">새 비밀번호</label><input name="password" type="password" class="form-control" minlength="8" placeholder="변경하지 않으려면 비워두기"></div>
+        <div class="mb-3"><label class="form-label fw-semibold">소속</label><input name="affiliation" value="{{ student.affiliation }}" class="form-control" maxlength="100"></div>
+        <div class="mb-3"><label class="form-label fw-semibold">현재 회차 팀</label><select name="team_id" class="form-select" {% if not current_round %}disabled{% endif %}><option value="">미배정</option>{% if current_round %}{% for team in current_round.teams.all %}{% if team.is_active %}<option value="{{ team.id }}" {% if current_team and current_team.id == team.id %}selected{% endif %}>{{ team.name }}</option>{% endif %}{% endfor %}{% endif %}</select></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" value="on" id="detailStudentActive" {% if student.is_active and student.user.is_active %}checked{% endif %}><label class="form-check-label" for="detailStudentActive">활성 계정</label></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary" type="submit">저장</button></div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

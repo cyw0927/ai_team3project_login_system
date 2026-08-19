@@ -1,0 +1,107 @@
+{% extends "base_admin.html" %}
+{% block title %}수강생 성장 대시보드{% endblock %}
+{% block content %}
+<div class="hr-dashboard-page">
+  <div class="page-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div>
+      <div class="text-uppercase small fw-bold text-primary mb-2">STUDENT GROWTH OVERVIEW</div>
+      <h2 class="mb-1">수강생 성장 대시보드</h2>
+      <p class="text-muted mb-0">과제 진행률, 지연, 검토 요청과 수강생 역량 현황을 한눈에 확인합니다.</p>
+    </div>
+    <a href="{% url 'admin_hr_tasks' %}" class="btn btn-primary ax-primary-btn">
+      <i class="bi bi-briefcase me-1"></i>과제 관리
+    </a>
+  </div>
+
+  <section class="hr-dash-kpis">
+    <article><span>전체 과제</span><strong>{{ summary.total }}</strong><small>등록된 역량 과제</small></article>
+    <article><span>평균 진행률</span><strong>{{ summary.avg_progress }}%</strong><small>학생 자기진도 기준</small></article>
+    <article><span>검토 대기</span><strong>{{ summary.review }}</strong><small>관리자 확인 필요</small></article>
+    <article class="{% if summary.overdue %}danger{% endif %}"><span>지연 과제</span><strong>{{ summary.overdue }}</strong><small>마감일 초과</small></article>
+    <article><span>평균 과제 점수</span><strong>{{ summary.avg_task_score }}</strong><small>100점 기준</small></article>
+  </section>
+
+  <div class="hr-dash-grid two">
+    <section class="hr-dash-panel">
+      <div class="hr-dash-head"><div><h3>즉시 확인할 과제</h3><p>지연 및 검토 요청을 우선 표시합니다.</p></div></div>
+      <div class="hr-attention-list">
+        {% for task in overdue_tasks %}
+        <a href="{% url 'admin_hr_tasks' %}?q={{ task.title|urlencode }}#task-{{ task.id }}" class="hr-attention-item danger">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <div><strong>{{ task.title }}</strong><span>{{ task.assignee.name|default:"담당자 미지정" }} · 마감 {{ task.due_date }}</span></div>
+          <b>{{ task.progress_percent }}%</b>
+        </a>
+        {% endfor %}
+        {% for task in review_tasks %}
+        <a href="{% url 'admin_hr_tasks' %}?q={{ task.title|urlencode }}#task-{{ task.id }}" class="hr-attention-item review">
+          <i class="bi bi-search"></i>
+          <div><strong>{{ task.title }}</strong><span>{{ task.assignee.name|default:"담당자 미지정" }} · 평가 대기</span></div>
+          <b>검토</b>
+        </a>
+        {% endfor %}
+        {% if not overdue_tasks and not review_tasks %}
+        <div class="hr-dash-empty"><i class="bi bi-check-circle"></i> 긴급하게 확인할 과제가 없습니다.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="hr-dash-panel">
+      <div class="hr-dash-head"><div><h3>업무 상태</h3><p>현재 전체 과제 분포입니다.</p></div></div>
+      <div class="hr-status-bars">
+        <div><span>진행 중</span><b>{{ summary.in_progress }}</b></div>
+        <div><span>검토 요청</span><b>{{ summary.review }}</b></div>
+        <div><span>완료</span><b>{{ summary.completed }}</b></div>
+        <div><span>지연</span><b>{{ summary.overdue }}</b></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="hr-dash-grid two">
+    <section class="hr-dash-panel">
+      <div class="hr-dash-head"><div><h3>수강생 역량 / 과제 현황</h3><p>역량 평균과 현재 미완료 과제 수입니다.</p></div></div>
+      <div class="hr-people-table">
+        <div class="hr-table-row head"><span>수강생</span><span>역량</span><span>평균</span><span>과제</span></div>
+        {% for row in people %}
+        <div class="hr-table-row">
+          <span><strong>{{ row.student.name }}</strong><small>{{ row.student.user.email }}</small></span>
+          <span>{{ row.skill_count }}개</span>
+          <span><b>{{ row.avg_skill }}</b></span>
+          <span class="{% if row.active_task_count >= 3 %}busy{% endif %}">{{ row.active_task_count }}건</span>
+        </div>
+        {% empty %}
+        <div class="hr-dash-empty">표시할 수강생이 없습니다.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="hr-dash-panel">
+      <div class="hr-dash-head"><div><h3>최근 과제 평가</h3><p>최근 완료된 과제 성과입니다.</p></div></div>
+      <div class="hr-recent-evals">
+        {% for evaluation in recent_evaluations %}
+        <a class="hr-recent-eval-link" href="{% url 'admin_hr_tasks' %}?q={{ evaluation.task.title|urlencode }}#task-{{ evaluation.task.id }}">
+          <div><strong>{{ evaluation.student.name }}</strong><span>{{ evaluation.task.title }}</span></div>
+          <b>{{ evaluation.score }}<small>/100</small></b>
+        </a>
+        {% empty %}
+        <div class="hr-dash-empty">아직 완료된 과제 평가가 없습니다.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section class="hr-dash-panel">
+    <div class="hr-dash-head"><div><h3>진행 중인 과제</h3><p>현재 수행 단계에 있는 업무입니다.</p></div></div>
+    <div class="hr-active-task-grid">
+      {% for task in active_tasks %}
+      <a class="hr-active-task-link" href="{% url 'admin_hr_tasks' %}?q={{ task.title|urlencode }}#task-{{ task.id }}">
+        <div><strong>{{ task.title }}</strong><span>{{ task.assignee.name|default:"미지정" }}</span></div>
+        <div class="mini-progress"><span style="width:{{ task.progress_percent }}%"></span></div>
+        <footer><span>{{ task.completed_step_count }}/{{ task.step_count }} Steps</span><b>{{ task.progress_percent }}%</b></footer>
+      </a>
+      {% empty %}
+      <div class="hr-dash-empty">현재 진행 중인 과제가 없습니다.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

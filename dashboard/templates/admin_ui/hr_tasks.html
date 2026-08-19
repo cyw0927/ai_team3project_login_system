@@ -1,0 +1,374 @@
+{% extends "base_admin.html" %}
+{% block title %}역량 과제 관리{% endblock %}
+{% block content %}
+<div class="hr-task-page">
+  <div class="page-header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div>
+      <div class="text-uppercase small fw-bold text-primary mb-2">STUDENT GROWTH TASKS</div>
+      <h2 class="mb-1">역량 과제 관리</h2>
+      <p class="text-muted mb-0">수강생에게 성장 과제를 배정하고 필요한 역량을 함께 설정합니다.</p>
+    </div>
+    <button class="btn btn-primary ax-primary-btn" type="button" data-bs-toggle="modal" data-bs-target="#taskCreateModal">
+      <i class="bi bi-plus-lg me-1"></i>새 과제
+    </button>
+  </div>
+
+  <div class="hr-task-stat-grid">
+    <article><span>전체 과제</span><strong>{{ task_stats.total }}</strong><i class="bi bi-collection"></i></article>
+    <article><span>진행 중</span><strong>{{ task_stats.active }}</strong><i class="bi bi-play-circle"></i></article>
+    <article><span>검토 요청</span><strong>{{ task_stats.review }}</strong><i class="bi bi-search"></i></article>
+    <article class="{% if task_stats.overdue %}is-alert{% endif %}"><span>지연</span><strong>{{ task_stats.overdue }}</strong><i class="bi bi-exclamation-triangle"></i></article>
+  </div>
+
+  <div class="ax-work-card hr-task-toolbar">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md">
+        <input class="form-control" name="q" value="{{ query }}" placeholder="과제명, 수강생, 역량 검색">
+      </div>
+      <div class="col-md-3">
+        <select class="form-select" name="status">
+          <option value="">전체 상태</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto"><button class="btn btn-outline-primary">검색</button></div>
+    </form>
+  </div>
+
+  <div class="hr-task-list">
+    {% for task in tasks %}
+    <article id="task-{{ task.id }}" class="hr-task-card {% if task.is_overdue %}is-overdue{% endif %}">
+      <div class="hr-task-main">
+        <div class="hr-task-title-row">
+          <div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="task-priority priority-{{ task.priority }}">{{ task.get_priority_display }}</span>
+              <span class="task-status status-{{ task.status }}">{{ task.get_status_display }}</span>
+              {% if task.evaluation_round %}
+              <span class="task-badge-link"><i class="bi bi-award"></i> {{ task.evaluation_round.name }} 배지 반영</span>
+              {% endif %}
+              {% if task.is_overdue %}<span class="task-overdue"><i class="bi bi-clock-history"></i> 지연</span>{% endif %}
+            </div>
+            <h3><a class="hr-task-title-link" href="#task-{{ task.id }}" title="이 과제로 바로가기">{{ task.title }}</a></h3>
+            <p>{{ task.description|default:"설명이 없습니다."|truncatechars:180 }}</p>
+          </div>
+          <div class="hr-task-person">
+            <span>담당 수강생</span>
+            <strong>{% if task.assignee %}{{ task.assignee.name }}{% else %}미지정{% endif %}</strong>
+          </div>
+        </div>
+
+        {% if task.attachment %}
+        <a class="hr-task-admin-attachment" href="{% url 'hr_task_attachment_download' task.id %}">
+          <i class="bi bi-paperclip"></i> 첨부파일 · {{ task.attachment.name|slice:"13:" }}
+        </a>
+        {% endif %}
+
+        <div class="hr-task-meta">
+          <span><i class="bi bi-calendar-event"></i> 시작 {{ task.start_date|default:"-" }}</span>
+          <span><i class="bi bi-flag"></i> 마감 {{ task.due_date|default:"-" }}</span>
+          <span><i class="bi bi-lightning-charge"></i> 역량 {{ task.skill_items|length }}개</span>
+        </div>
+
+        <div class="hr-task-progress-block">
+          <div class="hr-task-progress-head">
+            <span>학생 자기진도 <strong>{{ task.completed_step_count }} / {{ task.step_count }}</strong></span>
+            <strong>{{ task.progress_percent }}%</strong>
+          </div>
+          <div class="hr-task-progress-track"><span style="width:{{ task.progress_percent }}%"></span></div>
+          <small class="hr-self-progress-note"><i class="bi bi-info-circle"></i> 이 진행률은 학생의 자기진도 체크입니다. 과제 완료 여부는 제출 후 튜터 평가로 결정됩니다.</small>
+        </div>
+
+        <div class="hr-task-step-admin">
+          <div class="hr-task-step-head">
+            <strong>Task Steps</strong>
+            <form method="post" action="{% url 'admin_hr_task_step_add' task.id %}" class="hr-step-add-form hr-step-add-form-detail">
+              {% csrf_token %}
+              <div class="hr-step-create-fields">
+                <input class="form-control form-control-sm" name="step_title" maxlength="160" placeholder="Step 제목" required>
+                <textarea class="form-control form-control-sm" name="step_detail" rows="2" maxlength="3000" placeholder="이 단계에서 해야 할 일을 구체적으로 적어주세요."></textarea>
+              </div>
+              <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg"></i> 추가</button>
+            </form>
+          </div>
+          <div class="hr-task-step-list">
+            {% for step in task.step_items %}
+            <div class="hr-task-step-row {% if step.is_completed %}is-done{% endif %}">
+              <span class="step-order">{{ step.order }}</span>
+              <div class="step-admin-copy">
+                <strong class="step-title">{{ step.title }}</strong>
+                {% if step.detail %}<p>{{ step.detail|linebreaksbr }}</p>{% else %}<small>상세 지시사항 없음</small>{% endif %}
+              </div>
+              {% if step.is_completed %}<span class="step-done"><i class="bi bi-check-circle-fill"></i> 학생 체크</span>{% endif %}
+              <button class="btn btn-sm btn-link text-primary p-0" type="button" data-bs-toggle="collapse" data-bs-target="#stepEdit{{ step.id }}" aria-label="Step 수정"><i class="bi bi-pencil-square"></i></button>
+              <form method="post" action="{% url 'admin_hr_task_step_delete' task.id step.id %}"
+                    data-ax-critical
+                    data-ax-title="Step을 삭제할까요?"
+                    data-ax-message="'{{ step.title|escapejs }}' Step을 삭제합니다."
+                    data-ax-note="완료 기록도 함께 삭제됩니다."
+                    data-ax-button="삭제">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-link text-danger p-0" type="submit" aria-label="Step 삭제"><i class="bi bi-trash3"></i></button>
+              </form>
+            </div>
+            <div class="collapse hr-step-edit-collapse" id="stepEdit{{ step.id }}">
+              <form method="post" action="{% url 'admin_hr_task_step_update' task.id step.id %}" class="hr-step-edit-form">
+                {% csrf_token %}
+                <input class="form-control form-control-sm" name="step_title" maxlength="160" value="{{ step.title }}" required>
+                <textarea class="form-control form-control-sm" name="step_detail" rows="3" maxlength="3000" placeholder="상세 지시사항">{{ step.detail }}</textarea>
+                <button class="btn btn-sm btn-primary" type="submit">저장</button>
+              </form>
+            </div>
+            {% empty %}
+            <div class="small text-muted py-2">아직 Step이 없습니다. 수행 단계를 추가해주세요.</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="hr-task-skills">
+          {% for item in task.skill_items %}
+          <div class="hr-task-skill">
+            <div><strong>{{ item.skill.name }}</strong><span>{{ item.weight }}%</span></div>
+            <div class="hr-task-skill-track"><span style="width:{{ item.weight }}%"></span></div>
+          </div>
+          {% empty %}
+          <div class="text-muted small">필요 역량이 아직 설정되지 않았습니다.</div>
+          {% endfor %}
+        </div>
+
+        <div class="hr-recommend-panel">
+          <div class="hr-recommend-head">
+            <div>
+              <span>SMART STUDENT MATCH</span>
+              <strong>Skill 기반 담당 수강생 추천</strong>
+            </div>
+            {% if task.best_recommendation %}
+            <div class="hr-best-fit">
+              <small>최고 적합도</small>
+              <b>{{ task.best_recommendation.fit_score }}%</b>
+            </div>
+            {% endif %}
+          </div>
+
+          {% if task.recommendations %}
+          <div class="hr-recommend-list">
+            {% for candidate in task.recommendations %}
+            <article class="hr-recommend-item {% if forloop.first %}is-best{% endif %}">
+              <div class="hr-recommend-rank">{{ forloop.counter }}</div>
+              <div class="hr-recommend-person">
+                <strong>{{ candidate.student.name }}</strong>
+                <span>{{ candidate.student.user.email }}</span>
+              </div>
+              <div class="hr-recommend-fit">
+                <div>
+                  <span>적합도</span>
+                  <strong>{{ candidate.fit_score }}%</strong>
+                </div>
+                <div class="hr-recommend-fit-track">
+                  <span style="width:{{ candidate.fit_score }}%"></span>
+                </div>
+                <small>역량 데이터 충족 {{ candidate.coverage }}%</small>
+              </div>
+              <div class="hr-recommend-skills">
+                {% for item in candidate.skills %}
+                <span class="{% if item.score is None %}is-missing{% endif %}">
+                  {{ item.name }}
+                  <b>{% if item.score is None %}-{% else %}{{ item.score }}{% endif %}</b>
+                  <small>× {{ item.weight }}%</small>
+                </span>
+                {% endfor %}
+              </div>
+              <form method="post" action="{% url 'admin_hr_task_assign_recommended' task.id candidate.student.id %}">
+                {% csrf_token %}
+                <button class="btn btn-sm {% if task.assignee_id == candidate.student.id %}btn-success{% else %}btn-outline-primary{% endif %}" type="submit"
+                        {% if task.assignee_id == candidate.student.id %}disabled{% endif %}>
+                  {% if task.assignee_id == candidate.student.id %}
+                  <i class="bi bi-check-lg"></i> 현재 담당 수강생
+                  {% else %}
+                  <i class="bi bi-person-check"></i> 배정
+                  {% endif %}
+                </button>
+              </form>
+            </article>
+            {% endfor %}
+          </div>
+          <div class="hr-recommend-note">
+            <i class="bi bi-info-circle"></i>
+            적합도 = 각 필요 역량 점수 × 중요도의 가중평균입니다. 역량 Profile이 없는 역량은 0점으로 계산합니다.
+          </div>
+          {% elif task.skill_items %}
+          <div class="hr-recommend-empty">
+            활성 학생의 역량 Profile 데이터가 없습니다.
+          </div>
+          {% else %}
+          <div class="hr-recommend-empty">
+            필요 역량을 설정하면 담당 수강생 추천이 자동 계산됩니다.
+          </div>
+          {% endif %}
+        </div>
+
+        {% if task.submission_obj %}
+        <div class="hr-review-panel">
+          <div class="hr-review-head">
+            <div>
+              <span>SUBMISSION</span>
+              <strong>{{ task.submission_obj.student.name }} 제출물</strong>
+            </div>
+            <time>{{ task.submission_obj.submitted_at|date:"Y.m.d H:i" }}</time>
+          </div>
+          {% if task.submission_obj.content %}<p>{{ task.submission_obj.content|linebreaksbr }}</p>{% endif %}
+          {% if task.submission_obj.attachment %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ task.submission_obj.attachment.url }}" target="_blank">
+            <i class="bi bi-paperclip"></i> 첨부파일 열기
+          </a>
+          {% endif %}
+
+          {% if task.status == 'review' %}
+          <div class="hr-review-actions">
+            <form method="post" action="{% url 'admin_hr_task_request_revision' task.id %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>수정 요청</button>
+            </form>
+            <form method="post" action="{% url 'admin_hr_task_evaluate' task.id %}" class="hr-eval-form">
+              {% csrf_token %}
+              <div class="input-group">
+                <input class="form-control" type="number" name="score" min="0" max="100" value="{{ task.evaluation_obj.score|default:80 }}" required>
+                <span class="input-group-text">/100</span>
+              </div>
+              <input class="form-control" type="text" name="comment" maxlength="3000" value="{{ task.evaluation_obj.comment|default:'' }}" placeholder="평가 코멘트">
+              <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1"></i>평가 완료</button>
+            </form>
+          </div>
+          {% elif task.evaluation_obj %}
+          <div class="hr-eval-complete">
+            <span>평가 완료</span>
+            <strong>{{ task.evaluation_obj.score }}점</strong>
+            <p>{{ task.evaluation_obj.comment|default:"코멘트 없음" }}</p>
+          </div>
+          {% if task.skill_update_items %}
+          <div class="hr-skill-update-result">
+            <strong><i class="bi bi-lightning-charge-fill"></i> 역량 Profile 반영</strong>
+            <div>
+              {% for update in task.skill_update_items %}
+              <span>
+                {{ update.skill.name }}
+                <em>{{ update.previous_score }}</em>
+                <i class="bi bi-arrow-right"></i>
+                <b>{{ update.new_score }}</b>
+                {% if update.delta > 0 %}<small class="up">+{{ update.delta }}</small>
+                {% elif update.delta < 0 %}<small class="down">{{ update.delta }}</small>
+                {% else %}<small>±0</small>{% endif %}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="hr-task-actions">
+        <button class="btn btn-sm btn-outline-primary" type="button"
+                data-bs-toggle="modal" data-bs-target="#taskEditModal{{ task.id }}">
+          수정
+        </button>
+        <form method="post" action="{% url 'admin_hr_task_delete' task.id %}"
+              onsubmit="return confirm('{{ task.title|escapejs }} 역량 과제를 정말 삭제할까요?\nStep, 제출물, 평가, 역량 반영 이력이 함께 삭제되고 이 과제로 오른 역량점수도 취소됩니다.');">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger" type="submit">
+            <i class="bi bi-trash3 me-1"></i>삭제
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <div class="modal fade" id="taskEditModal{{ task.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <form method="post" enctype="multipart/form-data" action="{% url 'admin_hr_task_update' task.id %}">
+            {% csrf_token %}
+            <div class="modal-header">
+              <div><div class="small fw-bold text-primary">EDIT GROWTH TASK</div><h5 class="modal-title">{{ task.title }}</h5></div>
+              <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {% include "admin_ui/includes/hr_task_form.html" with edit_task=task %}
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-light" type="button" data-bs-dismiss="modal">취소</button>
+              <button class="btn btn-primary ax-primary-btn" type="submit">변경 저장</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="ax-work-card text-center py-5">
+      <i class="bi bi-briefcase fs-1 text-primary"></i>
+      <h4 class="mt-3">아직 역량 과제가 없습니다.</h4>
+      <p class="text-muted">첫 과제를 만들고 필요한 역량을 설정해보세요.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="modal fade" id="taskCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'admin_hr_task_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <div><div class="small fw-bold text-primary">NEW GROWTH TASK</div><h5 class="modal-title">새 과제 만들기</h5></div>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {% include "admin_ui/includes/hr_task_form.html" %}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">취소</button>
+          <button class="btn btn-primary ax-primary-btn" type="submit">과제 생성</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  document.querySelectorAll('[data-skill-builder]').forEach((builder) => {
+    const rows = builder.querySelector('[data-skill-rows]');
+    const template = builder.querySelector('template');
+    const addButton = builder.querySelector('[data-add-skill]');
+    const total = builder.querySelector('[data-skill-total]');
+
+    const updateTotal = () => {
+      let sum = 0;
+      rows.querySelectorAll('input[name="skill_weight"]').forEach((input) => {
+        sum += Number(input.value || 0);
+      });
+      total.textContent = `${sum}%`;
+      total.classList.toggle('is-valid', sum === 100 || sum === 0);
+      total.classList.toggle('is-invalid', sum !== 100 && sum !== 0);
+    };
+
+    addButton?.addEventListener('click', () => {
+      rows.insertAdjacentHTML('beforeend', template.innerHTML);
+      updateTotal();
+    });
+    rows.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-skill]');
+      if (!button) return;
+      button.closest('.task-skill-row')?.remove();
+      updateTotal();
+    });
+    rows.addEventListener('input', updateTotal);
+    updateTotal();
+  });
+})();
+</script>
+{% endblock %}

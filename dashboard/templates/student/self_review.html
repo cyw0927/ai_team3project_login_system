@@ -1,0 +1,70 @@
+{% extends "base_student.html" %}
+{% block title %}나의 프로젝트 평가{% endblock %}
+{% block content %}
+<div class="ax-student-page-head">
+  <div>
+    <h3 class="page-title"><span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-journal-check"></i></span>나의 프로젝트 평가</h3>
+    <p class="ax-page-subtitle">종료된 프로젝트를 돌아보고 다음 프로젝트를 위한 메모를 남겨보세요. 자기평가는 성적에 반영되지 않습니다.</p>
+  </div>
+</div>
+
+{% if ended_rounds %}
+<div class="card ax-student-panel mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">프로젝트 회차</label>
+        <select class="form-select" name="round" onchange="this.form.submit()">
+          {% for round in ended_rounds %}
+          <option value="{{ round.id }}" {% if selected_round and selected_round.id == round.id %}selected{% endif %}>
+            {{ round.name }}{% if round.id in reviews %} · 작성 완료{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card ax-student-panel">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+      <div><h5 class="fw-bold mb-1">{{ selected_round.name }} 회고</h5><p class="text-muted small mb-0">1점은 낮음, 5점은 높음입니다.</p></div>
+      {% if review %}<span class="badge bg-success-subtle text-success border">작성 완료 · 수정 가능</span>{% else %}<span class="badge bg-light text-secondary border">미작성</span>{% endif %}
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="evaluation_round_id" value="{{ selected_round.id }}">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="row g-3 mb-4">
+        {% for field in form %}
+          {% if field.name == 'satisfaction' or field.name == 'contribution' or field.name == 'collaboration' or field.name == 'difficulty' %}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% for field in form %}
+        {% if field.name == 'learned' or field.name == 'regret' or field.name == 'next_action' %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <div class="d-flex justify-content-end"><button class="btn btn-primary px-4" type="submit"><i class="bi bi-check2-circle me-1"></i>{% if review %}회고 수정{% else %}회고 저장{% endif %}</button></div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="card ax-student-panel"><div class="card-body"><div class="empty-state"><i class="bi bi-hourglass-split fs-2 d-block mb-2"></i>아직 회고를 작성할 수 있는 종료 프로젝트가 없습니다.</div></div></div>
+{% endif %}
+{% endblock %}

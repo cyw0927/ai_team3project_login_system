@@ -1,0 +1,248 @@
+{% extends "base_student.html" %}
+{% block title %}학생 홈 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-student-page-head home-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-house-heart-fill"></i></span>
+      {{ request.user.get_full_name|default:request.user.username }} 수강생님, 환영합니다! <span class="wave">👋</span>
+    </h3>
+    <p class="ax-page-subtitle">회차 상태에 맞춰 지금 해야 할 일과 결과를 확인하세요.</p>
+  </div>
+</div>
+
+{% if growth_task_preview %}
+<section class="home-growth-quick">
+  <div class="home-growth-quick-head">
+    <div><span>개별 성장 과제</span><strong>내 역량 과제 바로가기</strong></div>
+    <a href="{% url 'student_hr_tasks' %}">전체 보기 <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="home-growth-quick-list">
+    {% for task in growth_task_preview %}
+    <a href="{% url 'student_hr_tasks' %}#task-{{ task.id }}" class="{% if task.is_overdue %}is-overdue{% elif task.status == 'review' %}is-review{% endif %}">
+      <div>
+        <strong>{{ task.title }}</strong>
+        <span>{% if task.status == 'review' %}검토 요청{% elif task.is_overdue %}마감 지연{% else %}{{ task.get_status_display }}{% endif %}</span>
+      </div>
+      <i class="bi bi-chevron-right"></i>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if current_round %}
+<div class="student-dashboard home-v2 {% if round_ended %}is-ended{% endif %}">
+  {% if attendance and absent_from_team_eval %}
+  <section class="attendance-policy-banner">
+    <i class="bi bi-info-circle-fill"></i>
+    <div><b>{{ attendance.get_status_display }} 처리 안내</b><span>발표 당일 {{ attendance.get_status_display }}로 등록되어 다른 팀 평가는 면제됩니다. 같은 팀원 개인 평가는 정상적으로 진행할 수 있습니다.{% if attendance.note %} · {{ attendance.note }}{% endif %}</span></div>
+  </section>
+  {% endif %}
+
+  <section class="dashboard-card dashboard-hero-card {% if round_ended %}ended{% endif %}">
+    <div class="hero-icon"><i class="bi {% if round_ended %}bi-check2-circle{% else %}bi-calendar2-week{% endif %}"></i></div>
+    <div class="hero-copy">
+      <span class="eyebrow">{% if round_ended %}최근 종료 회차{% else %}현재 평가 회차{% endif %}</span>
+      <h2>{{ current_round.name }}</h2>
+      <p>{{ current_round.start_at|date:"Y-m-d" }} ~ {{ current_round.end_at|date:"Y-m-d" }}</p>
+    </div>
+    <div class="home-round-status-stack">
+      <span class="round-state {% if round_in_progress %}is-live{% elif round_ended %}is-ended{% endif %}">{{ current_round.status_display }}</span>
+      {% if deadline %}
+        <span class="home-deadline-chip is-{{ deadline.level }}"><i class="bi bi-alarm-fill"></i>{{ deadline.label }}</span>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if round_in_progress and deadline and deadline.level != "normal" %}
+  <section class="home-deadline-alert is-{{ deadline.level }}">
+    <span class="home-deadline-alert-icon"><i class="bi {% if deadline.level == 'critical' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i></span>
+    <div>
+      <b>{{ deadline.label }}</b>
+      <span>{{ deadline.detail }}</span>
+    </div>
+    <a href="{% url 'student_evaluation_status' %}">진행 현황 <i class="bi bi-arrow-right"></i></a>
+  </section>
+  {% endif %}
+
+  {% if current_round %}
+  <section class="home-evaluation-access is-{{ evaluation_edit_status.level }}">
+    <span class="home-evaluation-access-icon">
+      <i class="bi {% if evaluation_edit_status.level == 'complete' %}bi-check-circle-fill{% elif evaluation_edit_status.level == 'active' %}bi-pencil-square{% elif evaluation_edit_status.level == 'paused' %}bi-pause-circle-fill{% elif evaluation_edit_status.level == 'closed' %}bi-lock-fill{% else %}bi-hourglass-split{% endif %}"></i>
+    </span>
+    <div class="home-evaluation-access-copy">
+      <span>평가 수정 상태</span>
+      <b>{{ evaluation_edit_status.label }}</b>
+      <small>{{ evaluation_edit_status.detail }}</small>
+    </div>
+    {% if evaluation_edit_status.editable %}
+      <a href="{% url 'student_evaluation_status' %}">평가 확인 <i class="bi bi-arrow-right"></i></a>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if round_in_progress %}
+  <section class="dashboard-card home-summary-card">
+    <div class="summary-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+    <div>
+      <span class="eyebrow">지금 확인할 것</span>
+      <h3>{% if pending_assignment_count %}미제출 과제 {{ pending_assignment_count }}개가 있습니다.{% elif progress.overall_percent < 100 %}평가 진행률 {{ progress.overall_percent }}%입니다.{% else %}현재 할 일을 모두 완료했습니다.{% endif %}</h3>
+      <p>과제와 평가 진행 상태를 확인하고 필요한 항목을 이어서 진행하세요.</p>
+      <div class="home-alert-chips">
+        <a href="{% url 'student_messages' %}" class="home-alert-chip message {% if unread_message_count %}has-new{% endif %}">
+          <i class="bi bi-envelope-fill"></i>
+          <span>새 메시지</span>
+          <strong>{{ unread_message_count }}</strong>
+        </a>
+        <a href="{% url 'student_notifications' %}" class="home-alert-chip notice {% if unread_announcement_count %}has-new{% endif %}">
+          <i class="bi bi-megaphone-fill"></i>
+          <span>미확인 공지</span>
+          <strong>{{ unread_announcement_count }}</strong>
+          {% if urgent_announcement_count %}<em>긴급 {{ urgent_announcement_count }}</em>{% endif %}
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-card dashboard-todo-card home-wide-card">
+    <div class="home-card-head">
+      <div><span class="eyebrow">TODAY</span><h3>오늘 해야 할 일</h3></div>
+      <div class="home-todo-head-meta">
+        <span class="home-progress-badge">{{ todo_completed_count }} / {{ todo_total_count }} 완료</span>
+        {% if todo_remaining_count %}<span class="home-todo-remaining">남은 할 일 {{ todo_remaining_count }}건</span>{% else %}<span class="home-todo-complete"><i class="bi bi-check-circle-fill"></i> 모두 완료</span>{% endif %}
+      </div>
+    </div>
+
+    {% if todo_total_count and not todo_remaining_count %}
+      <div class="home-todo-all-done"><i class="bi bi-stars"></i><div><b>오늘 해야 할 일을 모두 완료했습니다.</b><span>마감 전까지 제출 내용을 다시 확인할 수 있습니다.</span></div></div>
+    {% endif %}
+
+    {% for row in assignment_rows %}
+      <a href="{% url 'student_assignment_info' %}" class="todo-item compact">
+        <span class="todo-icon"><i class="bi {% if row.assignment.assignment_type == 'team' %}bi-people{% else %}bi-person-workspace{% endif %}"></i></span>
+        <span class="todo-copy"><b>{{ row.assignment.get_assignment_type_display }} · {{ row.assignment.title }}</b><small>{% if row.submitted %}제출 완료{% else %}제출이 필요합니다{% endif %}</small></span>
+        <span class="todo-check {% if row.submitted %}done{% endif %}"><i class="bi bi-check-lg"></i></span>
+      </a>
+    {% empty %}
+      <div class="empty-inline"><i class="bi bi-file-earmark-check"></i><span>현재 등록된 과제가 없습니다.</span></div>
+    {% endfor %}
+
+    <a href="{% url 'student_team_evaluation' %}" class="todo-item compact">
+      <span class="todo-icon"><i class="bi bi-people-fill"></i></span>
+      <span class="todo-copy"><b>다른 팀 평가</b><small>{% if absent_from_team_eval %}발표 당일 결석 처리로 면제{% elif team_remaining_count %}{{ team_remaining_count }}건 남음 · {{ progress.team_completed }} / {{ progress.team_total }} 완료{% else %}모든 팀 평가 완료{% endif %}</small></span>
+      <span class="todo-check {% if absent_from_team_eval or progress.team_total and progress.team_completed == progress.team_total %}done{% endif %}"><i class="bi bi-check-lg"></i></span>
+    </a>
+    <a href="{% url 'student_personal_evaluation' %}" class="todo-item compact">
+      <span class="todo-icon"><i class="bi bi-person-check-fill"></i></span>
+      <span class="todo-copy"><b>같은 팀원 개인 평가</b><small>{% if personal_remaining_count %}{{ personal_remaining_count }}건 남음 · {{ progress.personal_completed }} / {{ progress.personal_total }} 완료{% else %}모든 개인 평가 완료{% endif %}</small></span>
+      <span class="todo-check {% if progress.personal_total and progress.personal_completed == progress.personal_total %}done{% endif %}"><i class="bi bi-check-lg"></i></span>
+    </a>
+  </section>
+
+  <section class="dashboard-card feedback-nudge-card">
+    <div class="feedback-nudge-icon"><i class="bi bi-chat-heart-fill"></i></div>
+    <div class="feedback-nudge-copy">
+      <span class="eyebrow">FEEDBACK</span>
+      <h3>따뜻한 피드백을 남겨주세요.</h3>
+      <p>점수와 함께 구체적인 한마디를 남기면 팀원과 다른 팀이 다음 프로젝트에서 더 잘 활용할 수 있습니다.</p>
+      <div class="feedback-nudge-meta"><strong>{{ feedback_written_count }}</strong><span>이번 회차에서 내가 남긴 코멘트</span></div>
+    </div>
+    <div class="feedback-nudge-actions">
+      {% if personal_eval_available %}<a href="{% url 'student_personal_evaluation' %}" class="home-primary-btn"><i class="bi bi-person-heart"></i> 팀원 피드백</a>{% endif %}
+      {% if team_eval_available %}<a href="{% url 'student_team_evaluation' %}" class="home-secondary-btn"><i class="bi bi-people"></i> 팀 피드백</a>{% endif %}
+    </div>
+  </section>
+
+  <section class="dashboard-card dashboard-progress-card">
+    <div class="home-card-head"><div><span class="eyebrow">PROGRESS</span><h3>평가 진행 현황</h3></div></div>
+    <div class="progress-block">
+      <div class="progress-meta"><span>팀 평가</span><b>{{ progress.team_completed }} / {{ progress.team_total }}</b></div>
+      <div class="ax-progress"><span style="width:{% if progress.team_total %}{% widthratio progress.team_completed progress.team_total 100 %}{% else %}0{% endif %}%"></span></div>
+    </div>
+    <div class="progress-block">
+      <div class="progress-meta"><span>개인 평가</span><b>{{ progress.personal_completed }} / {{ progress.personal_total }}</b></div>
+      <div class="ax-progress"><span style="width:{% if progress.personal_total %}{% widthratio progress.personal_completed progress.personal_total 100 %}{% else %}0{% endif %}%"></span></div>
+    </div>
+    <a href="{% url 'student_evaluation_status' %}" class="text-link progress-detail">전체 진행 현황 <i class="bi bi-arrow-right"></i></a>
+  </section>
+
+  {% else %}
+  <section class="dashboard-card ended-summary-card home-wide-card">
+    <div class="ended-summary-copy">
+      <span class="eyebrow">PROJECT COMPLETE</span>
+      <h3>프로젝트가 종료되었습니다.</h3>
+      <p>결과와 받은 피드백을 확인하고, 다음 프로젝트를 위한 회고를 남겨보세요.</p>
+    </div>
+    <div class="ended-summary-actions">
+      {% if result_available %}<a href="{% url 'student_results' %}" class="home-primary-btn"><i class="bi bi-bar-chart-fill"></i> 결과 확인</a>{% endif %}
+      <a href="{% url 'student_self_review' %}" class="home-secondary-btn"><i class="bi bi-journal-check"></i> {% if self_review_completed %}회고 다시 보기{% else %}프로젝트 회고 작성{% endif %}</a>
+    </div>
+  </section>
+
+  <section class="dashboard-card feedback-summary-card">
+    <div class="home-card-head"><div><span class="eyebrow">FEEDBACK</span><h3>이번 프로젝트 피드백</h3></div></div>
+    {% if result_available %}
+      <div class="feedback-metrics">
+        <div><strong>{{ received_comment_count }}</strong><span>동료 코멘트</span></div>
+        <div><strong>{% if admin_feedback_available %}1{% else %}0{% endif %}</strong><span>관리자 피드백</span></div>
+      </div>
+      <a href="{% url 'student_results' %}" class="text-link">받은 피드백 확인 <i class="bi bi-arrow-right"></i></a>
+    {% else %}
+      <div class="empty-inline"><i class="bi bi-hourglass-split"></i><span>결과가 공개되면 받은 피드백을 확인할 수 있습니다.</span></div>
+    {% endif %}
+  </section>
+
+  <section class="dashboard-card review-status-card">
+    <div class="home-card-head"><div><span class="eyebrow">REFLECTION</span><h3>나의 프로젝트 평가</h3></div></div>
+    <div class="review-status-body">
+      <span class="review-status-icon {% if self_review_completed %}done{% endif %}"><i class="bi {% if self_review_completed %}bi-check-lg{% else %}bi-pencil-square{% endif %}"></i></span>
+      <div><b>{% if self_review_completed %}회고 작성 완료{% else %}아직 회고를 작성하지 않았습니다.{% endif %}</b><p>만족도·기여도·협업 경험을 기록해 다음 프로젝트에 활용하세요.</p></div>
+    </div>
+    <a href="{% url 'student_self_review' %}" class="text-link">{% if self_review_completed %}회고 수정하기{% else %}회고 작성하기{% endif %} <i class="bi bi-arrow-right"></i></a>
+  </section>
+  {% endif %}
+
+  <section class="dashboard-card dashboard-team-card home-team-card">
+    <div class="home-card-head"><div><span class="eyebrow">MY TEAM</span><h3>내 팀</h3></div>{% if my_team %}<a href="{% url 'student_team_info' %}" class="text-link">팀 정보 <i class="bi bi-chevron-right"></i></a>{% endif %}</div>
+    {% if my_team %}
+      <div class="home-team-name">{{ my_team.name }}</div>
+      <div class="member-grid">
+        {% for member in team_members %}
+          <div class="member-card {% if member.id == request.student.id %}is-me{% endif %}">
+            <span class="member-avatar"><i class="bi bi-person-fill"></i></span>
+            <div><b>{{ member.user.get_full_name|default:member.user.username }}</b><small>{{ member.team_role }}</small></div>
+            {% if member.id == request.student.id %}<span class="me-badge">나</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-inline"><i class="bi bi-people"></i><span>아직 배정된 팀이 없습니다.</span></div>
+    {% endif %}
+  </section>
+
+  <section class="sample-card home-announcement-panel">
+    <div class="admin-section-head compact">
+      <div><h2>공지사항</h2><p>운영진이 전달한 최근 안내입니다.</p></div>
+      <a href="{% url 'student_notifications' %}" class="text-link">전체 알림 <i class="bi bi-chevron-right"></i></a>
+    </div>
+    <div class="home-announcement-list">
+      {% for item in recent_announcements %}
+        <a href="{% url 'student_notifications' %}" class="home-announcement-item priority-{{ item.priority }}">
+          <span class="announcement-priority">{{ item.get_priority_display }}</span>
+          <b>{{ item.title }}</b><time>{{ item.publish_at|date:"m.d H:i" }}</time><i class="bi bi-chevron-right"></i>
+        </a>
+      {% empty %}
+        <div class="empty-inline"><i class="bi bi-megaphone"></i><span>새 공지가 없습니다.</span></div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% else %}
+<section class="dashboard-card dashboard-empty-state home-empty-state">
+  <i class="bi bi-calendar2-plus"></i>
+  <h2>현재 표시할 평가 회차가 없습니다.</h2>
+  <p>새 회차가 시작되면 과제, 팀 정보, 평가 진행 상황을 이곳에서 확인할 수 있습니다.</p>
+</section>
+{% endif %}
+{% endblock %}

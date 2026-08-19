@@ -1,0 +1,92 @@
+{% extends "base_student.html" %}
+{% block title %}평가 현황{% endblock %}
+{% block content %}
+<section class="ax-eval-status-page">
+  <header class="ax-eval-status-hero">
+    <div class="ax-eval-status-title">
+      <span class="ax-eval-status-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
+      <div>
+        <span class="ax-eval-status-eyebrow">EVALUATION STATUS</span>
+        <h1>평가 현황</h1>
+        <p>현재 회차의 제출 상태와 남은 평가를 한눈에 확인하세요.</p>
+      </div>
+    </div>
+    {% if evaluation_round %}
+    <div class="ax-eval-round-chip">
+      <span>현재 회차</span><b>{{ evaluation_round.name }}</b><em>{{ evaluation_round.status_display }}</em>
+    </div>
+    {% endif %}
+  </header>
+
+  {% if evaluation_round %}
+  <div class="ax-eval-status-summary">
+    <article class="ax-eval-summary-card is-progress">
+      <div class="ax-eval-summary-top"><span>전체 진행률</span><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="ax-eval-summary-value"><strong>{{ progress.overall_percent }}</strong><small>%</small></div>
+      <div class="ax-eval-progress"><span style="width:{{ progress.overall_percent }}%"></span></div>
+      <p>{% if progress.overall_percent == 100 %}모든 평가를 완료했습니다.{% else %}남은 평가를 완료하면 결과 확인 단계로 넘어갑니다.{% endif %}</p>
+    </article>
+
+    <article class="ax-eval-summary-card">
+      <div class="ax-eval-summary-top"><span>팀 평가</span><i class="bi bi-people"></i></div>
+      {% if absent_from_team_eval %}
+      <div class="ax-eval-summary-text warning">평가 면제</div>
+      <p>{{ attendance.get_status_display }} 처리되어 팀 평가는 면제됩니다.</p>
+      {% else %}
+      <div class="ax-eval-summary-value"><strong>{{ progress.team_completed }}</strong><small>/ {{ progress.team_total }}</small></div>
+      <p>다른 팀에 대한 평가 제출 현황입니다.</p>
+      <a href="{% url 'student_team_evaluation' %}" class="ax-eval-summary-link">팀 평가로 이동 <i class="bi bi-arrow-right"></i></a>
+      {% endif %}
+    </article>
+
+    <article class="ax-eval-summary-card">
+      <div class="ax-eval-summary-top"><span>개인 평가</span><i class="bi bi-person-check"></i></div>
+      <div class="ax-eval-summary-value"><strong>{{ progress.personal_completed }}</strong><small>/ {{ progress.personal_total }}</small></div>
+      <p>같은 팀원에 대한 개인 평가 제출 현황입니다.</p>
+      <a href="{% url 'student_personal_evaluation' %}" class="ax-eval-summary-link">개인 평가로 이동 <i class="bi bi-arrow-right"></i></a>
+    </article>
+  </div>
+
+  <div class="ax-eval-status-grid">
+    <section class="ax-eval-status-card">
+      <div class="ax-eval-card-head">
+        <div><span>TEAM</span><h2>팀 평가 현황</h2><p>평가해야 할 팀과 저장 상태를 확인합니다.</p></div>
+        <b>{{ progress.team_completed }} / {{ progress.team_total }}</b>
+      </div>
+      {% if absent_from_team_eval %}
+      <div class="ax-eval-notice"><i class="bi bi-person-x-fill"></i><span>발표 당일 {{ attendance.get_status_display }} 처리되어 다른 팀 평가는 면제됩니다. 개인 평가는 정상적으로 진행합니다.</span></div>
+      {% endif %}
+      <div class="ax-eval-table-wrap">
+        <table class="ax-eval-table">
+          <thead><tr><th>팀</th><th>프로젝트</th><th>상태</th><th>최근 저장</th></tr></thead>
+          <tbody>
+          {% for item in team_statuses %}
+          <tr><td><strong>{{ item.team_name }}</strong></td><td>{{ item.project_title }}</td><td>{% if item.submitted %}<span class="ax-eval-state done">{{ item.status_display }}</span>{% elif item.updated_at %}<span class="ax-eval-state draft">{{ item.status_display }}</span>{% else %}<span class="ax-eval-state waiting">{{ item.status_display }}</span>{% endif %}</td><td>{% if item.updated_at %}{{ item.updated_at|date:"Y.m.d H:i" }}{% else %}<span class="ax-eval-empty-dash">-</span>{% endif %}</td></tr>
+          {% empty %}<tr><td colspan="4"><div class="ax-eval-empty"><i class="bi bi-people"></i><b>팀 평가 대상이 없습니다.</b><span>평가 대상이 배정되면 이곳에 표시됩니다.</span></div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="ax-eval-status-card">
+      <div class="ax-eval-card-head">
+        <div><span>PERSONAL</span><h2>개인 평가 현황</h2><p>팀원별 개인 평가 완료 여부를 확인합니다.</p></div>
+        <b>{{ progress.personal_completed }} / {{ progress.personal_total }}</b>
+      </div>
+      <div class="ax-eval-table-wrap">
+        <table class="ax-eval-table">
+          <thead><tr><th>팀원</th><th>상태</th><th>최근 저장</th></tr></thead>
+          <tbody>
+          {% for item in personal_statuses %}
+          <tr><td><strong>{{ item.student_name }}</strong></td><td>{% if item.submitted %}<span class="ax-eval-state done">{{ item.status_display }}</span>{% elif item.updated_at %}<span class="ax-eval-state draft">{{ item.status_display }}</span>{% else %}<span class="ax-eval-state waiting">{{ item.status_display }}</span>{% endif %}</td><td>{% if item.updated_at %}{{ item.updated_at|date:"Y.m.d H:i" }}{% else %}<span class="ax-eval-empty-dash">-</span>{% endif %}</td></tr>
+          {% empty %}<tr><td colspan="3"><div class="ax-eval-empty"><i class="bi bi-person-check"></i><b>개인 평가 대상이 없습니다.</b><span>팀 편성이 완료되면 팀원이 표시됩니다.</span></div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  {% else %}
+  <div class="ax-eval-status-card"><div class="ax-eval-empty large"><i class="bi bi-calendar-x"></i><b>확인할 평가 회차가 없습니다.</b><span>관리자가 현재 회차를 지정하면 평가 현황을 확인할 수 있습니다.</span></div></div>
+  {% endif %}
+</section>
+{% endblock %}

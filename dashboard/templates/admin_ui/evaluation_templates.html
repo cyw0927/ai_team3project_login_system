@@ -1,0 +1,208 @@
+{% extends "base_admin.html" %}
+
+{% block title %}평가 템플릿 관리{% endblock %}
+
+{% block content %}
+<div class="page-header ax-dashboard-header template-page-header">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-ui-checks-grid"></i></span>
+      평가 템플릿
+    </h3>
+    <p class="ax-page-subtitle">팀·개인 평가 문항과 배점 기준을 템플릿으로 관리합니다.</p>
+  </div>
+  <button class="btn btn-gradient-primary px-4" data-bs-toggle="modal" data-bs-target="#templateCreateModal">
+    <i class="bi bi-plus-lg me-2"></i>템플릿 추가
+  </button>
+</div>
+
+<div class="template-stats-grid mb-4">
+  <div class="template-stat-card"><span>전체 템플릿</span><strong>{{ stats.total|default:0 }}</strong></div>
+  <div class="template-stat-card"><span>팀 평가</span><strong>{{ stats.team|default:0 }}</strong></div>
+  <div class="template-stat-card"><span>개인 평가</span><strong>{{ stats.personal|default:0 }}</strong></div>
+  <div class="template-stat-card"><span>사용 중</span><strong>{{ stats.active|default:0 }}</strong></div>
+</div>
+
+<div class="template-workspace card ax-panel-card">
+  <div class="template-type-tabs">
+    <a href="?type=team" class="template-type-tab {% if type_filter == 'team' %}active{% endif %}">팀 평가 템플릿</a>
+    <a href="?type=personal" class="template-type-tab {% if type_filter == 'personal' %}active{% endif %}">개인 평가 템플릿</a>
+  </div>
+
+  <div class="template-layout">
+    <aside class="template-list-panel">
+      <div class="template-list-head">
+        <div><b>{% if type_filter == 'team' %}팀 평가{% else %}개인 평가{% endif %} 템플릿</b><span>적용할 템플릿을 선택하세요.</span></div>
+        <span class="template-count">{{ filtered_templates|length }}개</span>
+      </div>
+      <div class="template-list">
+        {% for template in filtered_templates %}
+        <a href="?type={{ type_filter }}&template={{ template.id }}" class="template-list-item {% if selected_template.id == template.id %}active{% endif %}">
+          <div class="template-list-icon"><i class="bi {% if template.evaluation_type == 'team' %}bi-people{% else %}bi-person-check{% endif %}"></i></div>
+          <div class="template-list-copy">
+            <b>{{ template.name }}</b>
+            <span>{% if template.evaluation_round %}{{ template.evaluation_round.name }}{% else %}공통 템플릿{% endif %} · {{ template.criterion_count }}문항</span>
+          </div>
+          {% if template.is_active %}<span class="template-use-badge">사용</span>{% else %}<span class="template-off-badge">중지</span>{% endif %}
+        </a>
+        {% empty %}
+        <div class="template-empty-list">이 유형의 템플릿이 없습니다.</div>
+        {% endfor %}
+      </div>
+    </aside>
+
+    <section class="template-editor-panel">
+      {% if selected_template %}
+      <div class="template-editor-head">
+        <div>
+          <div class="eyebrow">선택 템플릿</div>
+          <h3>{{ selected_template.name }}</h3>
+          <p>{{ selected_template.type_display }} · {% if selected_template.evaluation_round %}{{ selected_template.evaluation_round.name }}{% else %}모든 회차에서 사용 가능{% endif %}</p>
+        </div>
+        <div class="template-head-actions">
+          <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#templateEditModal"><i class="bi bi-pencil me-1"></i>설정 수정</button>
+          <form method="post" action="{% url 'admin_evaluation_template_toggle' selected_template.id %}">{% csrf_token %}
+            <button class="btn btn-outline-secondary btn-sm" type="submit">{% if selected_template.is_active %}<i class="bi bi-pause-circle me-1"></i>사용 중지{% else %}<i class="bi bi-play-circle me-1"></i>사용 시작{% endif %}</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="template-mini-stats">
+        <div><span>전체 문항</span><b>{{ criteria|length }}</b></div>
+        <div><span>필수 문항</span><b>{{ required_count }}</b></div>
+        <div><span>선택 문항</span><b>{{ optional_count }}</b></div>
+        <div><span>평가 척도</span><b>최대 5점</b></div>
+      </div>
+
+      <div class="criterion-toolbar">
+        <div>
+          <h5>평가 문항</h5>
+          <p>행을 끌어서 순서를 변경한 뒤 저장할 수 있습니다.</p>
+        </div>
+        <button class="btn btn-gradient-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#criterionCreateModal"><i class="bi bi-plus-lg me-1"></i>문항 추가</button>
+      </div>
+
+      <form id="criterionOrderForm" method="post" action="{% url 'admin_evaluation_criteria_reorder' selected_template.id %}">{% csrf_token %}
+        <input type="hidden" name="ordered_ids" id="orderedIds">
+        <div class="criterion-table-wrap">
+          <table class="criterion-table">
+            <thead><tr><th class="drag-col"></th><th>순서</th><th>평가 항목</th><th>설명</th><th>평가 척도</th><th>필수</th><th>관리</th></tr></thead>
+            <tbody id="criterionRows">
+            {% for criterion in criteria %}
+              <tr draggable="true" data-id="{{ criterion.id }}">
+                <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
+                <td><span class="criterion-order">{{ forloop.counter }}</span></td>
+                <td><b>{{ criterion.title }}</b></td>
+                <td class="criterion-description">{{ criterion.description|default:"설명 없음" }}</td>
+                <td><span class="scale-badge">{{ criterion.max_score }}점 척도</span></td>
+                <td>{% if criterion.is_required %}<span class="required-badge">필수</span>{% else %}<span class="optional-badge">선택</span>{% endif %}</td>
+                <td>
+                  <div class="criterion-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#criterionEditModal{{ criterion.id }}">수정</button>
+                    <form method="post" action="{% url 'admin_evaluation_criterion_delete' criterion.id %}" onsubmit="return confirm('이 문항을 삭제하시겠습니까?');">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">삭제</button></form>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="template-empty-row">아직 문항이 없습니다. 첫 문항을 추가하세요.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if criteria %}
+        <div class="criterion-order-footer">
+          <span><i class="bi bi-info-circle me-1"></i>드래그 후 <b>순서 저장</b>을 눌러야 반영됩니다.</span>
+          <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-floppy me-1"></i>순서 저장</button>
+        </div>
+        {% endif %}
+      </form>
+
+      <div class="template-danger-zone">
+        <div><b>템플릿 관리</b><span>평가에 사용된 템플릿은 삭제 대신 비활성화해야 합니다.</span></div>
+        <form method="post" action="{% url 'admin_evaluation_template_delete' selected_template.id %}" onsubmit="return confirm('템플릿을 삭제하시겠습니까?');">{% csrf_token %}<button class="btn btn-outline-danger btn-sm">템플릿 삭제</button></form>
+      </div>
+      {% else %}
+      <div class="template-editor-empty"><i class="bi bi-ui-checks-grid"></i><b>템플릿이 없습니다.</b><span>새 템플릿을 생성해 평가 문항을 구성하세요.</span></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<div class="modal fade" id="templateCreateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">평가 템플릿 생성</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" action="{% url 'admin_evaluation_template_create' %}">{% csrf_token %}<div class="modal-body">
+    <div class="mb-3"><label class="form-label fw-semibold">템플릿명</label><input name="name" class="form-control" placeholder="예: 2차 프로젝트 팀 평가" required></div>
+    <div class="mb-3"><label class="form-label fw-semibold">평가 유형</label><select name="evaluation_type" class="form-select" required><option value="team" {% if type_filter == 'team' %}selected{% endif %}>팀 평가</option><option value="personal" {% if type_filter == 'personal' %}selected{% endif %}>개인 평가</option></select></div>
+    <div class="mb-3"><label class="form-label fw-semibold">적용 회차</label><select name="evaluation_round" class="form-select"><option value="">공통 템플릿</option>{% for round in rounds %}<option value="{{ round.id }}">{{ round.name }}</option>{% endfor %}</select></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" id="newActive" checked><label class="form-check-label" for="newActive">생성 즉시 사용</label></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary">생성</button></div></form>
+</div></div></div>
+
+{% if selected_template %}
+<div class="modal fade" id="templateEditModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">템플릿 설정 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" action="{% url 'admin_evaluation_template_update' selected_template.id %}">{% csrf_token %}<div class="modal-body">
+    <div class="mb-3"><label class="form-label fw-semibold">템플릿명</label><input name="name" class="form-control" value="{{ selected_template.name }}" required></div>
+    <div class="mb-3"><label class="form-label fw-semibold">평가 유형</label><select name="evaluation_type" class="form-select"><option value="team" {% if selected_template.evaluation_type == 'team' %}selected{% endif %}>팀 평가</option><option value="personal" {% if selected_template.evaluation_type == 'personal' %}selected{% endif %}>개인 평가</option></select></div>
+    <div class="mb-3"><label class="form-label fw-semibold">적용 회차</label><select name="evaluation_round" class="form-select"><option value="">공통 템플릿</option>{% for round in rounds %}<option value="{{ round.id }}" {% if selected_template.evaluation_round_id == round.id %}selected{% endif %}>{{ round.name }}</option>{% endfor %}</select></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" id="editActive" {% if selected_template.is_active %}checked{% endif %}><label class="form-check-label" for="editActive">사용 중</label></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary">저장</button></div></form>
+</div></div></div>
+
+<div class="modal fade" id="criterionCreateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">평가 문항 추가</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" action="{% url 'admin_evaluation_criterion_create' selected_template.id %}">{% csrf_token %}<div class="modal-body">
+    <div class="mb-3"><label class="form-label fw-semibold">문항명</label><input name="title" class="form-control" placeholder="예: 기능 구현 완성도" required></div>
+    <div class="mb-3"><label class="form-label fw-semibold">설명</label><textarea name="description" class="form-control" rows="3" placeholder="평가자가 참고할 구체적인 기준을 입력하세요."></textarea></div>
+    <input name="order" type="hidden" value="{{ criteria|length|add:'1' }}">
+    <div class="mb-3"><label class="form-label fw-semibold">평가 척도</label><select name="max_score" class="form-select"><option value="5" selected>5점 척도</option><option value="4">4점 척도</option><option value="3">3점 척도</option><option value="2">2점 척도</option><option value="1">1점 척도</option></select></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_required" id="newRequired" checked><label class="form-check-label" for="newRequired">필수 응답 문항</label></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary">문항 추가</button></div></form>
+</div></div></div>
+
+{% for criterion in criteria %}
+<div class="modal fade" id="criterionEditModal{{ criterion.id }}" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">문항 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" action="{% url 'admin_evaluation_criterion_update' criterion.id %}">{% csrf_token %}<div class="modal-body">
+    <div class="mb-3"><label class="form-label fw-semibold">문항명</label><input name="title" class="form-control" value="{{ criterion.title }}" required></div>
+    <div class="mb-3"><label class="form-label fw-semibold">설명</label><textarea name="description" class="form-control" rows="3">{{ criterion.description }}</textarea></div>
+    <input name="order" type="hidden" value="{{ criterion.order }}">
+    <div class="mb-3"><label class="form-label fw-semibold">평가 척도</label><select name="max_score" class="form-select">{% for score in score_choices %}<option value="{{ score }}" {% if criterion.max_score == score %}selected{% endif %}>{{ score }}점 척도</option>{% endfor %}</select></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_required" id="required{{ criterion.id }}" {% if criterion.is_required %}checked{% endif %}><label class="form-check-label" for="required{{ criterion.id }}">필수 응답 문항</label></div>
+  </div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary">저장</button></div></form>
+</div></div></div>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const body = document.getElementById('criterionRows');
+  const form = document.getElementById('criterionOrderForm');
+  const hidden = document.getElementById('orderedIds');
+  if (!body || !form || !hidden) return;
+  let dragging = null;
+  body.querySelectorAll('tr[draggable="true"]').forEach(row => {
+    row.addEventListener('dragstart', () => { dragging = row; row.classList.add('dragging'); });
+    row.addEventListener('dragend', () => { row.classList.remove('dragging'); dragging = null; refreshNumbers(); });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragging || dragging === row) return;
+      const rect = row.getBoundingClientRect();
+      const after = e.clientY > rect.top + rect.height / 2;
+      body.insertBefore(dragging, after ? row.nextSibling : row);
+    });
+  });
+  function refreshNumbers() {
+    body.querySelectorAll('tr[data-id]').forEach((row, i) => {
+      const el = row.querySelector('.criterion-order');
+      if (el) el.textContent = i + 1;
+    });
+  }
+  form.addEventListener('submit', () => {
+    hidden.value = [...body.querySelectorAll('tr[data-id]')].map(row => row.dataset.id).join(',');
+  });
+})();
+</script>
+{% endblock %}

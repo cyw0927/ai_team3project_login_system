@@ -1,0 +1,72 @@
+{% extends "base_student.html" %}
+{% block title %}받은 메시지 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-message-page">
+  <div class="ax-message-head">
+    <div>
+      <span class="ax-message-eyebrow"><i class="bi bi-chat-square-text"></i> MESSAGE CENTER</span>
+      <h1>받은 메시지</h1>
+      <p>관리자가 나에게 보낸 개인 메시지를 확인할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="ax-message-summary">
+    <div class="ax-message-summary-card">
+      <span class="ax-message-summary-icon"><i class="bi bi-envelope-paper"></i></span>
+      <div><small>전체 메시지</small><strong>{{ internal_messages|length }}<em>건</em></strong></div>
+    </div>
+    <div class="ax-message-summary-card is-unread">
+      <span class="ax-message-summary-icon"><i class="bi bi-envelope-exclamation"></i></span>
+      <div><small>읽지 않음</small><strong>{{ unread_message_count }}<em>건</em></strong></div>
+    </div>
+  </div>
+
+  <section class="ax-message-box">
+    <div class="ax-message-box-head">
+      <div>
+        <h2>메시지함</h2>
+        <p>새 메시지는 강조되어 표시됩니다.</p>
+      </div>
+      {% if unread_message_count %}<span class="ax-unread-pill"><i class="bi bi-circle-fill"></i> 새 메시지 {{ unread_message_count }}건</span>{% endif %}
+    </div>
+
+    <div class="ax-message-list">
+      {% for item in internal_messages %}
+      <article class="ax-message-item {% if not item.read_at %}is-new{% endif %}">
+        <div class="ax-message-item-marker"></div>
+        <div class="ax-message-item-main">
+          <div class="ax-message-meta-row">
+            <div class="ax-message-badges">
+              {% if item.priority == 'urgent' %}<span class="ax-priority-badge urgent"><i class="bi bi-exclamation-triangle-fill"></i> 긴급</span>
+              {% elif item.priority == 'important' %}<span class="ax-priority-badge important"><i class="bi bi-exclamation-circle-fill"></i> 중요</span>
+              {% else %}<span class="ax-priority-badge normal">일반</span>{% endif %}
+              {% if not item.read_at %}<span class="ax-new-badge">NEW</span>{% endif %}
+            </div>
+            <time>{{ item.created_at|date:"Y.m.d H:i" }}</time>
+          </div>
+          <h3>{{ item.title }}</h3>
+          <div class="ax-message-body">{{ item.body }}</div>
+        </div>
+        <div class="ax-message-item-action">
+          {% if not item.read_at %}
+          <form method="post" action="{% url 'student_message_read' item.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="ax-message-read-btn" type="submit"><i class="bi bi-check2"></i> 읽음 처리</button>
+          </form>
+          {% else %}
+          <span class="ax-message-read-state"><i class="bi bi-check2-circle"></i> 읽음</span>
+          {% endif %}
+        </div>
+      </article>
+      {% empty %}
+      <div class="ax-message-empty">
+        <span><i class="bi bi-envelope-open"></i></span>
+        <h3>받은 메시지가 없습니다.</h3>
+        <p>관리자가 개인 메시지를 보내면 이곳에 표시됩니다.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

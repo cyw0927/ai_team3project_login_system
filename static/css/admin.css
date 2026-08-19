@@ -1,0 +1,4713 @@
+
+/* AX Evaluation System x Purple Admin prototype */
+
+body.ax-purple-admin {
+  background: #f4f5f7;
+}
+
+.ax-purple-admin .navbar {
+  z-index: 1050;
+}
+
+.ax-brand {
+  display: flex !important;
+  align-items: center;
+  gap: .65rem;
+  text-decoration: none;
+}
+
+.ax-brand-mark,
+.ax-brand-mini span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 .55rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #b66dff, #7b61ff);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+
+.ax-brand-name {
+  font-weight: 800;
+  color: #252631;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.ax-brand-mini {
+  text-decoration: none;
+}
+
+.ax-topbar-title {
+  margin-left: 1rem;
+  align-items: center;
+}
+
+.ax-topbar-title > div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.ax-topbar-title strong {
+  font-size: .95rem;
+  color: #34323d;
+}
+
+.ax-topbar-title small {
+  margin-top: .22rem;
+  color: #9a99a7;
+  font-size: .72rem;
+}
+
+.ax-profile-avatar,
+.ax-sidebar-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #b66dff, #7b61ff);
+  color: #fff;
+}
+
+.ax-profile-avatar {
+  width: 38px;
+  height: 38px;
+  margin-right: .6rem;
+}
+
+.ax-sidebar-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+
+.ax-purple-admin .nav-profile-text small {
+  color: #a4a2ac;
+}
+
+.ax-purple-admin .sidebar .nav .nav-item.active > .nav-link {
+  background: linear-gradient(118deg, #b66dff, #7b61ff);
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(123, 97, 255, .18);
+}
+
+.ax-purple-admin .sidebar .nav .nav-item.active > .nav-link .menu-title,
+.ax-purple-admin .sidebar .nav .nav-item.active > .nav-link .menu-icon,
+.ax-purple-admin .sidebar .nav .nav-item.active > .nav-link .menu-arrow::before {
+  color: #fff;
+}
+
+.ax-purple-admin .sidebar .nav .sub-menu .nav-item .nav-link {
+  white-space: nowrap;
+}
+
+.ax-purple-admin .content-wrapper {
+  min-height: calc(100vh - 70px);
+  padding: 2rem 2rem 1.5rem;
+}
+
+/* 기존 AX 페이지 컴포넌트가 Purple shell 안에서도 무너지지 않도록 최소 호환 */
+.ax-purple-admin .page-header,
+.ax-purple-admin .admin-dashboard-head {
+  margin-bottom: 1.5rem;
+}
+
+.ax-purple-admin .page-header h1,
+.ax-purple-admin .admin-dashboard-head h1 {
+  color: #252631;
+}
+
+.ax-purple-admin .ui-card,
+.ax-purple-admin .sample-card {
+  background: #fff;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 3px 18px rgba(37, 38, 49, .06);
+}
+
+.ax-purple-admin .ui-table,
+.ax-purple-admin .sample-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ax-purple-admin .ui-table th,
+.ax-purple-admin .sample-table th {
+  color: #6c6b75;
+  font-weight: 700;
+  background: #faf9fc;
+}
+
+.ax-purple-admin .sample-blue-btn,
+.ax-purple-admin .btn-primary {
+  background: linear-gradient(118deg, #b66dff, #7b61ff);
+  border-color: transparent;
+}
+
+.ax-purple-admin .sample-outline-btn {
+  border-color: #ded9e8;
+  background: #fff;
+}
+
+.ax-purple-admin .sample-status.green {
+  color: #198754;
+  background: #eaf8f0;
+}
+
+.ax-purple-admin .sample-status.blue {
+  color: #7950f2;
+  background: #f0ebff;
+}
+
+.ax-purple-admin .sample-status.gray {
+  color: #777582;
+  background: #f1f1f4;
+}
+
+/* Purple shell 축소 */
+body.ax-sidebar-mini .ax-purple-sidebar {
+  width: 72px;
+}
+
+body.ax-sidebar-mini .ax-purple-sidebar .menu-title,
+body.ax-sidebar-mini .ax-purple-sidebar .menu-arrow,
+body.ax-sidebar-mini .ax-purple-sidebar .nav-profile-text,
+body.ax-sidebar-mini .ax-purple-sidebar .nav-profile-badge,
+body.ax-sidebar-mini .ax-purple-sidebar .sub-menu {
+  display: none !important;
+}
+
+body.ax-sidebar-mini .ax-purple-sidebar .nav-link {
+  justify-content: center;
+}
+
+body.ax-sidebar-mini .ax-purple-sidebar .menu-icon {
+  margin: 0 !important;
+}
+
+body.ax-sidebar-mini .main-panel {
+  width: calc(100% - 72px);
+}
+
+@media (max-width: 991.98px) {
+  .ax-purple-admin .content-wrapper {
+    padding: 1.25rem;
+  }
+
+  .ax-purple-sidebar {
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+  }
+
+  body.ax-sidebar-open .ax-purple-sidebar {
+    transform: translateX(0);
+  }
+}
+
+
+/* =========================================================
+   STEP 4 - Purple 관리자 대시보드
+   ========================================================= */
+
+.ax-dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ax-page-subtitle {
+  margin: .7rem 0 0 3.75rem;
+  color: #8c8b95;
+}
+
+.ax-header-actions {
+  display: flex;
+  gap: .65rem;
+  flex-wrap: wrap;
+}
+
+.ax-stat-card {
+  display: block;
+  text-decoration: none;
+  overflow: hidden;
+  min-height: 170px;
+  border: 0;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.ax-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(52, 47, 69, .16);
+  color: #fff;
+}
+
+.ax-stat-card .card-body {
+  position: relative;
+  z-index: 2;
+}
+
+.ax-stat-card .card-img-absolute {
+  position: absolute;
+  right: -10px;
+  top: -18px;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+}
+
+.ax-stat-card h2 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.ax-stat-card h2 small {
+  font-size: .85rem;
+  margin-left: .25rem;
+  font-weight: 600;
+}
+
+.ax-stat-card h4 {
+  font-size: .92rem;
+}
+
+.ax-stat-card .card-text {
+  opacity: .86;
+  font-size: .8rem;
+}
+
+.ax-stat-icon {
+  position: absolute;
+  top: 1.45rem;
+  right: 1.5rem;
+  font-size: 1.55rem;
+}
+
+.ax-panel-card {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 3px 18px rgba(37, 38, 49, .055);
+}
+
+.ax-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ax-purple-table thead th {
+  border-top: 0;
+  color: #888690;
+  font-size: .74rem;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.ax-purple-table tbody td {
+  vertical-align: middle;
+}
+
+.ax-assignment-cell {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 210px;
+}
+
+.ax-assignment-cell > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-assignment-cell small {
+  margin-top: .18rem;
+  color: #a09eaa;
+  font-size: .72rem;
+}
+
+.ax-row-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 9px;
+  background: #f1ecff;
+  color: #8b5cf6;
+  font-weight: 700;
+}
+
+.ax-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  background: #f2efff;
+  color: #7756d8;
+  font-size: .75rem;
+  white-space: nowrap;
+}
+
+.ax-empty-state {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .8rem;
+  color: #9b99a5;
+  text-align: center;
+}
+
+.ax-empty-state i {
+  font-size: 2rem;
+}
+
+.ax-empty-state.compact {
+  min-height: 360px;
+}
+
+.ax-kicker {
+  font-size: .67rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.ax-round-title {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f8f6fc;
+}
+
+.ax-round-title > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-round-title strong {
+  font-size: 1.03rem;
+  color: #393740;
+}
+
+.ax-round-title small {
+  margin-top: .18rem;
+  color: #96949d;
+}
+
+.ax-round-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #b66dff, #7b61ff);
+  color: white;
+  font-size: 1.15rem;
+}
+
+.ax-detail-list {
+  margin-top: 1rem;
+}
+
+.ax-detail-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .72rem 0;
+  border-bottom: 1px solid #f0eef3;
+}
+
+.ax-detail-list span {
+  color: #96949d;
+}
+
+.ax-detail-list strong {
+  font-size: .82rem;
+  text-align: right;
+}
+
+.ax-round-assignment {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #ece8f2;
+}
+
+.ax-round-assignment > span {
+  display: block;
+  margin-bottom: .45rem;
+  color: #96949d;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.ax-round-assignment strong {
+  display: block;
+}
+
+.ax-round-assignment p {
+  margin: .35rem 0 0;
+  color: #7f7d87;
+  line-height: 1.5;
+  font-size: .78rem;
+}
+
+.ax-round-assignment small {
+  display: block;
+  margin-top: .5rem;
+  color: #7950f2;
+}
+
+.ax-round-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: .55rem;
+  margin-top: 1rem;
+}
+
+.ax-progress-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 2rem;
+  align-items: center;
+}
+
+.ax-progress-item + .ax-progress-item {
+  margin-top: 1.5rem;
+}
+
+.ax-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .55rem;
+}
+
+.ax-progress-label span {
+  color: #696771;
+  font-weight: 600;
+}
+
+.ax-progress-label span i {
+  margin-right: .35rem;
+  color: #8b5cf6;
+}
+
+.ax-operation-checks {
+  margin-top: 1.6rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .65rem;
+}
+
+.ax-operation-checks > div {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .55rem;
+  padding: .75rem .85rem;
+  border-radius: 10px;
+  background: #faf9fc;
+}
+
+.ax-operation-checks span {
+  color: #77757f;
+  font-size: .78rem;
+}
+
+.ax-operation-checks strong {
+  font-size: .76rem;
+}
+
+.ax-overall-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ax-progress-ring {
+  --progress: 0;
+  width: 154px;
+  height: 154px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#9b67f0 calc(var(--progress) * 1%), #eeeaf4 0);
+  position: relative;
+}
+
+.ax-progress-ring::after {
+  content: "";
+  position: absolute;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ax-progress-ring > div {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ax-progress-ring strong {
+  font-size: 1.7rem;
+  color: #3f3d45;
+}
+
+.ax-progress-ring span {
+  color: #9c99a4;
+  font-size: .73rem;
+}
+
+.ax-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-top: 1rem;
+}
+
+.ax-quick-list > a {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: .75rem;
+  align-items: center;
+  padding: .75rem;
+  border-radius: 11px;
+  text-decoration: none;
+  color: #44414b;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.ax-quick-list > a:hover {
+  background: #faf8fd;
+  transform: translateX(2px);
+}
+
+.ax-quick-list > a > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-quick-list small {
+  color: #a09da8;
+  margin-top: .15rem;
+  font-size: .72rem;
+}
+
+.ax-quick-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: white;
+}
+
+@media (max-width: 1199.98px) {
+  .ax-progress-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ax-overall-progress {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ax-dashboard-header {
+    flex-direction: column;
+  }
+
+  .ax-page-subtitle {
+    margin-left: 0;
+  }
+
+  .ax-header-actions {
+    width: 100%;
+  }
+
+  .ax-header-actions .btn {
+    flex: 1;
+  }
+
+  .ax-operation-checks {
+    grid-template-columns: 1fr;
+  }
+
+  .ax-round-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   STEP 5 - 관리자 목록 / 폼 공통 스타일
+   ========================================================= */
+
+.ax-management-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ax-management-toolbar > .d-flex {
+  flex-wrap: wrap;
+}
+
+.ax-management-toolbar form {
+  min-width: 280px;
+}
+
+.ax-management-toolbar .input-group {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #ece8f3;
+}
+
+.ax-management-toolbar .form-control {
+  border: 0;
+  min-height: 42px;
+}
+
+.ax-management-toolbar .input-group .btn {
+  border: 0;
+  background: #faf8fd;
+}
+
+.ax-mini-stat-grid .ax-mini-stat {
+  overflow: hidden;
+  position: relative;
+}
+
+.ax-mini-stat .card-body {
+  padding: 1.35rem 1.4rem;
+}
+
+.ax-mini-stat-value {
+  margin-top: .35rem;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #3d3b45;
+}
+
+.ax-mini-stat::after {
+  content: "";
+  position: absolute;
+  width: 78px;
+  height: 78px;
+  right: -20px;
+  bottom: -28px;
+  border-radius: 50%;
+  background: rgba(155, 103, 240, .08);
+}
+
+.ax-page-actions .btn {
+  min-height: 42px;
+}
+
+.ax-purple-admin .ax-purple-table {
+  margin-bottom: 0;
+}
+
+.ax-purple-admin .ax-purple-table thead th {
+  padding-top: .85rem;
+  padding-bottom: .85rem;
+  border-bottom: 1px solid #eeeaf2;
+}
+
+.ax-purple-admin .ax-purple-table tbody td {
+  padding-top: .85rem;
+  padding-bottom: .85rem;
+  border-color: #f0edf3;
+}
+
+.ax-purple-admin .ax-purple-table tbody tr:hover {
+  background: #fcfbfe;
+}
+
+.ax-purple-admin .ax-purple-table a {
+  font-weight: 600;
+}
+
+.ax-purple-admin .status-badge,
+.ax-purple-admin .badge {
+  white-space: nowrap;
+}
+
+.ax-purple-admin .ax-purple-notice {
+  border: 1px solid #eee8f5 !important;
+  background: #fbf9fe;
+  color: #6f6b77;
+  border-radius: 12px;
+}
+
+.ax-purple-modal {
+  border: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 55px rgba(42, 36, 56, .18);
+}
+
+.ax-purple-modal .modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f0edf3;
+  background: linear-gradient(180deg, #fff, #fcfbfe);
+}
+
+.ax-purple-modal .modal-body {
+  padding: 1.5rem;
+}
+
+.ax-purple-modal .modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f0edf3;
+  background: #fcfbfe;
+}
+
+.ax-purple-modal .form-label {
+  color: #55515e;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.ax-purple-modal .form-control,
+.ax-purple-modal .form-select {
+  min-height: 43px;
+  border-color: #e6e1eb;
+  border-radius: 9px;
+}
+
+.ax-purple-modal textarea.form-control {
+  min-height: auto;
+}
+
+.ax-purple-modal .form-control:focus,
+.ax-purple-modal .form-select:focus {
+  border-color: #a980f4;
+  box-shadow: 0 0 0 .2rem rgba(155, 103, 240, .10);
+}
+
+.ax-purple-admin .excel-upload-dropzone {
+  padding: 1.35rem;
+  text-align: center;
+  border: 1px dashed #cfc4dc;
+  border-radius: 12px;
+  background: #fcfaff;
+}
+
+@media (max-width: 767.98px) {
+  .ax-management-toolbar {
+    align-items: stretch;
+  }
+
+  .ax-management-toolbar form {
+    min-width: 100%;
+    width: 100% !important;
+  }
+
+  .ax-management-toolbar > .d-flex {
+    width: 100%;
+  }
+
+  .ax-management-toolbar .btn {
+    flex: 1 1 auto;
+  }
+}
+
+
+/* =========================================================
+   STEP 6 - 팀 / 평가 / 결과 관리
+   ========================================================= */
+
+.ax-purple-admin .team-stat-grid,
+.ax-purple-admin .result-summary-grid,
+.ax-purple-admin .assignment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ax-purple-admin .team-stat-card,
+.ax-purple-admin .result-stat-card,
+.ax-purple-admin .assignment-stat {
+  position: relative;
+  overflow: hidden;
+  padding: 1.15rem 1.25rem;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 18px rgba(37, 38, 49, .055);
+}
+
+.ax-purple-admin .team-stat-card::after,
+.ax-purple-admin .result-stat-card::after {
+  content: "";
+  position: absolute;
+  width: 78px;
+  height: 78px;
+  right: -22px;
+  bottom: -30px;
+  border-radius: 50%;
+  background: rgba(155, 103, 240, .08);
+}
+
+.ax-purple-admin .team-stat-card strong,
+.ax-purple-admin .result-stat-card strong,
+.ax-purple-admin .assignment-stat strong {
+  color: #3f3c47;
+}
+
+.ax-purple-admin .team-toolbar-card,
+.ax-purple-admin .assignment-toolbar,
+.ax-purple-admin .score-control-card {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 3px 18px rgba(37, 38, 49, .055);
+}
+
+.ax-purple-admin .team-toolbar,
+.ax-purple-admin .result-toolbar,
+.ax-purple-admin .score-weight-form {
+  display: flex;
+  gap: .9rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.ax-purple-admin .team-toolbar > div,
+.ax-purple-admin .result-toolbar > div {
+  min-width: 170px;
+}
+
+.ax-purple-admin .team-toolbar .toolbar-search,
+.ax-purple-admin .result-toolbar .result-search {
+  flex: 1 1 300px;
+}
+
+.ax-purple-admin .team-list-heading,
+.ax-purple-admin .section-heading-row,
+.ax-purple-admin .panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid #f0edf3;
+}
+
+.ax-purple-admin .team-list-heading > div,
+.ax-purple-admin .section-heading-row > div,
+.ax-purple-admin .panel-heading > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-purple-admin .team-list-heading span,
+.ax-purple-admin .section-heading-row p,
+.ax-purple-admin .panel-heading p {
+  color: #97949f;
+  font-size: .75rem;
+  margin: .2rem 0 0;
+}
+
+.ax-purple-admin .member-chip,
+.ax-purple-admin .team-status,
+.ax-purple-admin .score-policy-chip,
+.ax-purple-admin .count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: .28rem .58rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.ax-purple-admin .member-chip {
+  background: #f4f1fa;
+  color: #6d6578;
+  margin: .1rem;
+}
+
+.ax-purple-admin .member-chip.more,
+.ax-purple-admin .score-policy-chip {
+  background: #eee7ff;
+  color: #7950f2;
+}
+
+.ax-purple-admin .team-status.active {
+  color: #198754;
+  background: #e9f8ef;
+}
+
+.ax-purple-admin .team-status.inactive {
+  color: #76727d;
+  background: #f0eff2;
+}
+
+.ax-purple-admin .assignment-tabbar {
+  display: flex;
+  gap: .65rem;
+  border-bottom: 1px solid #ece8f1;
+}
+
+.ax-purple-admin .assignment-tab {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: .55rem;
+  padding: .9rem 1.2rem;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: #78747f;
+  text-align: left;
+}
+
+.ax-purple-admin .assignment-tab i {
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: 1.15rem;
+}
+
+.ax-purple-admin .assignment-tab span {
+  font-weight: 700;
+}
+
+.ax-purple-admin .assignment-tab small {
+  font-size: .68rem;
+}
+
+.ax-purple-admin .assignment-tab.active {
+  color: #7950f2;
+  background: #f5f0ff;
+}
+
+.ax-purple-admin .manual-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, .85fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+.ax-purple-admin .score-control-card {
+  overflow: hidden;
+}
+
+.ax-purple-admin .score-control-card .score-weight-form {
+  padding: 1.25rem;
+}
+
+.ax-purple-admin .score-policy-note {
+  margin: 0 1.25rem 1.25rem;
+  padding: .85rem 1rem;
+  border-radius: 10px;
+  background: #faf8fd;
+  color: #77727f;
+}
+
+.ax-purple-admin .result-stat-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #b66dff, #7b61ff);
+}
+
+.ax-purple-admin .form-switch .form-check-input:checked {
+  background-color: #8f62e8;
+  border-color: #8f62e8;
+}
+
+@media (max-width: 1199.98px) {
+  .ax-purple-admin .team-stat-grid,
+  .ax-purple-admin .result-summary-grid,
+  .ax-purple-admin .assignment-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .ax-purple-admin .manual-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ax-purple-admin .team-stat-grid,
+  .ax-purple-admin .result-summary-grid,
+  .ax-purple-admin .assignment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   STEP 7 - 관리자 운영 / 상세 / 출결 / 공지 / 데이터
+   ========================================================= */
+
+.ax-purple-admin .operation-grid,
+.ax-purple-admin .detail-stat-grid,
+.ax-purple-admin .attendance-summary,
+.ax-purple-admin .data-action-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.ax-purple-admin .operation-card,
+.ax-purple-admin .detail-card,
+.ax-purple-admin .attendance-card,
+.ax-purple-admin .log-card {
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 18px rgba(37, 38, 49, .055);
+}
+
+.ax-purple-admin .timeline,
+.ax-purple-admin .activity-list {
+  position: relative;
+}
+
+.ax-purple-admin .timeline-item,
+.ax-purple-admin .activity-item {
+  border-color: #eeeaf3;
+}
+
+.ax-purple-admin .announcement-item,
+.ax-purple-admin .activity-item {
+  border-radius: 11px;
+}
+
+.ax-purple-admin .announcement-item:hover,
+.ax-purple-admin .activity-item:hover {
+  background: #fcfbfe;
+}
+
+.ax-purple-admin .attendance-status,
+.ax-purple-admin .log-badge {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.ax-purple-admin .data-danger-zone {
+  border: 1px solid #f3d7dc;
+  background: #fffafb;
+  border-radius: 14px;
+}
+
+.ax-purple-admin .nav-tabs {
+  border-bottom-color: #ece8f1;
+}
+
+.ax-purple-admin .nav-tabs .nav-link {
+  color: #77727e;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+
+.ax-purple-admin .nav-tabs .nav-link.active {
+  color: #7950f2;
+  border-bottom-color: #8f62e8;
+  background: transparent;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   STEP 13 - Seed 가중치 관리
+   ========================================================= */
+
+.ax-purple-admin .ax-seed-weight-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.ax-purple-admin .ax-seed-weight-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 110px auto;
+  gap: .65rem;
+  align-items: center;
+  padding: .8rem;
+  border: 1px solid #eeeaf3;
+  border-radius: 11px;
+  background: #fcfbfe;
+}
+
+.ax-purple-admin .ax-seed-round-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-purple-admin .ax-seed-round-copy small {
+  margin-top: .18rem;
+  color: #9b97a2;
+  font-size: .7rem;
+}
+
+.ax-purple-admin .ax-seed-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  background: #eee7ff;
+  color: #7950f2;
+  font-weight: 800;
+}
+
+@media (max-width: 575.98px) {
+  .ax-purple-admin .ax-seed-weight-row {
+    grid-template-columns: 1fr 100px;
+  }
+
+  .ax-purple-admin .ax-seed-weight-row .btn {
+    grid-column: 1 / -1;
+  }
+}
+
+
+/* =========================================================
+   STEP 18 - Seed 산식 비율
+   ========================================================= */
+.ax-purple-admin .ax-seed-weight-row {
+  grid-template-columns: minmax(150px,1fr) 105px 105px 105px auto;
+}
+.ax-purple-admin .ax-seed-input-group label {
+  display:block; margin-bottom:.25rem; color:#918c97;
+  font-size:.62rem; font-weight:700;
+}
+@media (max-width:991.98px) {
+  .ax-purple-admin .ax-seed-weight-row {
+    grid-template-columns:1fr 1fr 1fr;
+  }
+  .ax-purple-admin .ax-seed-round-copy { grid-column:1 / -1; }
+}
+@media (max-width:575.98px) {
+  .ax-purple-admin .ax-seed-weight-row { grid-template-columns:1fr; }
+  .ax-purple-admin .ax-seed-weight-row .btn { grid-column:auto; }
+}
+
+
+/* =========================================================
+   STEP 25 - 관리자 레이아웃 복구
+   Purple 원본 폭/고정값 충돌을 강제로 정리
+   ========================================================= */
+
+:root {
+  --ax-sidebar-width: 250px;
+  --ax-sidebar-mini-width: 72px;
+  --ax-navbar-height: 70px;
+}
+
+/* 전체 셸 */
+body.ax-purple-admin,
+body.ax-purple-admin .container-scroller {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body.ax-purple-admin .container-fluid.page-body-wrapper {
+  display: flex !important;
+  width: 100%;
+  min-height: calc(100vh - var(--ax-navbar-height));
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 상단바 */
+body.ax-purple-admin .default-layout-navbar {
+  width: 100% !important;
+  min-height: var(--ax-navbar-height);
+}
+
+body.ax-purple-admin .navbar-brand-wrapper {
+  width: var(--ax-sidebar-width) !important;
+  min-width: var(--ax-sidebar-width) !important;
+  max-width: var(--ax-sidebar-width) !important;
+}
+
+body.ax-purple-admin .navbar-menu-wrapper {
+  width: calc(100% - var(--ax-sidebar-width)) !important;
+  min-width: 0;
+}
+
+/* 사이드바 */
+body.ax-purple-admin .ax-purple-sidebar {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  flex: 0 0 var(--ax-sidebar-width) !important;
+  width: var(--ax-sidebar-width) !important;
+  min-width: var(--ax-sidebar-width) !important;
+  max-width: var(--ax-sidebar-width) !important;
+  height: calc(100vh - var(--ax-navbar-height));
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: none !important;
+  margin: 0 !important;
+  border-right: 1px solid #eeeaf3;
+  background: #fff;
+  z-index: 20;
+}
+
+body.ax-purple-admin .ax-purple-sidebar .nav {
+  width: 100%;
+  padding: 1rem 0.85rem 2rem;
+}
+
+body.ax-purple-admin .ax-purple-sidebar .nav-item {
+  width: 100%;
+}
+
+body.ax-purple-admin .ax-purple-sidebar .nav-link {
+  width: 100%;
+  min-width: 0;
+  padding: 0.85rem 0.9rem;
+  border-radius: 10px;
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+body.ax-purple-admin .ax-purple-sidebar .menu-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.ax-purple-admin .ax-purple-sidebar .menu-icon {
+  flex: 0 0 20px;
+  width: 20px;
+  min-width: 20px;
+  margin-left: auto !important;
+  text-align: center;
+}
+
+/* 본문 */
+body.ax-purple-admin .main-panel {
+  position: relative !important;
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  left: 0 !important;
+}
+
+body.ax-purple-admin .content-wrapper {
+  width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 2rem !important;
+  overflow-x: auto;
+}
+
+/* 접힘 상태 */
+body.ax-purple-admin.ax-sidebar-mini .navbar-brand-wrapper {
+  width: var(--ax-sidebar-mini-width) !important;
+  min-width: var(--ax-sidebar-mini-width) !important;
+  max-width: var(--ax-sidebar-mini-width) !important;
+}
+
+body.ax-purple-admin.ax-sidebar-mini .navbar-menu-wrapper {
+  width: calc(100% - var(--ax-sidebar-mini-width)) !important;
+}
+
+body.ax-purple-admin.ax-sidebar-mini .ax-purple-sidebar {
+  flex-basis: var(--ax-sidebar-mini-width) !important;
+  width: var(--ax-sidebar-mini-width) !important;
+  min-width: var(--ax-sidebar-mini-width) !important;
+  max-width: var(--ax-sidebar-mini-width) !important;
+}
+
+body.ax-purple-admin.ax-sidebar-mini .ax-purple-sidebar .nav {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+
+body.ax-purple-admin.ax-sidebar-mini .ax-purple-sidebar .nav-link {
+  justify-content: center !important;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+body.ax-purple-admin.ax-sidebar-mini .ax-purple-sidebar .menu-icon {
+  margin: 0 !important;
+}
+
+/* Purple 원본의 ::before 아이콘 폰트가 깨질 경우 X 박스가 나타나므로 제거 */
+body.ax-purple-admin .sidebar .nav .nav-item .nav-link .menu-arrow::before,
+body.ax-purple-admin .sidebar .nav .nav-item .nav-link i.menu-arrow::before {
+  content: none !important;
+}
+
+/* collapse 화살표는 Bootstrap Icons로 대체 */
+body.ax-purple-admin .menu-arrow {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  position: relative;
+  margin-left: auto;
+}
+
+body.ax-purple-admin .menu-arrow::after {
+  content: "›";
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  line-height: 14px;
+  color: #9a95a2;
+  transform-origin: center;
+  transition: transform .15s ease;
+}
+
+body.ax-purple-admin .nav-link[aria-expanded="true"] .menu-arrow::after {
+  transform: rotate(90deg);
+}
+
+/* 작은 화면 */
+@media (max-width: 991.98px) {
+  body.ax-purple-admin .navbar-brand-wrapper {
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+  }
+
+  body.ax-purple-admin .navbar-menu-wrapper {
+    width: calc(100% - 72px) !important;
+  }
+
+  body.ax-purple-admin .ax-purple-sidebar {
+    position: fixed !important;
+    top: var(--ax-navbar-height) !important;
+    left: 0 !important;
+    height: calc(100vh - var(--ax-navbar-height));
+    transform: translateX(-100%) !important;
+    transition: transform .2s ease;
+    box-shadow: 8px 0 24px rgba(39, 34, 48, .08);
+  }
+
+  body.ax-purple-admin.ax-sidebar-open .ax-purple-sidebar {
+    transform: translateX(0) !important;
+  }
+
+  body.ax-purple-admin .content-wrapper {
+    padding: 1.25rem !important;
+  }
+}
+
+
+/* =========================================================
+   STEP 26 - 관리자 홈 SaaS 리디자인
+   과도한 그라디언트/색상 제거
+   ========================================================= */
+
+body.ax-purple-admin .content-wrapper {
+  background: #f7f8fb !important;
+}
+
+.ax-saas-page-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:1.5rem;
+}
+
+.ax-saas-kicker {
+  display:block;
+  color:#8a8f98;
+  font-size:.67rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  margin-bottom:.3rem;
+}
+
+.ax-saas-page-head h1 {
+  margin:0;
+  color:#1f2937;
+  font-size:1.7rem;
+  font-weight:800;
+  letter-spacing:-.03em;
+}
+
+.ax-saas-page-head p {
+  margin:.45rem 0 0;
+  color:#8a8f98;
+  font-size:.84rem;
+}
+
+.ax-saas-head-actions {
+  display:flex;
+  gap:.6rem;
+}
+
+.ax-primary-btn {
+  background:#7557d9 !important;
+  border-color:#7557d9 !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+
+.ax-primary-btn:hover {
+  background:#6748cf !important;
+  border-color:#6748cf !important;
+}
+
+.ax-kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+.ax-kpi-card {
+  display:grid;
+  grid-template-columns:46px 1fr;
+  gap:.85rem;
+  align-items:center;
+  padding:1rem 1.05rem;
+  min-height:116px;
+  border:1px solid #e8ebf0;
+  border-radius:14px;
+  background:#fff;
+  color:#374151;
+  text-decoration:none;
+  box-shadow:0 1px 2px rgba(15,23,42,.025);
+  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.ax-kpi-card:hover {
+  color:#374151;
+  border-color:#d9dce5;
+  box-shadow:0 6px 18px rgba(15,23,42,.05);
+  transform:translateY(-1px);
+}
+
+.ax-kpi-icon {
+  width:46px;
+  height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  background:#f2effc;
+  color:#7557d9;
+  font-size:1.1rem;
+}
+
+.ax-kpi-card.danger .ax-kpi-icon {
+  background:#fff2f2;
+  color:#dc5b5b;
+}
+
+.ax-kpi-copy {
+  display:flex;
+  flex-direction:column;
+}
+
+.ax-kpi-copy span {
+  color:#6b7280;
+  font-size:.78rem;
+  font-weight:700;
+}
+
+.ax-kpi-copy strong {
+  margin:.2rem 0;
+  color:#111827;
+  font-size:1.65rem;
+  line-height:1;
+}
+
+.ax-kpi-copy small {
+  color:#9ca3af;
+  font-size:.69rem;
+}
+
+.ax-dashboard-grid {
+  display:grid;
+  grid-template-columns:minmax(0,1.8fr) minmax(320px,.8fr);
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+.ax-dashboard-grid.lower {
+  grid-template-columns:minmax(0,1.8fr) minmax(320px,.8fr);
+}
+
+.ax-saas-card {
+  border:1px solid #e8ebf0;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.025);
+}
+
+.ax-saas-card-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  padding:1.15rem 1.2rem;
+  border-bottom:1px solid #edf0f4;
+}
+
+.ax-saas-card-head h2 {
+  margin:0;
+  color:#1f2937;
+  font-size:.95rem;
+  font-weight:800;
+}
+
+.ax-saas-card-head p {
+  margin:.25rem 0 0;
+  color:#9ca3af;
+  font-size:.72rem;
+}
+
+.ax-text-link {
+  color:#7557d9;
+  font-size:.74rem;
+  font-weight:700;
+  text-decoration:none;
+  white-space:nowrap;
+}
+
+.ax-text-link:hover {
+  color:#5f43c4;
+}
+
+.ax-saas-table {
+  margin:0;
+}
+
+.ax-saas-table thead th {
+  padding:.8rem 1rem;
+  border-bottom:1px solid #edf0f4;
+  color:#9ca3af;
+  font-size:.68rem;
+  font-weight:800;
+  background:#fafbfc;
+  white-space:nowrap;
+}
+
+.ax-saas-table tbody td {
+  padding:.9rem 1rem;
+  border-color:#f0f2f5;
+  color:#4b5563;
+  font-size:.78rem;
+}
+
+.ax-assignment-title {
+  display:flex;
+  flex-direction:column;
+}
+
+.ax-assignment-title strong {
+  color:#1f2937;
+  font-size:.8rem;
+}
+
+.ax-assignment-title small {
+  margin-top:.18rem;
+  color:#9ca3af;
+  font-size:.68rem;
+}
+
+.ax-status-pill {
+  display:inline-flex;
+  align-items:center;
+  padding:.28rem .55rem;
+  border-radius:999px;
+  font-size:.66rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.ax-status-pill.success {
+  background:#ecf8f1;
+  color:#2f8b57;
+}
+
+.ax-status-pill.info {
+  background:#f1eefb;
+  color:#6f53c8;
+}
+
+.ax-status-pill.neutral {
+  background:#fff7df;
+  color:#a27516;
+}
+
+.ax-status-pill.muted {
+  background:#f2f3f5;
+  color:#7b818b;
+}
+
+.ax-round-summary {
+  padding:1.15rem 1.2rem;
+}
+
+.ax-round-summary-title {
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+  padding:.9rem;
+  border-radius:12px;
+  background:#f8f7fb;
+}
+
+.ax-round-icon-clean {
+  width:42px;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:#7557d9;
+  color:#fff;
+}
+
+.ax-round-summary-title > div:last-child {
+  display:flex;
+  flex-direction:column;
+}
+
+.ax-round-summary-title strong {
+  color:#1f2937;
+  font-size:.85rem;
+}
+
+.ax-round-summary-title small {
+  margin-top:.18rem;
+  color:#9ca3af;
+  font-size:.68rem;
+}
+
+.ax-round-meta {
+  margin:1rem 0 0;
+}
+
+.ax-round-meta > div {
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  padding:.7rem 0;
+  border-bottom:1px solid #f0f2f5;
+}
+
+.ax-round-meta dt {
+  color:#9ca3af;
+  font-size:.72rem;
+  font-weight:600;
+}
+
+.ax-round-meta dd {
+  margin:0;
+  color:#374151;
+  font-size:.75rem;
+  font-weight:700;
+  text-align:right;
+}
+
+.ax-current-assignment {
+  margin-top:1rem;
+  padding:.9rem;
+  border:1px solid #eceef2;
+  border-radius:12px;
+}
+
+.ax-current-assignment > span {
+  display:block;
+  margin-bottom:.35rem;
+  color:#9ca3af;
+  font-size:.66rem;
+  font-weight:800;
+}
+
+.ax-current-assignment strong {
+  color:#1f2937;
+  font-size:.8rem;
+}
+
+.ax-current-assignment p {
+  margin:.3rem 0 0;
+  color:#7b818b;
+  font-size:.7rem;
+  line-height:1.5;
+}
+
+.ax-round-button-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:.5rem;
+  margin-top:1rem;
+}
+
+.ax-progress-clean {
+  padding:1.2rem;
+}
+
+.ax-progress-row + .ax-progress-row {
+  margin-top:1.1rem;
+}
+
+.ax-progress-row-head {
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:.45rem;
+  color:#6b7280;
+  font-size:.75rem;
+}
+
+.ax-progress-row-head strong {
+  color:#374151;
+}
+
+.ax-progress-clean .progress {
+  height:8px;
+  border-radius:999px;
+  background:#eef0f3;
+}
+
+.ax-progress-clean .progress-bar {
+  background:#7557d9 !important;
+  border-radius:999px;
+}
+
+.ax-overall-clean {
+  margin-top:1.35rem;
+  padding-top:1.1rem;
+  border-top:1px solid #edf0f4;
+}
+
+.ax-overall-clean > div:first-child {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:.45rem;
+  color:#6b7280;
+  font-size:.75rem;
+}
+
+.ax-overall-clean strong {
+  color:#7557d9;
+}
+
+.ax-quick-clean {
+  padding:.6rem;
+}
+
+.ax-quick-clean a {
+  display:grid;
+  grid-template-columns:38px 1fr auto;
+  gap:.75rem;
+  align-items:center;
+  padding:.75rem;
+  border-radius:10px;
+  color:#374151;
+  text-decoration:none;
+}
+
+.ax-quick-clean a:hover {
+  background:#f8f9fb;
+  color:#374151;
+}
+
+.ax-quick-clean a > span {
+  width:38px;
+  height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:#f2effc;
+  color:#7557d9;
+}
+
+.ax-quick-clean a > div {
+  display:flex;
+  flex-direction:column;
+}
+
+.ax-quick-clean strong {
+  font-size:.77rem;
+}
+
+.ax-quick-clean small {
+  margin-top:.14rem;
+  color:#9ca3af;
+  font-size:.65rem;
+}
+
+.ax-quick-clean > a > i {
+  color:#c0c4cc;
+}
+
+.ax-empty-block {
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  color:#9ca3af;
+}
+
+.ax-empty-block i {
+  font-size:1.6rem;
+}
+
+.ax-empty-block strong {
+  color:#6b7280;
+  font-size:.8rem;
+}
+
+.ax-empty-block span {
+  font-size:.7rem;
+}
+
+.ax-empty-block.compact {
+  min-height:280px;
+}
+
+@media (max-width:1199.98px) {
+  .ax-kpi-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .ax-dashboard-grid,
+  .ax-dashboard-grid.lower {
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:767.98px) {
+  .ax-saas-page-head {
+    flex-direction:column;
+  }
+
+  .ax-saas-head-actions {
+    width:100%;
+  }
+
+  .ax-saas-head-actions .btn {
+    flex:1;
+  }
+
+  .ax-kpi-grid {
+    grid-template-columns:1fr;
+  }
+
+  .ax-round-button-grid {
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* =========================================================
+   STEP 27 - Clean Sidebar
+   ========================================================= */
+
+.ax-clean-sidebar {
+  background:#fff !important;
+  border-right:1px solid #e8ebf0 !important;
+}
+
+.ax-clean-sidebar .ax-sidebar-scroll {
+  height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:.8rem .7rem 1.3rem;
+}
+
+.ax-clean-sidebar .ax-sidebar-profile {
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  margin:.15rem .15rem 1rem;
+  padding:.8rem .75rem;
+  border:1px solid #eceef2;
+  border-radius:12px;
+  background:#fafbfc;
+}
+
+.ax-clean-sidebar .ax-sidebar-avatar {
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  border-radius:10px;
+  background:#7557d9 !important;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.ax-clean-sidebar .ax-sidebar-profile-copy {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.ax-clean-sidebar .ax-sidebar-profile-copy strong {
+  color:#222b38;
+  font-size:.76rem;
+  font-weight:800;
+}
+
+.ax-clean-sidebar .ax-sidebar-profile-copy span {
+  margin-top:.12rem;
+  color:#9ba1aa;
+  font-size:.62rem;
+}
+
+.ax-clean-sidebar .ax-sidebar-nav {
+  width:100%;
+  padding:0 !important;
+}
+
+.ax-clean-sidebar .ax-sidebar-section {
+  margin:1.05rem .75rem .35rem;
+  color:#b0b5bd;
+  font-size:.58rem;
+  font-weight:800;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  list-style:none;
+}
+
+.ax-clean-sidebar .nav-item {
+  width:100%;
+  margin:.1rem 0;
+}
+
+.ax-clean-sidebar .nav-link {
+  width:100%;
+  min-height:42px;
+  display:flex !important;
+  align-items:center;
+  gap:.7rem;
+  padding:.67rem .75rem !important;
+  border-radius:9px !important;
+  color:#5f6772 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  font-size:.75rem;
+  font-weight:600;
+}
+
+.ax-clean-sidebar .nav-link > i:first-child {
+  width:18px;
+  min-width:18px;
+  font-size:.95rem;
+  color:#9aa0aa;
+  text-align:center;
+}
+
+.ax-clean-sidebar .nav-link .menu-title {
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ax-clean-sidebar .nav-item.active > .nav-link,
+.ax-clean-sidebar .nav-item > .nav-link:hover {
+  background:#f3f0fb !important;
+  color:#684bc7 !important;
+}
+
+.ax-clean-sidebar .nav-item.active > .nav-link > i:first-child,
+.ax-clean-sidebar .nav-item > .nav-link:hover > i:first-child {
+  color:#7557d9 !important;
+}
+
+.ax-clean-sidebar .nav-item.active > .nav-link {
+  font-weight:800;
+}
+
+.ax-clean-sidebar .sub-menu {
+  padding:.2rem 0 .35rem 2.35rem !important;
+}
+
+.ax-clean-sidebar .sub-menu .nav-item {
+  margin:0;
+}
+
+.ax-clean-sidebar .sub-menu .nav-link {
+  position:relative;
+  min-height:34px;
+  padding:.45rem .6rem !important;
+  border-radius:7px !important;
+  color:#7d848e !important;
+  font-size:.69rem;
+  font-weight:600;
+}
+
+.ax-clean-sidebar .sub-menu .nav-link::before {
+  content:"";
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:#c5c9d0;
+  margin-right:.5rem;
+}
+
+.ax-clean-sidebar .sub-menu .nav-link:hover {
+  background:#f8f7fb !important;
+  color:#684bc7 !important;
+}
+
+.ax-clean-sidebar .menu-arrow {
+  width:16px;
+  height:16px;
+  min-width:16px;
+  margin-left:auto;
+  position:relative;
+}
+
+.ax-clean-sidebar .menu-arrow::after {
+  content:"›";
+  display:block;
+  color:#adb2ba;
+  font-family:Arial,sans-serif;
+  font-size:16px;
+  line-height:15px;
+  transition:transform .15s ease;
+}
+
+.ax-clean-sidebar .nav-link[aria-expanded="true"] .menu-arrow::after {
+  transform:rotate(90deg);
+}
+
+/* mini 상태에서는 텍스트/프로필을 완전히 숨기고 아이콘만 표시 */
+body.ax-sidebar-mini .ax-clean-sidebar .ax-sidebar-profile,
+body.ax-student-sidebar-mini .ax-clean-sidebar .ax-sidebar-profile {
+  justify-content:center;
+  padding:.55rem;
+}
+
+body.ax-sidebar-mini .ax-clean-sidebar .ax-sidebar-profile-copy,
+body.ax-student-sidebar-mini .ax-clean-sidebar .ax-sidebar-profile-copy,
+body.ax-sidebar-mini .ax-clean-sidebar .ax-sidebar-section,
+body.ax-student-sidebar-mini .ax-clean-sidebar .ax-sidebar-section,
+body.ax-sidebar-mini .ax-clean-sidebar .menu-title,
+body.ax-student-sidebar-mini .ax-clean-sidebar .menu-title,
+body.ax-sidebar-mini .ax-clean-sidebar .menu-arrow,
+body.ax-student-sidebar-mini .ax-clean-sidebar .menu-arrow,
+body.ax-sidebar-mini .ax-clean-sidebar .sub-menu,
+body.ax-student-sidebar-mini .ax-clean-sidebar .sub-menu {
+  display:none !important;
+}
+
+body.ax-sidebar-mini .ax-clean-sidebar .nav-link,
+body.ax-student-sidebar-mini .ax-clean-sidebar .nav-link {
+  justify-content:center !important;
+  padding:.67rem .5rem !important;
+}
+
+body.ax-sidebar-mini .ax-clean-sidebar .nav-link > i:first-child,
+body.ax-student-sidebar-mini .ax-clean-sidebar .nav-link > i:first-child {
+  margin:0 !important;
+  color:#8f95a0;
+}
+
+body.ax-sidebar-mini .ax-clean-sidebar .ax-sidebar-scroll,
+body.ax-student-sidebar-mini .ax-clean-sidebar .ax-sidebar-scroll {
+  padding-left:.45rem;
+  padding-right:.45rem;
+}
+
+
+/* =========================================================
+   STEP 28 - Clean Top Navbar
+   ========================================================= */
+
+.ax-clean-navbar {
+  height:70px !important;
+  min-height:70px !important;
+  background:#fff !important;
+  border-bottom:1px solid #e8ebf0 !important;
+  box-shadow:none !important;
+}
+
+.ax-clean-navbar .navbar-brand-wrapper {
+  height:70px !important;
+  padding:0 1rem !important;
+  background:#fff !important;
+  border-right:1px solid #edf0f4;
+}
+
+.ax-navbar-brand {
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  min-width:0;
+  text-decoration:none;
+}
+
+.ax-navbar-logo {
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:11px;
+  background:#7557d9;
+  color:#fff;
+  font-size:1rem;
+  font-weight:900;
+  letter-spacing:-.04em;
+}
+
+.ax-navbar-product {
+  color:#1f2937;
+  font-size:.92rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.ax-clean-navbar .navbar-menu-wrapper {
+  height:70px !important;
+  padding:0 1rem !important;
+  background:#fff !important;
+}
+
+.ax-navbar-icon-btn {
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#6b7280;
+  text-decoration:none;
+  transition:background .15s ease, color .15s ease;
+}
+
+.ax-navbar-icon-btn:hover {
+  background:#f5f6f8;
+  color:#4f46c7;
+}
+
+.ax-navbar-icon-btn i {
+  font-size:1rem;
+}
+
+.ax-navbar-context {
+  flex-direction:column;
+  justify-content:center;
+  margin-left:.7rem;
+  min-width:0;
+}
+
+.ax-navbar-context strong {
+  color:#1f2937;
+  font-size:.78rem;
+  font-weight:800;
+}
+
+.ax-navbar-context span {
+  margin-top:.08rem;
+  color:#9ca3af;
+  font-size:.64rem;
+}
+
+.ax-navbar-spacer {
+  flex:1 1 auto;
+}
+
+.ax-navbar-dot {
+  position:absolute;
+  right:6px;
+  top:6px;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#ef6a78;
+  border:2px solid #fff;
+  box-sizing:content-box;
+}
+
+.ax-user-menu {
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  margin-left:.35rem;
+  padding:.35rem .45rem;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:#374151;
+}
+
+.ax-user-menu:hover,
+.ax-user-menu[aria-expanded="true"] {
+  background:#f7f8fa;
+}
+
+.ax-user-avatar {
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:#f0ecfb;
+  color:#7557d9;
+}
+
+.ax-user-copy {
+  flex-direction:column;
+  align-items:flex-start;
+  min-width:0;
+  line-height:1.15;
+}
+
+.ax-user-copy strong {
+  max-width:150px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#2c3440;
+  font-size:.74rem;
+  font-weight:800;
+}
+
+.ax-user-copy small {
+  margin-top:.15rem;
+  color:#9ca3af;
+  font-size:.6rem;
+}
+
+.ax-user-chevron {
+  color:#b3b7bf;
+  font-size:.7rem;
+}
+
+.ax-user-dropdown {
+  min-width:210px;
+  margin-top:.7rem !important;
+  padding:.45rem;
+  border:1px solid #e8ebf0 !important;
+  border-radius:12px !important;
+  box-shadow:0 14px 35px rgba(31,41,55,.10) !important;
+}
+
+.ax-dropdown-head {
+  display:flex;
+  flex-direction:column;
+  padding:.65rem .7rem;
+}
+
+.ax-dropdown-head strong {
+  color:#1f2937;
+  font-size:.76rem;
+  font-weight:800;
+}
+
+.ax-dropdown-head span {
+  margin-top:.15rem;
+  color:#9ca3af;
+  font-size:.64rem;
+}
+
+.ax-user-dropdown .dropdown-item {
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  padding:.65rem .7rem;
+  border-radius:8px;
+  color:#5f6772;
+  font-size:.72rem;
+  font-weight:600;
+}
+
+.ax-user-dropdown .dropdown-item:hover {
+  background:#f7f8fa;
+  color:#4f46c7;
+}
+
+.ax-user-dropdown .dropdown-item i {
+  width:16px;
+  text-align:center;
+  color:#9399a3;
+}
+
+.ax-user-dropdown .dropdown-item.text-danger {
+  color:#d64f5e !important;
+}
+
+.ax-user-dropdown .dropdown-item.text-danger i {
+  color:#d64f5e !important;
+}
+
+.ax-user-dropdown .dropdown-divider {
+  margin:.35rem 0;
+  border-color:#eef0f3;
+}
+
+/* 접힌 상태 */
+body.ax-sidebar-mini .ax-clean-navbar .navbar-brand-wrapper,
+body.ax-student-sidebar-mini .ax-clean-navbar .navbar-brand-wrapper {
+  padding:0 !important;
+  justify-content:center;
+}
+
+body.ax-sidebar-mini .ax-navbar-product,
+body.ax-student-sidebar-mini .ax-navbar-product {
+  display:none;
+}
+
+/* 모바일 */
+@media (max-width:767.98px) {
+  .ax-clean-navbar .navbar-menu-wrapper {
+    padding:0 .65rem !important;
+  }
+
+  .ax-user-menu {
+    margin-left:.15rem;
+  }
+}
+
+
+/* =========================================================
+   STEP 29 - 관리자 업무 페이지 통일
+   ========================================================= */
+
+body.ax-purple-admin .content-wrapper {
+  padding:1.5rem 1.75rem 2rem !important;
+}
+
+.ax-work-page-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+  margin:0 auto 1.25rem;
+  max-width:1500px;
+}
+
+.ax-work-page-head > div:first-child {
+  min-width:0;
+}
+
+.ax-work-page-head .page-title {
+  display:flex;
+  align-items:center;
+  margin:0;
+  color:#1f2937;
+  font-size:1.45rem;
+  font-weight:800;
+  letter-spacing:-.025em;
+}
+
+.ax-work-page-head .page-title-icon {
+  width:36px;
+  height:36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  margin-right:.65rem !important;
+  background:#7557d9 !important;
+  color:#fff;
+  box-shadow:none !important;
+}
+
+.ax-work-page-head .ax-page-subtitle,
+.ax-work-page-head .page-description {
+  margin:.45rem 0 0 3.2rem;
+  color:#8a8f98;
+  font-size:.78rem;
+  line-height:1.5;
+}
+
+.ax-work-card {
+  max-width:1500px;
+  margin-left:auto;
+  margin-right:auto;
+  border:1px solid #e8ebf0;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.025);
+}
+
+.ax-work-card + .ax-work-card {
+  margin-top:1rem;
+}
+
+.ax-work-card > .card-body,
+.ax-work-card > .p-4,
+.ax-work-card > .p-3 {
+  padding:1.15rem 1.2rem !important;
+}
+
+.ax-work-card .card-title,
+.ax-work-card h4,
+.ax-work-card h5 {
+  color:#1f2937;
+}
+
+.ax-work-card .card-description {
+  color:#9ca3af;
+  font-size:.72rem;
+}
+
+.ax-work-card .ax-section-head,
+.ax-work-card .section-heading-row,
+.ax-work-card .panel-heading,
+.ax-work-card .team-list-heading {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+}
+
+.ax-work-table {
+  width:100%;
+  margin-bottom:0;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+.ax-work-table thead th {
+  padding:.78rem .9rem;
+  border-top:0;
+  border-bottom:1px solid #e9edf2;
+  background:#fafbfc;
+  color:#8f96a1;
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+
+.ax-work-table tbody td {
+  padding:.82rem .9rem;
+  border-bottom:1px solid #f0f2f5;
+  color:#4b5563;
+  font-size:.76rem;
+  vertical-align:middle;
+}
+
+.ax-work-table tbody tr:last-child td {
+  border-bottom:0;
+}
+
+.ax-work-table tbody tr:hover {
+  background:#fbfbfd;
+}
+
+.ax-work-table .btn {
+  min-height:32px;
+  padding:.35rem .65rem;
+  font-size:.68rem;
+}
+
+.ax-work-notice {
+  max-width:1500px;
+  margin-left:auto;
+  margin-right:auto;
+  padding:.85rem 1rem;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  background:#fafafa;
+  color:#6b7280;
+  font-size:.74rem;
+}
+
+.ax-management-toolbar,
+.ax-page-actions,
+.team-toolbar,
+.result-toolbar,
+.assignment-toolbar {
+  max-width:1500px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.ax-management-toolbar {
+  padding:.85rem 1rem;
+}
+
+.ax-management-toolbar .form-control,
+.ax-management-toolbar .form-select,
+.team-toolbar .form-control,
+.team-toolbar .form-select,
+.assignment-toolbar .form-control,
+.assignment-toolbar .form-select {
+  min-height:40px;
+  border:1px solid #dfe3e8;
+  border-radius:9px;
+  background:#fff;
+  font-size:.75rem;
+}
+
+.ax-management-toolbar .form-control:focus,
+.ax-management-toolbar .form-select:focus,
+.team-toolbar .form-control:focus,
+.team-toolbar .form-select:focus,
+.assignment-toolbar .form-control:focus,
+.assignment-toolbar .form-select:focus {
+  border-color:#a996e7;
+  box-shadow:0 0 0 .18rem rgba(117,87,217,.08);
+}
+
+.ax-mini-stat-grid,
+.team-stat-grid,
+.result-summary-grid,
+.assignment-summary-grid {
+  max-width:1500px;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+.ax-mini-stat,
+.team-stat-card,
+.result-stat-card,
+.assignment-stat {
+  border:1px solid #e8ebf0 !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  box-shadow:none !important;
+}
+
+.ax-mini-stat::after,
+.team-stat-card::after,
+.result-stat-card::after {
+  display:none !important;
+}
+
+.ax-mini-stat-value {
+  color:#1f2937;
+  font-size:1.55rem;
+}
+
+.modal-content.ax-purple-modal,
+.ax-purple-modal {
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  box-shadow:0 18px 50px rgba(15,23,42,.12);
+}
+
+.ax-purple-modal .modal-header {
+  background:#fff;
+}
+
+.ax-purple-modal .modal-footer {
+  background:#fafbfc;
+}
+
+.ax-purple-modal .form-label {
+  color:#525866;
+  font-size:.73rem;
+}
+
+.ax-purple-modal .form-control,
+.ax-purple-modal .form-select {
+  min-height:40px;
+  border:1px solid #dfe3e8;
+  border-radius:9px;
+  font-size:.75rem;
+}
+
+@media (max-width:991.98px) {
+  body.ax-purple-admin .content-wrapper {
+    padding:1rem !important;
+  }
+
+  .ax-work-page-head {
+    flex-direction:column;
+  }
+
+  .ax-work-page-head .ax-page-subtitle,
+  .ax-work-page-head .page-description {
+    margin-left:0;
+  }
+}
+
+
+/* =========================================================
+   STEP 30 - 결과 / 점수 / 순위 / Seed UI 통일
+   ========================================================= */
+
+.ax-result-page,
+.ax-score-page,
+.ax-seed-page {
+  max-width:1500px;
+  margin:0 auto;
+}
+
+.result-summary-grid,
+.team-stat-grid,
+.assignment-summary-grid {
+  max-width:1500px;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+.result-stat-card,
+.team-stat-card,
+.assignment-stat {
+  position:relative;
+  overflow:hidden;
+  padding:1rem 1.1rem;
+  border:1px solid #e8ebf0 !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  box-shadow:none !important;
+}
+
+.result-stat-card::after,
+.team-stat-card::after {
+  display:none !important;
+}
+
+.result-stat-card strong,
+.team-stat-card strong,
+.assignment-stat strong {
+  color:#1f2937 !important;
+  font-size:1.4rem;
+}
+
+.result-stat-card span,
+.team-stat-card span,
+.assignment-stat span {
+  color:#8b919b !important;
+  font-size:.7rem;
+}
+
+.score-control-card,
+.team-toolbar-card,
+.assignment-toolbar,
+.result-toolbar {
+  max-width:1500px;
+  margin-left:auto;
+  margin-right:auto;
+  border:1px solid #e8ebf0 !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  box-shadow:none !important;
+}
+
+.score-control-card .score-weight-form,
+.result-toolbar,
+.team-toolbar {
+  padding:1rem !important;
+}
+
+.score-weight-form label,
+.result-toolbar label,
+.team-toolbar label {
+  color:#6b7280;
+  font-size:.68rem;
+  font-weight:700;
+}
+
+.score-weight-form .form-control,
+.score-weight-form .form-select,
+.result-toolbar .form-control,
+.result-toolbar .form-select,
+.team-toolbar .form-control,
+.team-toolbar .form-select {
+  min-height:40px;
+  border:1px solid #dfe3e8;
+  border-radius:9px;
+  background:#fff;
+  font-size:.74rem;
+}
+
+.score-policy-note {
+  margin:0 1rem 1rem !important;
+  padding:.8rem .9rem !important;
+  border:1px solid #eceef2;
+  border-radius:10px;
+  background:#fafbfc !important;
+  color:#7d838c !important;
+  font-size:.7rem;
+}
+
+.score-policy-chip,
+.count-pill {
+  display:inline-flex;
+  align-items:center;
+  padding:.26rem .55rem;
+  border-radius:999px;
+  background:#f2effc !important;
+  color:#7557d9 !important;
+  font-size:.64rem !important;
+  font-weight:800;
+}
+
+.ax-work-card .table-responsive {
+  border-radius:0 0 14px 14px;
+}
+
+.ax-work-table td .badge,
+.ax-work-table td .status-badge,
+.ax-work-table td .team-status,
+.ax-work-table td .count-pill {
+  font-size:.63rem;
+  font-weight:700;
+}
+
+.ax-work-table .text-primary {
+  color:#7557d9 !important;
+}
+
+.ax-work-table .text-success {
+  color:#2e8b57 !important;
+}
+
+.ax-work-table .text-danger {
+  color:#d05c67 !important;
+}
+
+/* result settings */
+.ax-work-card .form-check-input:checked {
+  background-color:#7557d9;
+  border-color:#7557d9;
+}
+
+.ax-work-card .form-switch .form-check-input {
+  cursor:pointer;
+}
+
+.ax-work-card .form-label {
+  color:#59606b;
+  font-size:.72rem;
+  font-weight:700;
+}
+
+/* Seed settings */
+.ax-seed-weight-list {
+  display:grid;
+  gap:.55rem !important;
+}
+
+.ax-seed-weight-row {
+  display:grid !important;
+  grid-template-columns:minmax(170px,1fr) 105px 105px 105px auto !important;
+  gap:.6rem !important;
+  align-items:end !important;
+  padding:.8rem !important;
+  border:1px solid #eaedf1 !important;
+  border-radius:10px !important;
+  background:#fbfcfd !important;
+}
+
+.ax-seed-round-copy strong {
+  color:#27313d;
+  font-size:.75rem;
+}
+
+.ax-seed-round-copy small {
+  color:#9ba1aa;
+  font-size:.63rem;
+}
+
+.ax-seed-input-group label {
+  display:block;
+  margin-bottom:.25rem;
+  color:#8a909a;
+  font-size:.61rem;
+  font-weight:700;
+}
+
+.ax-seed-input-group .form-control,
+.ax-seed-input-group .input-group-text {
+  min-height:34px;
+  border-color:#dfe3e8;
+  font-size:.69rem;
+}
+
+.ax-seed-rank-clean {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
+  border-radius:9px;
+  background:#f2effc;
+  color:#7557d9;
+  font-size:.7rem;
+  font-weight:800;
+}
+
+/* ranking emphasis */
+.ax-work-table tbody tr:first-child .ax-seed-rank-clean,
+.ax-work-table tbody tr:first-child td:first-child {
+  color:#7557d9;
+  font-weight:800;
+}
+
+.ax-average-summary,
+.ax-result-summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  max-width:1500px;
+  margin:0 auto 1rem;
+  padding:.9rem 1rem;
+  border:1px solid #e8ebf0;
+  border-radius:12px;
+  background:#fff;
+}
+
+.ax-average-summary strong,
+.ax-result-summary strong {
+  color:#1f2937;
+}
+
+.ax-average-summary span,
+.ax-result-summary span {
+  color:#8d939d;
+  font-size:.72rem;
+}
+
+@media (max-width:991.98px) {
+  .ax-seed-weight-row {
+    grid-template-columns:1fr 1fr !important;
+  }
+
+  .ax-seed-round-copy {
+    grid-column:1 / -1;
+  }
+
+  .ax-seed-weight-row .btn {
+    grid-column:1 / -1;
+  }
+}
+
+@media (max-width:575.98px) {
+  .ax-seed-weight-row {
+    grid-template-columns:1fr !important;
+  }
+}
+\n\n/* =========================================================\n   STEP 39 - 평가 결과 화면 가독성/크기 보정\n   ========================================================= */\nbody.ax-purple-admin .result-toolbar,\nbody.ax-purple-admin .result-summary-grid,\nbody.ax-purple-admin .result-overview-grid,\nbody.ax-purple-admin .result-tabs,\nbody.ax-purple-admin .result-table-card,\nbody.ax-purple-admin .score-control-card {\n  width:100%;\n  max-width:1600px;\n  margin-left:auto;\n  margin-right:auto;\n}\n\nbody.ax-purple-admin .result-summary-grid {\n  display:grid;\n  grid-template-columns:repeat(4,minmax(0,1fr));\n  gap:20px;\n}\n\nbody.ax-purple-admin .result-stat-card {\n  min-height:110px;\n  padding:20px 22px !important;\n  gap:16px;\n}\n\nbody.ax-purple-admin .result-stat-icon {\n  width:50px;\n  height:50px;\n  flex:0 0 50px;\n  border-radius:14px;\n  font-size:21px;\n}\n\nbody.ax-purple-admin .result-stat-copy span {\n  font-size:13px !important;\n}\n\nbody.ax-purple-admin .result-stat-copy strong {\n  margin-top:3px;\n  font-size:28px !important;\n  line-height:1.15;\n}\n\nbody.ax-purple-admin .result-stat-copy strong small {\n  font-size:13px;\n}\n\nbody.ax-purple-admin .result-stat-copy .result-publish-value {\n  font-size:22px !important;\n}\n\n/* ax-work-card의 auto margin이 grid item을 내용 폭으로 축소시키던 문제 수정 */\nbody.ax-purple-admin .result-overview-grid {\n  display:grid;\n  grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(320px,.9fr);\n  gap:20px;\n  align-items:stretch;\n}\n\nbody.ax-purple-admin .result-overview-grid > .ax-work-card {\n  width:100%;\n  max-width:none;\n  min-width:0;\n  min-height:220px;\n  margin:0 !important;\n  padding:22px 24px;\n}\n\nbody.ax-purple-admin .result-overview-grid .section-heading-row {\n  padding:0;\n  border-bottom:0;\n}\n\nbody.ax-purple-admin .result-overview-grid .section-eyebrow {\n  font-size:11px;\n}\n\nbody.ax-purple-admin .result-overview-grid h5 {\n  font-size:20px;\n  line-height:1.25;\n}\n\nbody.ax-purple-admin .result-progress-number {\n  font-size:30px;\n  line-height:1;\n}\n\nbody.ax-purple-admin .result-progress-track {\n  height:12px;\n  margin:24px 0 14px;\n}\n\nbody.ax-purple-admin .result-progress-caption {\n  font-size:13px;\n}\n\nbody.ax-purple-admin .result-highlight-row {\n  margin-top:20px;\n}\n\nbody.ax-purple-admin .result-highlight-row span {\n  font-size:12px;\n}\n\nbody.ax-purple-admin .result-highlight-row strong {\n  margin-top:4px;\n  font-size:25px;\n}\n\nbody.ax-purple-admin .result-publish-card p {\n  min-height:50px;\n  margin:18px 0;\n  font-size:13px;\n  line-height:1.65;\n}\n\nbody.ax-purple-admin .publish-pill {\n  padding:6px 10px;\n  font-size:12px;\n}\n\nbody.ax-purple-admin .result-tabs a {\n  padding:11px 15px;\n  font-size:13px;\n}\n\nbody.ax-purple-admin .result-table th {\n  font-size:12px;\n}\n\nbody.ax-purple-admin .result-table td {\n  font-size:13px;\n}\n\n@media (max-width:1199.98px) {\n  body.ax-purple-admin .result-overview-grid {\n    grid-template-columns:1fr 1fr;\n  }\n  body.ax-purple-admin .result-publish-card {\n    grid-column:1/-1;\n  }\n}\n\n@media (max-width:991.98px) {\n  body.ax-purple-admin .result-summary-grid {\n    grid-template-columns:repeat(2,minmax(0,1fr));\n  }\n}\n\n@media (max-width:767.98px) {\n  body.ax-purple-admin .result-summary-grid,\n  body.ax-purple-admin .result-overview-grid {\n    grid-template-columns:1fr;\n  }\n  body.ax-purple-admin .result-publish-card {\n    grid-column:auto;\n  }\n  body.ax-purple-admin .result-overview-grid > .ax-work-card {\n    min-height:auto;\n    padding:18px;\n  }\n}\n
+
+/* =========================================================
+   STEP 42 - 관리자 화면 가시성 개선
+   ========================================================= */
+
+/* 긴 페이지를 내려도 사이드바가 사라지지 않도록 독립 고정 */
+@media (min-width: 992px) {
+  body.ax-purple-admin .ax-purple-sidebar {
+    position: sticky !important;
+    top: 70px !important;
+    align-self: flex-start !important;
+    height: calc(100vh - 70px) !important;
+    min-height: calc(100vh - 70px) !important;
+    overflow: hidden !important;
+  }
+
+  body.ax-purple-admin .ax-purple-sidebar .ax-sidebar-scroll {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1.5rem !important;
+    scrollbar-width: thin;
+  }
+}
+
+/* 본문은 큰 화면을 적극적으로 사용 */
+body.ax-purple-admin .content-wrapper {
+  padding: 1.55rem 1.6rem 2.5rem !important;
+}
+
+body.ax-purple-admin .assignment-page {
+  width: 100%;
+  max-width: none;
+}
+
+body.ax-purple-admin .assignment-page > .ax-work-page-head,
+body.ax-purple-admin .assignment-page > .assignment-toolbar,
+body.ax-purple-admin .assignment-page > .assignment-tabbar,
+body.ax-purple-admin .assignment-page > .tab-content {
+  width: 100%;
+  max-width: none !important;
+}
+
+/* grid 안의 ax-work-card가 auto margin 때문에 작게 수축하지 않게 함 */
+body.ax-purple-admin .assignment-page .ax-work-card {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 헤더 가독성 */
+body.ax-purple-admin .assignment-page .page-title {
+  font-size: 1.65rem !important;
+}
+
+body.ax-purple-admin .assignment-page .ax-page-subtitle {
+  font-size: .82rem !important;
+}
+
+/* 통계 카드 */
+body.ax-purple-admin .assignment-summary-grid {
+  gap: .85rem !important;
+}
+
+body.ax-purple-admin .assignment-stat {
+  min-height: 82px !important;
+  padding: .95rem 1rem !important;
+}
+
+body.ax-purple-admin .assignment-stat span {
+  font-size: .72rem !important;
+}
+
+body.ax-purple-admin .assignment-stat strong {
+  font-size: 1.65rem !important;
+}
+
+/* 탭 */
+body.ax-purple-admin .assignment-tabbar {
+  padding: .35rem;
+  gap: .35rem;
+  border: 1px solid #e7ebf2;
+  border-radius: 13px;
+  background: #f5f7fb;
+}
+
+body.ax-purple-admin .assignment-tab {
+  min-width: 190px;
+  border-radius: 10px !important;
+}
+
+body.ax-purple-admin .assignment-tab.active {
+  background: #fff !important;
+  box-shadow: 0 1px 3px rgba(15,23,42,.06);
+}
+
+/* 자동 편성은 설정 360px + 넓은 미리보기 */
+body.ax-purple-admin .assignment-page .auto-layout {
+  display: grid !important;
+  grid-template-columns: 360px minmax(0, 1fr) !important;
+  gap: 1.25rem !important;
+  width: 100% !important;
+  align-items: start !important;
+}
+
+body.ax-purple-admin .assignment-page .auto-setting-card {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+}
+
+body.ax-purple-admin .assignment-page .auto-preview-card {
+  min-width: 0;
+  width: 100% !important;
+}
+
+/* 미리보기 카드 자체를 크게 */
+body.ax-purple-admin .assignment-page .preview-summary {
+  gap: .8rem !important;
+  margin: 1rem 1rem .8rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-summary > div {
+  min-height: 70px;
+  padding: .85rem 1rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+body.ax-purple-admin .assignment-page .preview-summary strong {
+  font-size: 1.2rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-summary span {
+  font-size: .7rem !important;
+}
+
+/* 1920px 화면에서는 팀 3개씩 보여 한눈에 6팀 확인 */
+body.ax-purple-admin .assignment-page .preview-team-grid {
+  grid-template-columns: repeat(3, minmax(250px, 1fr)) !important;
+  gap: .8rem !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 0 1rem .5rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-team-card {
+  min-width: 0;
+  border-radius: 13px !important;
+}
+
+body.ax-purple-admin .assignment-page .team-card-head {
+  padding: .75rem .85rem !important;
+}
+
+body.ax-purple-admin .assignment-page .team-card-head strong {
+  font-size: .82rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-members {
+  padding: .35rem .7rem .6rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-member-row {
+  min-height: 43px;
+  gap: .55rem !important;
+  padding: .5rem .15rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-member-row > strong {
+  font-size: .75rem !important;
+}
+
+body.ax-purple-admin .assignment-page .seed-chip {
+  font-size: .61rem !important;
+  padding: .25rem .45rem !important;
+}
+
+body.ax-purple-admin .assignment-page .score-chip {
+  font-size: .68rem !important;
+  min-width: 38px !important;
+}
+
+body.ax-purple-admin .assignment-page .student-avatar.small {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  font-size: .68rem !important;
+}
+
+/* 확정 버튼 영역은 하단 전체 폭에서 잘 보이게 */
+body.ax-purple-admin .assignment-page .preview-actions {
+  margin: .5rem 1rem 1rem !important;
+  padding: .85rem 0 0 !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-actions .btn {
+  min-height: 42px;
+  font-weight: 800;
+}
+
+/* 수동 팀 편성도 더 넓게 사용 */
+body.ax-purple-admin .assignment-page .manual-layout {
+  grid-template-columns: minmax(320px, 370px) minmax(0, 1fr) !important;
+  gap: 1.25rem !important;
+}
+
+body.ax-purple-admin .assignment-page .team-board-grid {
+  grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body.ax-purple-admin .assignment-page .unassigned-list {
+  max-height: 600px !important;
+}
+
+/* 공통 텍스트가 지나치게 작았던 영역 */
+body.ax-purple-admin .assignment-page .panel-heading h5 {
+  font-size: 1rem !important;
+}
+
+body.ax-purple-admin .assignment-page .panel-heading p,
+body.ax-purple-admin .assignment-page .auto-control-block > label:first-child {
+  font-size: .74rem !important;
+}
+
+body.ax-purple-admin .assignment-page .rule-option strong,
+body.ax-purple-admin .assignment-page .switch-option strong {
+  font-size: .75rem !important;
+}
+
+body.ax-purple-admin .assignment-page .rule-option small,
+body.ax-purple-admin .assignment-page .switch-option small,
+body.ax-purple-admin .assignment-page .auto-control-block > small {
+  font-size: .65rem !important;
+}
+
+@media (max-width: 1550px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid,
+  body.ax-purple-admin .assignment-page .team-board-grid {
+    grid-template-columns: repeat(2, minmax(250px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  body.ax-purple-admin .assignment-page .auto-layout,
+  body.ax-purple-admin .assignment-page .manual-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.ax-purple-admin .assignment-page .auto-setting-card {
+    position: static !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid,
+  body.ax-purple-admin .assignment-page .team-board-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.ax-purple-admin .assignment-tab {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+}
+
+
+/* =========================================================
+   STEP 43 - 관리자 전체 가시성 보강
+   STEP42 팀 편성 외의 나머지 업무 화면 점검 결과 반영
+   ========================================================= */
+
+@media (min-width: 1200px) {
+  body.ax-purple-admin .ax-work-page-head,
+  body.ax-purple-admin .ax-work-card,
+  body.ax-purple-admin .ax-work-notice,
+  body.ax-purple-admin .ax-management-toolbar,
+  body.ax-purple-admin .ax-page-actions,
+  body.ax-purple-admin .team-toolbar,
+  body.ax-purple-admin .result-toolbar,
+  body.ax-purple-admin .assignment-toolbar,
+  body.ax-purple-admin .ax-mini-stat-grid,
+  body.ax-purple-admin .team-stat-grid,
+  body.ax-purple-admin .result-summary-grid,
+  body.ax-purple-admin .assignment-summary-grid {
+    width: 100%;
+    max-width: 1600px !important;
+  }
+}
+
+/* 사이드바 글씨가 지나치게 작던 부분 */
+body.ax-purple-admin .ax-clean-sidebar .ax-sidebar-section {
+  font-size: .65rem !important;
+  letter-spacing: .09em !important;
+}
+
+body.ax-purple-admin .ax-clean-sidebar .nav-link {
+  font-size: .80rem !important;
+  min-height: 44px !important;
+}
+
+body.ax-purple-admin .ax-clean-sidebar .sub-menu .nav-link {
+  font-size: .74rem !important;
+  min-height: 36px !important;
+}
+
+/* 상단바 */
+body.ax-purple-admin .ax-navbar-context strong {
+  font-size: .82rem !important;
+}
+body.ax-purple-admin .ax-navbar-context span,
+body.ax-purple-admin .ax-user-copy small {
+  font-size: .68rem !important;
+}
+
+/* 업무 테이블 */
+body.ax-purple-admin .ax-work-table thead th,
+body.ax-purple-admin .ax-saas-table thead th {
+  font-size: .72rem !important;
+  padding: .86rem .95rem !important;
+}
+
+body.ax-purple-admin .ax-work-table tbody td,
+body.ax-purple-admin .ax-saas-table tbody td {
+  font-size: .80rem !important;
+  padding: .90rem .95rem !important;
+  line-height: 1.45;
+}
+
+body.ax-purple-admin .ax-work-table .btn {
+  font-size: .73rem !important;
+}
+
+/* status / chip */
+body.ax-purple-admin .ax-status-pill,
+body.ax-purple-admin .score-policy-chip,
+body.ax-purple-admin .count-pill,
+body.ax-purple-admin .ax-work-table td .badge,
+body.ax-purple-admin .ax-work-table td .status-badge,
+body.ax-purple-admin .ax-work-table td .team-status {
+  font-size: .69rem !important;
+}
+
+/* 카드 설명/폼 */
+body.ax-purple-admin .ax-work-card .card-description,
+body.ax-purple-admin .ax-work-notice,
+body.ax-purple-admin .form-label,
+body.ax-purple-admin .score-weight-form label,
+body.ax-purple-admin .result-toolbar label,
+body.ax-purple-admin .team-toolbar label {
+  font-size: .76rem !important;
+  line-height: 1.55;
+}
+
+body.ax-purple-admin .form-control,
+body.ax-purple-admin .form-select,
+body.ax-purple-admin textarea {
+  font-size: .80rem !important;
+}
+
+/* 대시보드의 작은 설명 텍스트 */
+body.ax-purple-admin .ax-kpi-copy small,
+body.ax-purple-admin .ax-assignment-title small,
+body.ax-purple-admin .ax-round-summary-title small,
+body.ax-purple-admin .ax-current-assignment > span,
+body.ax-purple-admin .ax-quick-clean small {
+  font-size: .71rem !important;
+}
+
+/* 결과/Seed */
+body.ax-purple-admin .ax-seed-round-copy small,
+body.ax-purple-admin .ax-seed-input-group label {
+  font-size: .68rem !important;
+}
+
+body.ax-purple-admin .ax-seed-input-group .form-control,
+body.ax-purple-admin .ax-seed-input-group .input-group-text {
+  font-size: .74rem !important;
+}
+
+/* 빈 공간이 과하게 생기지 않도록 내용 카드 최소 높이 강제 제거 */
+body.ax-purple-admin .ax-work-card,
+body.ax-purple-admin .ax-saas-card {
+  min-height: 0 !important;
+}
+
+/* 가로가 긴 테이블은 카드 자체를 줄이지 않고 내부에서만 스크롤 */
+body.ax-purple-admin .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* 모달 입력도 조금 키움 */
+body.ax-purple-admin .ax-purple-modal .form-control,
+body.ax-purple-admin .ax-purple-modal .form-select {
+  font-size: .80rem !important;
+}
+
+@media (max-width: 991.98px) {
+  body.ax-purple-admin .ax-work-table tbody td,
+  body.ax-purple-admin .ax-saas-table tbody td {
+    font-size: .76rem !important;
+  }
+}
+
+
+/* =========================================================
+   STEP 44 - 자동 팀 편성 6개 팀 동시 노출
+   ========================================================= */
+
+/* 좌측 조건 + 우측 미리보기 구조는 공간 낭비가 커서 폐기 */
+body.ax-purple-admin .assignment-page .auto-layout {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* 조건 카드도 전체 폭 사용 */
+body.ax-purple-admin .assignment-page .auto-setting-card {
+  position: static !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+}
+
+/* 조건 입력을 가로형으로 압축 */
+@media (min-width: 1200px) {
+  body.ax-purple-admin .assignment-page #autoPreviewForm {
+    display: grid !important;
+    grid-template-columns:
+      minmax(150px, .7fr)
+      minmax(190px, .85fr)
+      minmax(420px, 1.8fr)
+      minmax(300px, 1.25fr)
+      minmax(190px, .75fr) !important;
+    gap: .85rem !important;
+    align-items: stretch !important;
+    padding: 1rem !important;
+  }
+
+  body.ax-purple-admin .assignment-page #autoPreviewForm > input[type="hidden"] {
+    display: none !important;
+  }
+
+  body.ax-purple-admin .assignment-page #autoPreviewForm > .auto-control-block {
+    margin: 0 !important;
+    min-height: 112px !important;
+    padding: .8rem !important;
+    border: 1px solid #e8ebf0 !important;
+    border-radius: 12px !important;
+    background: #fbfcfe !important;
+  }
+
+  body.ax-purple-admin .assignment-page #autoPreviewForm > button[type="submit"] {
+    align-self: stretch !important;
+    min-height: 112px !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    font-size: .82rem !important;
+  }
+
+  body.ax-purple-admin .assignment-page #autoPreviewForm .rule-option {
+    padding: .55rem .65rem !important;
+    min-height: 42px !important;
+  }
+
+  body.ax-purple-admin .assignment-page #autoPreviewForm .switch-option {
+    min-height: 64px !important;
+  }
+}
+
+/* 미리보기 카드 = 화면 전체폭 */
+body.ax-purple-admin .assignment-page .auto-preview-card {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+/* 상단 요약은 너무 높지 않게 */
+body.ax-purple-admin .assignment-page .preview-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  margin: .8rem 1rem !important;
+  gap: .7rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-summary > div {
+  min-height: 56px !important;
+  padding: .7rem .85rem !important;
+}
+
+/* 핵심: 6팀을 3열 x 2행으로 한 화면에 */
+body.ax-purple-admin .assignment-page .preview-team-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: .75rem !important;
+  width: 100% !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 0 1rem .85rem !important;
+}
+
+/* 팀 카드 높이를 압축해서 2행이 한 화면에 들어오게 */
+body.ax-purple-admin .assignment-page .preview-team-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  border-radius: 12px !important;
+}
+
+body.ax-purple-admin .assignment-page .team-card-head {
+  min-height: 40px !important;
+  padding: .55rem .7rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-members {
+  padding: .2rem .55rem .45rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-member-row {
+  min-height: 35px !important;
+  padding: .33rem .1rem !important;
+  gap: .4rem !important;
+}
+
+body.ax-purple-admin .assignment-page .student-avatar.small {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  font-size: .62rem !important;
+}
+
+body.ax-purple-admin .assignment-page .preview-member-row > strong {
+  font-size: .73rem !important;
+}
+
+body.ax-purple-admin .assignment-page .seed-chip {
+  font-size: .61rem !important;
+  padding: .2rem .36rem !important;
+}
+
+body.ax-purple-admin .assignment-page .score-chip {
+  min-width: 34px !important;
+  font-size: .66rem !important;
+}
+
+/* 적용 영역 */
+body.ax-purple-admin .assignment-page .preview-actions {
+  margin: 0 1rem .85rem !important;
+  padding-top: .7rem !important;
+}
+
+/* 1100 이상이면 계속 3열 유지 */
+@media (min-width: 1100px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* 태블릿만 2열 */
+@media (min-width: 700px) and (max-width: 1099.98px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* 모바일 1열 */
+@media (max-width: 699.98px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* STEP42/43의 1550px 2열 규칙을 최종적으로 무효화 */
+@media (max-width: 1550px) and (min-width: 1100px) {
+  body.ax-purple-admin .assignment-page .preview-team-grid,
+  body.ax-purple-admin .assignment-page .team-board-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+
+/* =========================================================
+   STEP 45 - 상단 고정 Navbar와 본문 간격 전역 수정
+   모든 관리자 화면 공통
+   ========================================================= */
+
+:root {
+  --ax-navbar-height: 70px;
+  --ax-content-top-gap: 28px;
+}
+
+/* fixed navbar 높이만큼 page body를 정확히 아래에서 시작 */
+body.ax-purple-admin .page-body-wrapper {
+  padding-top: var(--ax-navbar-height) !important;
+  min-height: 100vh !important;
+}
+
+/* 본문 첫 콘텐츠가 상단바에 붙지 않도록 공통 여백 확보 */
+body.ax-purple-admin .content-wrapper {
+  padding-top: var(--ax-content-top-gap) !important;
+}
+
+/* 페이지 헤더가 없는 화면도 첫 블록에 최소 상단 여백 */
+body.ax-purple-admin .content-wrapper > :first-child {
+  margin-top: 0 !important;
+}
+
+/* 기존 sticky sidebar도 navbar 바로 밑에서 시작 */
+@media (min-width: 992px) {
+  body.ax-purple-admin .ax-purple-sidebar {
+    top: var(--ax-navbar-height) !important;
+    height: calc(100vh - var(--ax-navbar-height)) !important;
+    min-height: calc(100vh - var(--ax-navbar-height)) !important;
+  }
+}
+
+/* 페이지 헤더 아래 간격 통일 */
+body.ax-purple-admin .ax-work-page-head,
+body.ax-purple-admin .ax-saas-page-head {
+  margin-top: 0 !important;
+  margin-bottom: 1.4rem !important;
+}
+
+/* 카드/툴바가 헤더와 겹쳐 보이지 않도록 */
+body.ax-purple-admin .ax-work-page-head + *,
+body.ax-purple-admin .ax-saas-page-head + * {
+  margin-top: 0 !important;
+}
+
+/* 좁은 화면은 여백만 조금 축소 */
+@media (max-width: 991.98px) {
+  body.ax-purple-admin .content-wrapper {
+    padding-top: 20px !important;
+  }
+}
+
+
+/* =========================================================
+   STEP 46 - Fixed Navbar 상단 간격 충돌 해결
+   ========================================================= */
+
+/*
+  기존 레이아웃의 아래 규칙:
+  .container-fluid.page-body-wrapper { padding:0!important; margin:0!important; }
+  이 STEP45의 .page-body-wrapper 여백보다 specificity가 높아
+  실제 브라우저에서는 제목이 Navbar 아래로 숨어 있었습니다.
+
+  해결: 동일/더 높은 specificity로 navbar 높이만큼 wrapper 자체를 아래로 이동.
+*/
+body.ax-purple-admin .container-fluid.page-body-wrapper {
+  margin-top: 70px !important;
+  padding-top: 0 !important;
+  min-height: calc(100vh - 70px) !important;
+}
+
+/* main panel 첫 내용에 실제 눈에 보이는 간격 확보 */
+body.ax-purple-admin .main-panel > .content-wrapper {
+  padding-top: 32px !important;
+}
+
+/* 페이지 헤더 안 제목과 설명 간격 */
+body.ax-purple-admin .ax-work-page-head .page-title,
+body.ax-purple-admin .ax-saas-page-head h1 {
+  margin-top: 0 !important;
+}
+
+body.ax-purple-admin .ax-work-page-head .ax-page-subtitle,
+body.ax-purple-admin .ax-work-page-head .page-description {
+  margin-top: .65rem !important;
+}
+
+/* sticky sidebar는 wrapper가 이미 70px 아래에서 시작하므로 추가 top offset 제거 */
+@media (min-width: 992px) {
+  body.ax-purple-admin .ax-purple-sidebar {
+    top: 0 !important;
+    height: calc(100vh - 70px) !important;
+    min-height: calc(100vh - 70px) !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.ax-purple-admin .container-fluid.page-body-wrapper {
+    margin-top: 70px !important;
+  }
+
+  body.ax-purple-admin .main-panel > .content-wrapper {
+    padding-top: 22px !important;
+  }
+}
+
+/* Stage 07 - admin information architecture and workflow */
+.ax-admin-flow-card { margin-bottom:1rem; overflow:hidden; }
+.ax-admin-flow {
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:0;
+  padding:1rem 1.1rem 1.15rem;
+}
+.ax-admin-flow-step {
+  position:relative;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:.45rem;
+  padding:.85rem .8rem;
+  border:1px solid #e8ebf0;
+  border-right:0;
+  background:#fff;
+  color:#374151;
+  text-decoration:none;
+  transition:.15s ease;
+}
+.ax-admin-flow-step:first-child { border-radius:12px 0 0 12px; }
+.ax-admin-flow-step:last-child { border-right:1px solid #e8ebf0; border-radius:0 12px 12px 0; }
+.ax-admin-flow-step:hover { z-index:1; border-color:#b9acec; background:#faf9ff; color:#374151; }
+.ax-admin-flow-step.done { background:#f7fbf8; }
+.ax-admin-flow-step.current { background:#f5f1ff; box-shadow:inset 0 0 0 1px #8b72df; }
+.ax-admin-flow-number {
+  width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:50%; background:#eef0f3; color:#707782; font-size:.7rem; font-weight:800;
+}
+.ax-admin-flow-step.done .ax-admin-flow-number { background:#e5f5eb; color:#28834d; }
+.ax-admin-flow-step.current .ax-admin-flow-number { background:#7557d9; color:#fff; }
+.ax-admin-flow-copy { min-width:0; display:flex; flex-direction:column; }
+.ax-admin-flow-copy strong { color:#202632; font-size:.75rem; }
+.ax-admin-flow-copy small { margin-top:.18rem; color:#9299a5; font-size:.62rem; line-height:1.35; }
+.ax-admin-flow-state { margin-top:auto; color:#a0a6b0; font-size:.61rem; font-weight:800; }
+.ax-admin-flow-step.done .ax-admin-flow-state { color:#3b8d5d; }
+.ax-admin-flow-step.current .ax-admin-flow-state { color:#7557d9; }
+.ax-admin-flow-empty { display:flex; align-items:center; gap:.9rem; padding:1.1rem 1.2rem; }
+.ax-admin-flow-empty > div:first-child { width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:12px; background:#f2effc; color:#7557d9; }
+.ax-admin-flow-empty > div:nth-child(2) { flex:1; display:flex; flex-direction:column; }
+.ax-admin-flow-empty strong { color:#29303b; font-size:.82rem; }
+.ax-admin-flow-empty span { margin-top:.18rem; color:#9299a5; font-size:.69rem; }
+.ax-admin-section-title { display:flex; align-items:baseline; gap:.55rem; margin:.2rem 0 .65rem .15rem; }
+.ax-admin-section-title span { color:#343b47; font-size:.78rem; font-weight:800; }
+.ax-admin-section-title small { color:#9ca3af; font-size:.65rem; }
+
+body.ax-purple-admin .ax-clean-sidebar .ax-sidebar-section {
+  margin-top:.9rem;
+  color:rgba(255,255,255,.45);
+  font-size:.61rem;
+  letter-spacing:.08em;
+  font-weight:800;
+}
+body.ax-purple-admin .ax-clean-sidebar .ax-sidebar-section:first-of-type { margin-top:.2rem; }
+
+@media (max-width:1399.98px) {
+  .ax-admin-flow { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.55rem; }
+  .ax-admin-flow-step, .ax-admin-flow-step:first-child, .ax-admin-flow-step:last-child { border:1px solid #e8ebf0; border-radius:10px; }
+}
+@media (max-width:767.98px) {
+  .ax-admin-flow { grid-template-columns:1fr; }
+  .ax-admin-flow-step { display:grid; grid-template-columns:30px 1fr auto; align-items:center; }
+  .ax-admin-flow-state { margin-top:0; }
+  .ax-admin-flow-empty { align-items:flex-start; flex-wrap:wrap; }
+}
+
+/* =========================================================
+   Stage 09 - Admin UI consistency pass
+   ========================================================= */
+:root {
+  --ax-admin-radius: 14px;
+  --ax-admin-radius-sm: 10px;
+  --ax-admin-border: #e6e8ee;
+  --ax-admin-muted: #747c89;
+}
+
+body.ax-purple-admin .content-wrapper {
+  padding-left: clamp(1rem, 2.2vw, 2rem) !important;
+  padding-right: clamp(1rem, 2.2vw, 2rem) !important;
+}
+
+body.ax-purple-admin .card,
+body.ax-purple-admin .ax-card,
+body.ax-purple-admin .content-card,
+body.ax-purple-admin .table-card {
+  border-color: var(--ax-admin-border);
+  border-radius: var(--ax-admin-radius);
+}
+
+body.ax-purple-admin .card-body {
+  padding: clamp(1rem, 1.8vw, 1.35rem);
+}
+
+body.ax-purple-admin .table-responsive {
+  border-radius: var(--ax-admin-radius-sm);
+}
+
+body.ax-purple-admin table {
+  margin-bottom: 0;
+}
+
+body.ax-purple-admin table > :not(caption) > * > * {
+  padding: .76rem .88rem;
+  vertical-align: middle;
+}
+
+body.ax-purple-admin table th:first-child,
+body.ax-purple-admin table td:first-child {
+  padding-left: 1rem;
+}
+
+body.ax-purple-admin table th:last-child,
+body.ax-purple-admin table td:last-child {
+  padding-right: 1rem;
+}
+
+body.ax-purple-admin .form-control,
+body.ax-purple-admin .form-select {
+  min-height: 42px;
+  border-color: #dfe3e9;
+  border-radius: 10px;
+}
+
+body.ax-purple-admin textarea.form-control {
+  min-height: 104px;
+  resize: vertical;
+}
+
+body.ax-purple-admin .form-control:focus,
+body.ax-purple-admin .form-select:focus {
+  border-color: #9a87df;
+  box-shadow: 0 0 0 .2rem rgba(117, 87, 217, .10);
+}
+
+body.ax-purple-admin .btn {
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+body.ax-purple-admin .badge {
+  padding: .42em .68em;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+body.ax-purple-admin .text-muted,
+body.ax-purple-admin .form-text {
+  color: var(--ax-admin-muted) !important;
+}
+
+body.ax-purple-admin .modal-content {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(29, 33, 43, .16);
+}
+
+body.ax-purple-admin .modal-header,
+body.ax-purple-admin .modal-footer {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+body.ax-purple-admin .modal-body {
+  padding: 1.25rem;
+}
+
+@media (max-width: 767.98px) {
+  body.ax-purple-admin .content-wrapper {
+    padding-left: .9rem !important;
+    padding-right: .9rem !important;
+  }
+
+  body.ax-purple-admin table > :not(caption) > * > * {
+    padding: .68rem .72rem;
+  }
+}
+
+/* STEP 47 - 관리자 홈 현재 회차 히어로 */
+.ax-current-round-hero {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.1fr) minmax(420px, 1.35fr) auto;
+  gap: 1.4rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1.35rem 1.45rem;
+  border: 1px solid #e6e0fb;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 4% 12%, rgba(117, 87, 217, .13), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #fbf9ff 58%, #f5f1ff 100%);
+  box-shadow: 0 10px 28px rgba(61, 46, 112, .07);
+}
+
+.ax-current-round-hero-main,
+.ax-current-round-hero-empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ax-current-round-hero-icon {
+  width: 50px;
+  height: 50px;
+  flex: 0 0 50px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #7656d9, #5d3fc6);
+  color: #fff;
+  font-size: 1.28rem;
+  box-shadow: 0 8px 18px rgba(93, 63, 198, .2);
+}
+
+.ax-current-round-hero-copy { min-width: 0; }
+.ax-current-round-hero-label { display:flex; align-items:center; gap:.55rem; margin-bottom:.25rem; }
+.ax-current-round-hero-label > span:first-child,
+.ax-current-round-hero-empty > div:nth-child(2) > span {
+  color: #756d87;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.ax-current-round-hero-copy h2,
+.ax-current-round-hero-empty h2 { margin:0; color:#292338; font-size:1.32rem; font-weight:800; }
+.ax-current-round-hero-copy p,
+.ax-current-round-hero-empty p { margin:.28rem 0 0; color:#827a92; font-size:.82rem; }
+.ax-current-round-hero-copy p span { margin:0 .25rem; color:#b1a9bf; }
+
+.ax-current-round-hero-status {
+  display:inline-flex;
+  align-items:center;
+  gap:.3rem;
+  padding:.27rem .5rem;
+  border-radius:999px;
+  font-size:.7rem;
+  font-weight:800;
+}
+.ax-current-round-hero-status.live { color:#18794e; background:#eaf8f1; }
+.ax-current-round-hero-status.live i { font-size:.42rem; }
+.ax-current-round-hero-status.scheduled { color:#5e4bc2; background:#f0edff; }
+.ax-current-round-hero-status.ended { color:#6d6876; background:#f1f1f3; }
+
+.ax-current-round-hero-stats {
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border:1px solid #eee9f8;
+  border-radius:14px;
+  background:rgba(255,255,255,.72);
+  overflow:hidden;
+}
+.ax-current-round-hero-stats > div { min-width:0; padding:.8rem .9rem; border-right:1px solid #eee9f8; }
+.ax-current-round-hero-stats > div:last-child { border-right:0; }
+.ax-current-round-hero-stats span { display:block; color:#8b8399; font-size:.7rem; font-weight:700; margin-bottom:.16rem; }
+.ax-current-round-hero-stats strong { display:block; color:#312a40; font-size:1.05rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ax-current-round-hero-stats strong small { margin-left:.12rem; color:#766e83; font-size:.72rem; font-weight:700; }
+.ax-current-round-hero-stats .assignment strong { font-size:.85rem; }
+
+.ax-current-round-hero-actions { display:flex; flex-direction:column; align-items:stretch; gap:.45rem; min-width:112px; }
+.ax-current-round-change-btn {
+  border:0;
+  background:#6f50d4;
+  color:#fff;
+  font-size:.82rem;
+  font-weight:800;
+  padding:.68rem .9rem;
+  box-shadow:0 7px 16px rgba(111,80,212,.16);
+}
+.ax-current-round-change-btn:hover { background:#5f40c6; color:#fff; }
+.ax-current-round-detail-link { text-align:center; color:#756a87; font-size:.74rem; font-weight:700; text-decoration:none; }
+.ax-current-round-detail-link:hover { color:#5f40c6; }
+
+.ax-current-round-hero.is-empty { grid-template-columns:1fr; }
+.ax-current-round-hero-empty { justify-content:flex-start; }
+.ax-current-round-hero-empty .ax-current-round-change-btn { margin-left:auto; }
+.ax-dashboard-grid.ax-dashboard-grid-wide { grid-template-columns:minmax(0,1fr); }
+
+@media (max-width: 1199.98px) {
+  .ax-current-round-hero { grid-template-columns:1fr auto; }
+  .ax-current-round-hero-stats { grid-column:1 / -1; grid-row:2; }
+}
+
+@media (max-width: 767.98px) {
+  .ax-current-round-hero { grid-template-columns:1fr; padding:1rem; }
+  .ax-current-round-hero-stats { grid-template-columns:repeat(2,1fr); }
+  .ax-current-round-hero-stats > div:nth-child(2) { border-right:0; }
+  .ax-current-round-hero-stats > div:nth-child(-n+2) { border-bottom:1px solid #eee9f8; }
+  .ax-current-round-hero-actions { flex-direction:row; align-items:center; }
+  .ax-current-round-hero-empty { align-items:flex-start; flex-wrap:wrap; }
+  .ax-current-round-hero-empty .ax-current-round-change-btn { margin-left:0; width:100%; }
+}
+
+
+/* =========================================================
+   STEP 47 - 평가 결과 상단 카드 규격화
+   ========================================================= */
+body.ax-purple-admin .result-control-grid {
+  width: 100%;
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(420px, .95fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+body.ax-purple-admin .result-control-grid > .score-control-card {
+  width: 100%;
+  max-width: none;
+  margin: 0 !important;
+  min-width: 0;
+}
+
+body.ax-purple-admin .result-control-grid > .score-control-card .section-heading-row {
+  padding: 18px 20px 14px;
+}
+
+body.ax-purple-admin .result-control-grid > .score-control-card .score-weight-form {
+  padding: 16px 20px !important;
+  display: grid;
+  grid-template-columns: minmax(125px, 1fr) auto minmax(125px, 1fr) auto minmax(150px, auto);
+  gap: 12px;
+  align-items: end;
+  background: #fafbfc;
+  border-top: 1px solid #eef0f3;
+  border-bottom: 1px solid #eef0f3;
+}
+
+body.ax-purple-admin .result-control-grid .weight-plus,
+body.ax-purple-admin .result-control-grid .weight-equals {
+  align-self: end;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 800;
+  color: #8090a6;
+}
+
+body.ax-purple-admin .result-control-grid .weight-field {
+  min-width: 0;
+}
+
+body.ax-purple-admin .result-control-grid .weight-field label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+body.ax-purple-admin .result-control-grid .score-policy-note {
+  margin: 14px 20px 18px !important;
+  padding: 10px 12px !important;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+body.ax-purple-admin .result-control-grid > .result-summary-grid {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.ax-purple-admin .result-control-grid .result-stat-card {
+  min-height: 0;
+  height: 100%;
+  padding: 17px 18px !important;
+  gap: 13px;
+  display: flex;
+  align-items: center;
+}
+
+body.ax-purple-admin .result-control-grid .result-stat-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  font-size: 18px;
+}
+
+body.ax-purple-admin .result-control-grid .result-stat-copy strong {
+  font-size: 22px !important;
+}
+
+body.ax-purple-admin .result-control-grid .result-stat-copy .result-publish-value {
+  font-size: 17px !important;
+}
+
+@media (max-width: 1279.98px) {
+  body.ax-purple-admin .result-control-grid {
+    grid-template-columns: 1fr;
+  }
+  body.ax-purple-admin .result-control-grid > .result-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 991.98px) {
+  body.ax-purple-admin .result-control-grid > .score-control-card .score-weight-form {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  body.ax-purple-admin .result-control-grid .weight-equals {
+    display: none;
+  }
+  body.ax-purple-admin .result-control-grid .score-weight-form .ax-primary-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  body.ax-purple-admin .result-control-grid > .result-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  body.ax-purple-admin .result-control-grid > .score-control-card .score-weight-form {
+    grid-template-columns: 1fr;
+  }
+  body.ax-purple-admin .result-control-grid .weight-plus,
+  body.ax-purple-admin .result-control-grid .weight-equals {
+    display: none;
+  }
+  body.ax-purple-admin .result-control-grid > .result-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* STEP 48 - 관리자 홈 현재 회차 카드 재디자인 */
+body.ax-purple-admin .ax-current-round-card {
+  margin: 1.15rem 0 1rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e5e0f7;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(44, 34, 86, .055);
+}
+body.ax-purple-admin .ax-current-round-card-top {
+  display:flex; align-items:center; justify-content:space-between; gap:1.25rem;
+  padding:1.2rem 1.35rem;
+  background:linear-gradient(135deg,#fbf9ff 0%,#fff 68%);
+  border-bottom:1px solid #eeeaf8;
+}
+body.ax-purple-admin .ax-current-round-eyebrow { display:inline-flex;align-items:center;gap:.4rem;color:#7357cf;font-size:.68rem;font-weight:900;letter-spacing:.08em;margin-bottom:.32rem; }
+body.ax-purple-admin .ax-current-round-name-row { display:flex;align-items:center;gap:.65rem;flex-wrap:wrap; }
+body.ax-purple-admin .ax-current-round-name-row h2 { margin:0;color:#171520;font-size:1.55rem;font-weight:900;letter-spacing:-.035em; }
+body.ax-purple-admin .ax-current-round-status { display:inline-flex;align-items:center;gap:.34rem;padding:.3rem .6rem;border-radius:999px;font-size:.7rem;font-weight:800; }
+body.ax-purple-admin .ax-current-round-status.live { color:#137149;background:#e9f8f0; }
+body.ax-purple-admin .ax-current-round-status.live i { font-size:.42rem; }
+body.ax-purple-admin .ax-current-round-status.scheduled { color:#6949c9;background:#f0ebff; }
+body.ax-purple-admin .ax-current-round-status.ended { color:#66616f;background:#f1f2f4; }
+body.ax-purple-admin .ax-current-round-period { display:flex;align-items:center;gap:.42rem;margin:.38rem 0 0;color:#868092;font-size:.78rem; }
+body.ax-purple-admin .ax-current-round-period span { color:#b2abba; }
+body.ax-purple-admin .ax-current-round-card-actions { display:flex;align-items:center;gap:.5rem; }
+body.ax-purple-admin .ax-current-round-switch { display:inline-flex;align-items:center;gap:.4rem;border:0;border-radius:9px;background:#7152d6;color:#fff;font-size:.78rem;font-weight:800;padding:.62rem .78rem; }
+body.ax-purple-admin .ax-current-round-switch:hover { background:#6243c7;color:#fff; }
+body.ax-purple-admin .ax-current-round-detail { display:inline-flex;align-items:center;gap:.2rem;border:1px solid #ddd8e9;border-radius:9px;background:#fff;color:#595263;font-size:.78rem;font-weight:750;padding:.58rem .7rem; }
+body.ax-purple-admin .ax-current-round-detail:hover { border-color:#b9ace4;color:#6448c7; }
+body.ax-purple-admin .ax-current-round-metrics { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:.95rem 1.1rem;gap:.75rem;background:#fff; }
+body.ax-purple-admin .ax-round-metric { display:flex;align-items:center;gap:.72rem;min-width:0;padding:.78rem .85rem;border:1px solid #ece9f3;border-radius:11px;background:#fcfbfe; }
+body.ax-purple-admin .ax-round-metric-icon { width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:9px;background:#eee9ff;color:#6d4fd0;font-size:.9rem; }
+body.ax-purple-admin .ax-round-metric > div { min-width:0; }
+body.ax-purple-admin .ax-round-metric small { display:block;color:#8c8596;font-size:.67rem;font-weight:750;margin-bottom:.14rem; }
+body.ax-purple-admin .ax-round-metric strong { display:block;min-width:0;color:#221e29;font-size:1.05rem;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+body.ax-purple-admin .ax-round-metric strong em { margin-left:.12rem;color:#777080;font-size:.7rem;font-style:normal;font-weight:700; }
+body.ax-purple-admin .ax-round-metric.assignment strong { font-size:.82rem; }
+body.ax-purple-admin .is-empty-value { color:#a19aa9;font-weight:750; }
+body.ax-purple-admin .ax-current-round-empty { display:flex;align-items:center;gap:1rem;padding:1.25rem 1.35rem; }
+body.ax-purple-admin .ax-current-round-empty-icon { width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#eee9ff;color:#6d4fd0;font-size:1.05rem; }
+body.ax-purple-admin .ax-current-round-empty > div { flex:1; }
+body.ax-purple-admin .ax-current-round-empty small { color:#7357cf;font-size:.66rem;font-weight:900;letter-spacing:.08em; }
+body.ax-purple-admin .ax-current-round-empty h2 { margin:.18rem 0 0;color:#24202b;font-size:1rem;font-weight:850; }
+body.ax-purple-admin .ax-current-round-empty p { margin:.2rem 0 0;color:#8a8391;font-size:.76rem; }
+
+body.ax-purple-admin .ax-dashboard-grid.ax-dashboard-grid-top { grid-template-columns:minmax(0,1.8fr) minmax(310px,.8fr);align-items:stretch; }
+body.ax-purple-admin .ax-dashboard-grid-top > .ax-saas-card { height:100%; }
+body.ax-purple-admin .ax-quick-card .ax-quick-clean { padding-bottom:.45rem; }
+body.ax-purple-admin .ax-evaluation-status-card { margin-bottom:1rem; }
+body.ax-purple-admin .ax-progress-clean-wide { padding:1.15rem 1.2rem 1.25rem; }
+
+@media (max-width: 1050px) {
+  body.ax-purple-admin .ax-current-round-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  body.ax-purple-admin .ax-dashboard-grid.ax-dashboard-grid-top { grid-template-columns:1fr; }
+}
+@media (max-width: 700px) {
+  body.ax-purple-admin .ax-current-round-card-top { align-items:flex-start;flex-direction:column; }
+  body.ax-purple-admin .ax-current-round-card-actions { width:100%; }
+  body.ax-purple-admin .ax-current-round-card-actions .btn { flex:1;justify-content:center; }
+  body.ax-purple-admin .ax-current-round-metrics { grid-template-columns:1fr; }
+  body.ax-purple-admin .ax-current-round-empty { align-items:flex-start;flex-wrap:wrap; }
+  body.ax-purple-admin .ax-current-round-empty .ax-current-round-switch { width:100%;justify-content:center; }
+}
+
+
+/* FIX04 - 관리자 홈 하단 카드 정렬 */
+body.ax-purple-admin .ax-dashboard-home-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, .9fr);
+  grid-template-areas: "recent quick";
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 1rem;
+}
+body.ax-purple-admin .ax-dashboard-recent-card { grid-area: recent; min-width: 0; }
+body.ax-purple-admin .ax-dashboard-quick-card { grid-area: quick; min-width: 0; height: 100%; }
+body.ax-purple-admin .ax-dashboard-progress-card {
+  width: 100%;
+  margin-top: 0;
+  min-width: 0;
+}
+body.ax-purple-admin .ax-dashboard-home-row > * { margin: 0; }
+body.ax-purple-admin .ax-dashboard-quick-card .ax-quick-clean {
+  height: calc(100% - 74px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+body.ax-purple-admin .ax-dashboard-quick-card .ax-quick-clean a { flex: 1 1 0; min-height: 64px; }
+
+@media (max-width: 1180px) {
+  body.ax-purple-admin .ax-dashboard-home-row {
+    grid-template-columns: 1fr;
+    grid-template-areas: "recent" "quick";
+  }
+  body.ax-purple-admin .ax-dashboard-quick-card .ax-quick-clean {
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  body.ax-purple-admin .ax-dashboard-quick-card .ax-quick-clean { grid-template-columns: 1fr; }
+}
+
+/* FIX05 - 관리자 보낸 메시지 화면 */
+body.ax-purple-admin .ax-admin-message-page { max-width:1600px;margin:0 auto; }
+body.ax-purple-admin .ax-admin-message-head { align-items:flex-end; }
+body.ax-purple-admin .ax-admin-message-eyebrow { display:inline-flex;align-items:center;gap:.4rem;color:#7357cf;font-size:.68rem;font-weight:900;letter-spacing:.09em;margin-bottom:.35rem; }
+body.ax-purple-admin .ax-admin-message-summary { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin:1rem 0; }
+body.ax-purple-admin .ax-admin-message-stat { display:flex;align-items:center;gap:.85rem;padding:1rem 1.1rem;border:1px solid #e8e4f0;border-radius:14px;background:#fff;box-shadow:0 4px 16px rgba(45,34,84,.035); }
+body.ax-purple-admin .ax-admin-message-stat > span { width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:11px;background:#eee9ff;color:#6d4fd0;font-size:1rem; }
+body.ax-purple-admin .ax-admin-message-stat.is-unread > span { background:#fff0f3;color:#df4967; }
+body.ax-purple-admin .ax-admin-message-stat small { display:block;color:#918a99;font-size:.69rem;font-weight:750;margin-bottom:.1rem; }
+body.ax-purple-admin .ax-admin-message-stat strong { color:#211d2b;font-size:1.42rem;font-weight:900;line-height:1; }
+body.ax-purple-admin .ax-admin-message-stat strong em { margin-left:.16rem;color:#817a88;font-size:.71rem;font-style:normal;font-weight:700; }
+body.ax-purple-admin .ax-admin-message-card { overflow:hidden;border:1px solid #e8e4ef;border-radius:15px;background:#fff;box-shadow:0 5px 20px rgba(43,33,78,.035); }
+body.ax-purple-admin .ax-admin-message-toolbar { display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #ece9f2;background:#fcfbfe; }
+body.ax-purple-admin .ax-admin-message-toolbar h2 { margin:0;color:#292431;font-size:1rem;font-weight:850; }
+body.ax-purple-admin .ax-admin-message-toolbar p { margin:.15rem 0 0;color:#97909e;font-size:.71rem; }
+body.ax-purple-admin .ax-admin-message-search { position:relative;display:flex;align-items:center;min-width:390px;max-width:520px; }
+body.ax-purple-admin .ax-admin-message-search > i { position:absolute;left:.75rem;color:#aaa2b2;font-size:.78rem;pointer-events:none; }
+body.ax-purple-admin .ax-admin-message-search input { width:100%;height:38px;padding:0 4rem 0 2rem;border:1px solid #dfdbe7;border-radius:9px;background:#fff;color:#4c4652;font-size:.75rem;outline:none; }
+body.ax-purple-admin .ax-admin-message-search input:focus { border-color:#9d8adb;box-shadow:0 0 0 3px rgba(112,79,207,.08); }
+body.ax-purple-admin .ax-admin-message-search button { position:absolute;right:4px;height:30px;padding:0 .75rem;border:0;border-radius:7px;background:#7152d6;color:#fff;font-size:.7rem;font-weight:800; }
+body.ax-purple-admin .ax-message-history-table { margin:0; }
+body.ax-purple-admin .ax-message-history-table th { background:#fff;color:#8d8695;font-size:.68rem;font-weight:850; }
+body.ax-purple-admin .ax-message-history-table td { vertical-align:middle; }
+body.ax-purple-admin .ax-message-history-table tr.is-unread-row td { background:#fcfaff; }
+body.ax-purple-admin .ax-history-status { display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .5rem;border-radius:999px;font-size:.64rem;font-weight:850;white-space:nowrap; }
+body.ax-purple-admin .ax-history-status.read { color:#397c5f;background:#eaf7f0; }
+body.ax-purple-admin .ax-history-status.unread { color:#6545c9;background:#eee9ff; }
+body.ax-purple-admin .ax-history-status.unread i { font-size:.35rem; }
+body.ax-purple-admin .ax-history-priority { display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:.28rem .42rem;border-radius:6px;font-size:.62rem;font-weight:850; }
+body.ax-purple-admin .ax-history-priority.normal { color:#716c77;background:#f1f2f4; }
+body.ax-purple-admin .ax-history-priority.important { color:#9a6500;background:#fff3d8; }
+body.ax-purple-admin .ax-history-priority.urgent { color:#c73351;background:#ffe9ee; }
+@media (max-width: 900px) {
+  body.ax-purple-admin .ax-admin-message-toolbar { align-items:stretch;flex-direction:column; }
+  body.ax-purple-admin .ax-admin-message-search { min-width:0;max-width:none;width:100%; }
+}
+@media (max-width: 640px) { body.ax-purple-admin .ax-admin-message-summary { grid-template-columns:1fr; } }
+
+/* FIX06 - 공지 관리 화면 리디자인 + 열람 현황 */
+body.ax-purple-admin .ax-announcement-page{max-width:1600px;margin:0 auto}
+body.ax-purple-admin .ax-announcement-head{align-items:flex-end}
+body.ax-purple-admin .ax-announcement-eyebrow{display:inline-flex;align-items:center;gap:.4rem;color:#7357cf;font-size:.68rem;font-weight:900;letter-spacing:.09em;margin-bottom:.35rem}
+body.ax-purple-admin .ax-announcement-create{min-height:40px}
+body.ax-purple-admin .ax-announcement-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem;margin:1rem 0}
+body.ax-purple-admin .ax-announcement-stat{display:flex;align-items:center;gap:.8rem;padding:.95rem 1rem;border:1px solid #e8e4f0;border-radius:14px;background:#fff;box-shadow:0 4px 16px rgba(45,34,84,.035)}
+body.ax-purple-admin .ax-announcement-stat>span{width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;border-radius:11px;background:#eee9ff;color:#6d4fd0;font-size:.95rem}
+body.ax-purple-admin .ax-announcement-stat.is-live>span{background:#e9f8f0;color:#18744b}
+body.ax-purple-admin .ax-announcement-stat.is-rate>span{background:#eaf3ff;color:#3572b8}
+body.ax-purple-admin .ax-announcement-stat small{display:block;color:#918a99;font-size:.67rem;font-weight:750;margin-bottom:.12rem}
+body.ax-purple-admin .ax-announcement-stat strong{color:#211d2b;font-size:1.35rem;font-weight:900;line-height:1}
+body.ax-purple-admin .ax-announcement-stat strong em{margin-left:.14rem;color:#817a88;font-size:.7rem;font-style:normal;font-weight:700}
+body.ax-purple-admin .ax-announcement-list-card{overflow:hidden;border:1px solid #e7e3ef;border-radius:15px;background:#fff;box-shadow:0 5px 20px rgba(43,33,78,.035)}
+body.ax-purple-admin .ax-announcement-card-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #ece9f2;background:#fcfbfe}
+body.ax-purple-admin .ax-announcement-card-head h2{margin:0;color:#292431;font-size:1rem;font-weight:850}
+body.ax-purple-admin .ax-announcement-card-head p{margin:.16rem 0 0;color:#97909e;font-size:.7rem}
+body.ax-purple-admin .ax-announcement-total{display:inline-flex;padding:.32rem .55rem;border-radius:999px;background:#f0ecfb;color:#7357cf;font-size:.66rem;font-weight:800}
+body.ax-purple-admin .ax-announcement-table{margin:0}
+body.ax-purple-admin .ax-announcement-table th{background:#fff;color:#8d8695;font-size:.67rem;font-weight:850;white-space:nowrap}
+body.ax-purple-admin .ax-announcement-table td{vertical-align:middle;padding-top:.85rem;padding-bottom:.85rem}
+body.ax-purple-admin .ax-ann-status{display:inline-flex;align-items:center;gap:.32rem;padding:.3rem .52rem;border-radius:999px;font-size:.64rem;font-weight:850;white-space:nowrap}
+body.ax-purple-admin .ax-ann-status.live{color:#18744b;background:#e9f8f0}
+body.ax-purple-admin .ax-ann-status.live i{font-size:.35rem}
+body.ax-purple-admin .ax-ann-status.scheduled{color:#6545c9;background:#eee9ff}
+body.ax-purple-admin .ax-ann-status.hidden{color:#76717b;background:#f1f2f4}
+body.ax-purple-admin .ax-ann-priority{display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:.28rem .42rem;border-radius:6px;font-size:.62rem;font-weight:850}
+body.ax-purple-admin .ax-ann-priority.normal{color:#716c77;background:#f1f2f4}
+body.ax-purple-admin .ax-ann-priority.important{color:#9a6500;background:#fff3d8}
+body.ax-purple-admin .ax-ann-priority.urgent{color:#c73351;background:#ffe9ee}
+body.ax-purple-admin .ax-ann-copy-cell{min-width:260px;max-width:460px}
+body.ax-purple-admin .ax-ann-copy-cell strong{display:block;color:#292431;font-size:.76rem;font-weight:850;margin-bottom:.22rem}
+body.ax-purple-admin .ax-ann-copy-cell p{margin:0;color:#938c99;font-size:.68rem;line-height:1.45}
+body.ax-purple-admin .ax-ann-period-cell{min-width:155px}
+body.ax-purple-admin .ax-ann-period-cell span{display:flex;align-items:center;gap:.38rem;color:#5e5863;font-size:.68rem;font-weight:750;white-space:nowrap}
+body.ax-purple-admin .ax-ann-period-cell span i{color:#8b73d6}
+body.ax-purple-admin .ax-ann-period-cell small{display:block;margin:.25rem 0 0 1.1rem;color:#9a939f;font-size:.62rem;white-space:nowrap}
+body.ax-purple-admin .ax-read-progress{width:150px;border:0;background:transparent;text-align:left;padding:0;cursor:pointer}
+body.ax-purple-admin .ax-read-progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.28rem}
+body.ax-purple-admin .ax-read-progress-top b{color:#39333f;font-size:.68rem;font-weight:850}
+body.ax-purple-admin .ax-read-progress-top em{color:#7357cf;font-size:.64rem;font-style:normal;font-weight:850}
+body.ax-purple-admin .ax-read-bar{display:block;height:5px;overflow:hidden;border-radius:999px;background:#eeeaf4}
+body.ax-purple-admin .ax-read-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7357cf,#947de0)}
+body.ax-purple-admin .ax-read-progress small{display:block;margin-top:.25rem;color:#96909b;font-size:.6rem}
+body.ax-purple-admin .ax-read-progress:hover .ax-read-progress-top b{color:#6545c9}
+body.ax-purple-admin .ax-ann-actions{flex-wrap:nowrap}
+body.ax-purple-admin .ax-ann-actions .row-action{display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap}
+body.ax-purple-admin .ax-ann-empty span{display:block;margin-top:.25rem;color:#98919d;font-size:.7rem}
+body.ax-purple-admin .ax-ann-modal .modal-header small,body.ax-purple-admin .ax-read-modal .modal-header small{display:block;color:#7357cf;font-size:.62rem;font-weight:900;letter-spacing:.08em;margin-bottom:.12rem}
+body.ax-purple-admin .ax-read-modal-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;margin-bottom:1rem}
+body.ax-purple-admin .ax-read-modal-summary>div{padding:.8rem .9rem;border:1px solid #ebe7f1;border-radius:11px;background:#fcfbfe}
+body.ax-purple-admin .ax-read-modal-summary span{display:block;color:#918a99;font-size:.64rem;font-weight:750;margin-bottom:.18rem}
+body.ax-purple-admin .ax-read-modal-summary strong{color:#292431;font-size:1.1rem;font-weight:900}
+body.ax-purple-admin .ax-read-columns{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+body.ax-purple-admin .ax-read-columns section{min-height:170px;padding:.85rem;border:1px solid #ebe7f1;border-radius:12px;background:#fff}
+body.ax-purple-admin .ax-read-columns h6{display:flex;align-items:center;gap:.35rem;margin:0 0 .7rem;color:#49424f;font-size:.72rem;font-weight:850}
+body.ax-purple-admin .ax-read-columns h6 i{color:#7357cf}
+body.ax-purple-admin .ax-student-chip-list{display:flex;flex-wrap:wrap;gap:.4rem}
+body.ax-purple-admin .ax-student-chip{display:inline-flex;padding:.34rem .5rem;border-radius:8px;font-size:.65rem;font-weight:750}
+body.ax-purple-admin .ax-student-chip.read{color:#347256;background:#eaf7f0}
+body.ax-purple-admin .ax-student-chip.unread{color:#6b6470;background:#f1f2f4}
+body.ax-purple-admin .ax-no-reader{margin:0;color:#a099a4;font-size:.68rem}
+body.ax-purple-admin .ax-no-reader.complete{color:#347256}
+@media(max-width:1100px){body.ax-purple-admin .ax-announcement-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){body.ax-purple-admin .ax-announcement-head{align-items:stretch;flex-direction:column}body.ax-purple-admin .ax-announcement-summary{grid-template-columns:1fr}body.ax-purple-admin .ax-read-columns{grid-template-columns:1fr}body.ax-purple-admin .ax-read-modal-summary{grid-template-columns:1fr}}
+
+/* STEP 60 - sent message recall/delete controls */
+.ax-message-bulkbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid #eef0f5;border-bottom:1px solid #eef0f5;background:#fafbff}.ax-message-bulkbar label{display:flex;align-items:center;gap:8px;font-weight:700;color:#4b5563}.ax-history-status.recalled{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:#fff4df;color:#b96a00;font-weight:800;font-size:12px}.ax-message-history-table tr.is-recalled-row{opacity:.7;background:#fffdfa}.ax-message-history-table td:last-child{white-space:nowrap}
+
+
+/* STEP 66 - admin action center */
+.ax-admin-alert-center{margin:18px 0;padding:20px 22px;border:1px solid #e3e7ef;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(31,41,55,.04)}
+.ax-admin-alert-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.ax-admin-alert-head h2{margin:3px 0 2px;font-size:18px;font-weight:800;color:#111827}.ax-admin-alert-head p{margin:0;color:#8a94a6;font-size:12px}.ax-admin-alert-count,.ax-admin-alert-clear{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}.ax-admin-alert-count{background:#fff1f2;color:#e11d48}.ax-admin-alert-clear{background:#ecfdf5;color:#059669}
+.ax-admin-alert-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ax-admin-alert-item{display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 14px;border:1px solid #e8ebf1;border-radius:13px;text-decoration:none;background:#fbfcff;transition:.18s ease}.ax-admin-alert-item:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(31,41,55,.07)}.ax-admin-alert-icon{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:11px;font-size:18px}.ax-admin-alert-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}.ax-admin-alert-copy strong{font-size:14px;color:#111827}.ax-admin-alert-copy small{color:#7c8799;font-size:11px}.ax-admin-alert-action{font-size:11px;font-weight:800;white-space:nowrap}
+.ax-admin-alert-item.danger{border-color:#fecdd3;background:#fff7f8}.ax-admin-alert-item.danger .ax-admin-alert-icon{background:#ffe4e6;color:#e11d48}.ax-admin-alert-item.danger .ax-admin-alert-action{color:#e11d48}.ax-admin-alert-item.warning{border-color:#fde68a;background:#fffdf5}.ax-admin-alert-item.warning .ax-admin-alert-icon{background:#fef3c7;color:#d97706}.ax-admin-alert-item.warning .ax-admin-alert-action{color:#b45309}.ax-admin-alert-item.info{border-color:#ddd6fe;background:#faf8ff}.ax-admin-alert-item.info .ax-admin-alert-icon{background:#ede9fe;color:#6d4ce8}.ax-admin-alert-item.info .ax-admin-alert-action{color:#6d4ce8}
+.ax-admin-alert-center.is-clear{border-color:#d1fae5;background:#fbfffd}.ax-admin-alert-empty{display:flex;align-items:center;gap:12px;padding:10px 2px}.ax-admin-alert-empty>i{font-size:28px;color:#10b981}.ax-admin-alert-empty div{display:flex;flex-direction:column;gap:2px}.ax-admin-alert-empty strong{font-size:14px;color:#14532d}.ax-admin-alert-empty span{font-size:11px;color:#6b7280}
+@media(max-width:1000px){.ax-admin-alert-list{grid-template-columns:1fr}}@media(max-width:640px){.ax-admin-alert-item{align-items:flex-start}.ax-admin-alert-action{display:none}}
+
+
+/* FIX17 — evaluation result Excel export */
+.result-toolbar-buttons .result-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  border: 1px solid #18a66a;
+  background: #eafaf3;
+  color: #087847;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.result-toolbar-buttons .result-export-btn:hover {
+  background: #18a66a;
+  border-color: #18a66a;
+  color: #fff;
+}
+
+
+/* FIX18 — evaluation pattern review */
+.result-review-card{padding:18px 20px;border:1px solid #e5e7eb;background:#fff}
+.result-review-card.has-flags{border-color:#f6d28b;background:linear-gradient(180deg,#fffdf8 0%,#fff 100%)}
+.result-review-card.is-clear{border-color:#bfe8d5;background:linear-gradient(180deg,#fbfffd 0%,#fff 100%)}
+.result-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.result-review-head h5{margin:2px 0 4px;font-weight:850;color:#282238}
+.result-review-head p{margin:0;max-width:800px;color:#8b8494;font-size:12px}
+.result-review-count,.result-review-clear{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:850;white-space:nowrap}
+.result-review-count{background:#fff1cf;color:#ad6500}.result-review-clear{background:#e8f8f0;color:#16714d}
+.result-review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.result-review-item{display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 12px;border:1px solid #ece8f1;border-radius:12px;background:#fff}
+.review-type{display:grid;place-items:center;min-width:42px;height:32px;padding:0 8px;border-radius:9px;font-size:11px;font-weight:900}
+.review-type.type-team{background:#e8f3ff;color:#2674c9}.review-type.type-personal{background:#f0eaff;color:#7150cf}
+.review-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}.review-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#332d3a}.review-copy small{font-size:11px;color:#8e8795}
+.review-label{padding:5px 7px;border-radius:7px;background:#fff3dc;color:#b76c00;font-size:10px;font-weight:850;white-space:nowrap}
+.result-review-empty{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:10px;background:#f1fbf6;color:#438065;font-size:12px;font-weight:700}.result-review-empty i{color:#16a36a;font-size:16px}
+.result-review-more{margin-top:9px;text-align:right;color:#8b8494;font-size:11px;font-weight:700}
+@media(max-width:900px){.result-review-list{grid-template-columns:1fr}.result-review-head{flex-direction:column}.result-review-count,.result-review-clear{align-self:flex-start}}
+
+/* FIX25: reusable safety confirmation modal */
+.ax-critical-modal{border:0;border-radius:22px;box-shadow:0 24px 70px rgba(61,31,105,.24);overflow:hidden}.ax-critical-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#ffe6d5,#ffd0d7);color:#c43d42;font-size:1.3rem}.ax-critical-eyebrow{font-size:.68rem;letter-spacing:.14em;font-weight:900;color:#8d5ac8;margin-bottom:3px}.ax-critical-note{display:flex;gap:9px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#fff7df;border:1px solid #f3d77c;color:#73560b;font-size:.86rem}.ax-critical-note i{margin-top:1px}
+
+
+/* HR Skill Profile */
+.skill-profile-panel { overflow: hidden; }
+.skill-editor {
+  margin: 18px 0 22px;
+  padding: 18px;
+  border: 1px solid #e7e2fb;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #faf9ff 0%, #f4f8ff 100%);
+}
+.skill-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(180px,1fr) 150px minmax(220px,1.3fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.skill-profile-list { display: grid; gap: 12px; }
+.skill-profile-item {
+  padding: 16px 18px;
+  border: 1px solid #ebe7f7;
+  border-radius: 16px;
+  background: #fff;
+}
+.skill-profile-top { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
+.skill-profile-top strong { display:block; font-size:15px; color:#26213b; }
+.skill-profile-top small { display:block; margin-top:3px; color:#817b93; }
+.skill-score {
+  min-width:48px; height:34px; border-radius:10px;
+  display:grid; place-items:center; font-weight:800;
+  color:#5b36d6; background:#f0ebff;
+}
+.skill-progress { height:9px; margin:12px 0 14px; border-radius:999px; background:#eeeaf7; overflow:hidden; }
+.skill-progress span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#6d4aff,#2e7cf6); }
+.skill-profile-actions { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.skill-inline-edit { flex:1; display:grid; grid-template-columns:90px minmax(160px,1fr) auto; gap:8px; }
+.skill-inline-edit input {
+  min-width:0; height:34px; padding:5px 9px;
+  border:1px solid #ddd7ed; border-radius:9px;
+}
+.skill-empty i { margin-right:6px; color:#7a5af8; }
+@media (max-width: 1000px) {
+  .skill-editor-grid { grid-template-columns:1fr 140px; }
+  .skill-editor-grid > :nth-child(3) { grid-column:1 / -1; }
+}
+
+
+/* HR Task Management */
+.hr-task-page { max-width: 1600px; margin: 0 auto; }
+.hr-task-stat-grid {
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px; margin:22px 0 18px;
+}
+.hr-task-stat-grid article {
+  position:relative; min-height:118px; padding:20px 22px;
+  border:1px solid #ebe7f7; border-radius:20px;
+  background:linear-gradient(145deg,#fff 0%,#faf9ff 100%);
+  box-shadow:0 10px 30px rgba(49,37,90,.05); overflow:hidden;
+}
+.hr-task-stat-grid article span { display:block; color:#777087; font-size:13px; font-weight:700; }
+.hr-task-stat-grid article strong { display:block; margin-top:7px; font-size:29px; line-height:1; color:#251d3c; }
+.hr-task-stat-grid article i {
+  position:absolute; right:18px; bottom:14px;
+  font-size:32px; color:#b7a8f2; opacity:.75;
+}
+.hr-task-stat-grid article.is-alert { border-color:#ffd0a6; background:linear-gradient(145deg,#fffaf4,#fff3e7); }
+.hr-task-stat-grid article.is-alert i, .hr-task-stat-grid article.is-alert strong { color:#e66b1a; }
+
+.hr-task-toolbar { margin-bottom:18px; }
+.hr-task-list { display:grid; gap:16px; }
+.hr-task-card {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:22px;
+  padding:22px; border:1px solid #e9e5f3; border-radius:22px;
+  background:#fff; box-shadow:0 9px 28px rgba(42,31,82,.05);
+}
+.hr-task-card.is-overdue { border-color:#ffc5b3; box-shadow:0 9px 28px rgba(222,91,48,.08); }
+.hr-task-title-row { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; }
+.hr-task-title-row h3 { margin:0 0 7px; color:#251d3c; font-size:20px; font-weight:800; }
+.hr-task-title-row p { margin:0; color:#777087; line-height:1.55; }
+.hr-task-person {
+  min-width:150px; padding:12px 14px; border-radius:14px;
+  background:#f6f3ff; text-align:right;
+}
+.hr-task-person span { display:block; color:#9189a1; font-size:11px; font-weight:700; }
+.hr-task-person strong { display:block; margin-top:3px; color:#5b3bd1; }
+.task-priority,.task-status,.task-overdue {
+  display:inline-flex; align-items:center; gap:4px; padding:5px 9px;
+  border-radius:999px; font-size:11px; font-weight:800;
+}
+.task-status { background:#edf4ff; color:#2867c7; }
+.status-completed { background:#e9f9ef; color:#21884c; }
+.status-review { background:#fff2df; color:#bd6c0c; }
+.status-unassigned { background:#f1eff7; color:#6e687d; }
+.task-priority { background:#f2efff; color:#6c48dc; }
+.priority-high { background:#fff0e5; color:#d6651a; }
+.priority-urgent { background:#ffe9ec; color:#c72f49; }
+.priority-low { background:#eaf8f6; color:#258373; }
+.task-overdue { background:#ffe9df; color:#d84b24; }
+
+.hr-task-meta { display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 16px; color:#777087; font-size:12px; }
+.hr-task-meta span { display:inline-flex; align-items:center; gap:6px; }
+.hr-task-skills { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.hr-task-skill { padding:12px; border-radius:13px; background:#faf9fd; border:1px solid #eeeaf6; }
+.hr-task-skill > div:first-child { display:flex; justify-content:space-between; gap:8px; font-size:12px; }
+.hr-task-skill > div:first-child strong { color:#4b435c; }
+.hr-task-skill > div:first-child span { color:#6b49db; font-weight:800; }
+.hr-task-skill-track { height:6px; margin-top:8px; border-radius:999px; background:#eae6f3; overflow:hidden; }
+.hr-task-skill-track span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#6845e8,#2e7cf6); }
+.hr-task-actions { display:flex; flex-direction:column; gap:8px; min-width:76px; }
+
+.task-skill-builder {
+  border:1px solid #e9e4f4; border-radius:18px; padding:16px;
+  background:linear-gradient(145deg,#fbfaff,#f7faff);
+}
+.task-skill-builder-head { display:flex; justify-content:space-between; gap:16px; align-items:center; }
+.task-skill-builder-head strong { display:block; color:#2f2840; }
+.task-skill-builder-head small { display:block; margin-top:2px; color:#867f95; }
+.task-skill-total {
+  min-width:56px; padding:5px 9px; border-radius:9px;
+  background:#f1eef8; color:#766d87; text-align:center; font-weight:800;
+}
+.task-skill-total.is-valid { background:#e7f7ee; color:#20884b; }
+.task-skill-total.is-invalid { background:#fff0e7; color:#d4641e; }
+.task-skill-rows { display:grid; gap:9px; margin-top:14px; }
+.task-skill-row {
+  display:grid; grid-template-columns:minmax(180px,1fr) 150px 44px;
+  gap:8px; align-items:center;
+}
+
+@media (max-width: 900px) {
+  .hr-task-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .hr-task-card { grid-template-columns:1fr; }
+  .hr-task-title-row { flex-direction:column; }
+  .hr-task-person { width:100%; text-align:left; }
+  .hr-task-skills { grid-template-columns:1fr; }
+  .hr-task-actions { flex-direction:row; }
+}
+@media (max-width: 560px) {
+  .hr-task-stat-grid { grid-template-columns:1fr; }
+  .task-skill-row { grid-template-columns:1fr 110px 44px; }
+}
+
+
+/* HR Task Steps / Progress */
+.hr-task-progress-block { margin:15px 0 17px; }
+.hr-task-progress-head { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; color:#766f86; }
+.hr-task-progress-head strong { color:#4d34bc; }
+.hr-task-progress-track { height:9px; margin-top:8px; border-radius:999px; background:#ece8f5; overflow:hidden; }
+.hr-task-progress-track span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#7050ed,#2b86e8); }
+.hr-task-step-admin { margin:0 0 17px; padding:14px; border:1px solid #ebe7f4; border-radius:15px; background:#fcfbff; }
+.hr-task-step-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.hr-task-step-head > strong { color:#332b46; font-size:13px; }
+.hr-step-add-form { display:flex; gap:7px; width:min(420px,70%); }
+.hr-task-step-list { display:grid; gap:7px; margin-top:11px; }
+.hr-task-step-row { display:grid; grid-template-columns:28px minmax(0,1fr) auto 24px; gap:8px; align-items:center; min-height:34px; padding:5px 8px; border-radius:9px; background:#fff; }
+.hr-task-step-row .step-order { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; background:#eee9ff; color:#6241d5; font-size:11px; font-weight:800; }
+.hr-task-step-row .step-title { font-size:12px; color:#4b445a; }
+.hr-task-step-row.is-done .step-title { text-decoration:line-through; color:#9992a3; }
+.hr-task-step-row .step-done { color:#258855; font-size:11px; font-weight:800; }
+@media (max-width:700px) { .hr-task-step-head { align-items:flex-start; flex-direction:column; } .hr-step-add-form { width:100%; } }
+
+
+/* HR submission review */
+.hr-review-panel { margin-top:17px; padding:16px; border:1px solid #dcd5ef; border-radius:16px; background:#fbfaff; }
+.hr-review-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:10px; }
+.hr-review-head span { display:block; color:#7355d8; font-size:10px; font-weight:900; letter-spacing:.08em; }
+.hr-review-head strong { display:block; margin-top:2px; color:#302844; }
+.hr-review-head time { color:#91899d; font-size:11px; }
+.hr-review-panel > p { margin:0 0 12px; color:#665e74; line-height:1.55; }
+.hr-review-actions { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; align-items:start; margin-top:14px; padding-top:14px; border-top:1px solid #e9e4f3; }
+.hr-eval-form { display:grid; grid-template-columns:130px minmax(180px,1fr) auto; gap:8px; }
+.hr-eval-complete { margin-top:13px; padding:13px 14px; border-radius:13px; background:#eaf8ef; border:1px solid #ccebd8; }
+.hr-eval-complete span { color:#5a7765; font-size:11px; font-weight:800; }
+.hr-eval-complete strong { margin-left:8px; color:#25854f; font-size:18px; }
+.hr-eval-complete p { margin:6px 0 0; color:#506258; font-size:12px; }
+@media(max-width:900px){ .hr-review-actions,.hr-eval-form{grid-template-columns:1fr} }
+
+
+/* HR automatic Skill update */
+.hr-skill-update-result {
+  margin-top:10px; padding:12px 14px; border-radius:13px;
+  border:1px solid #d9d0fb; background:linear-gradient(135deg,#faf8ff,#f4f8ff);
+}
+.hr-skill-update-result > strong { display:block; margin-bottom:8px; color:#5b3ec4; font-size:12px; }
+.hr-skill-update-result > div { display:flex; flex-wrap:wrap; gap:7px; }
+.hr-skill-update-result span {
+  display:inline-flex; align-items:center; gap:5px; padding:6px 9px;
+  border-radius:9px; background:#fff; border:1px solid #ebe6f7;
+  color:#5f576d; font-size:11px; font-weight:700;
+}
+.hr-skill-update-result em { color:#8e8798; font-style:normal; }
+.hr-skill-update-result b { color:#5437c3; }
+.hr-skill-update-result small.up { color:#238552; font-weight:800; }
+.hr-skill-update-result small.down { color:#c74949; font-weight:800; }
+
+
+/* Skill-based assignee recommendation */
+.hr-recommend-panel {
+  margin-top:17px; padding:16px; border:1px solid #dcd4f7; border-radius:17px;
+  background:linear-gradient(145deg,#fbf9ff 0%,#f5f9ff 100%);
+}
+.hr-recommend-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+.hr-recommend-head > div:first-child span {
+  display:block; color:#6d4ad8; font-size:10px; font-weight:900; letter-spacing:.09em;
+}
+.hr-recommend-head > div:first-child strong { display:block; margin-top:3px; color:#302744; }
+.hr-best-fit {
+  min-width:88px; padding:8px 11px; border-radius:12px;
+  background:#eee8ff; text-align:right;
+}
+.hr-best-fit small { display:block; color:#847a9a; font-size:9px; font-weight:700; }
+.hr-best-fit b { color:#5b39cb; font-size:20px; }
+.hr-recommend-list { display:grid; gap:9px; }
+.hr-recommend-item {
+  display:grid;
+  grid-template-columns:32px minmax(120px,.8fr) minmax(150px,.9fr) minmax(220px,1.4fr) auto;
+  gap:12px; align-items:center;
+  padding:12px; border:1px solid #e9e4f4; border-radius:13px; background:#fff;
+}
+.hr-recommend-item.is-best {
+  border-color:#cfc0ff;
+  box-shadow:0 6px 18px rgba(93,63,191,.08);
+}
+.hr-recommend-rank {
+  width:28px; height:28px; display:grid; place-items:center;
+  border-radius:9px; background:#eee9ff; color:#5c3bc9; font-size:12px; font-weight:900;
+}
+.hr-recommend-item.is-best .hr-recommend-rank { background:#6643d9; color:#fff; }
+.hr-recommend-person strong { display:block; color:#3b324d; font-size:13px; }
+.hr-recommend-person span { display:block; margin-top:2px; color:#91899b; font-size:10px; }
+.hr-recommend-fit > div:first-child { display:flex; justify-content:space-between; gap:8px; }
+.hr-recommend-fit > div:first-child span { color:#837b91; font-size:10px; }
+.hr-recommend-fit > div:first-child strong { color:#5738c5; font-size:13px; }
+.hr-recommend-fit-track { height:6px; margin:5px 0; border-radius:999px; background:#ebe7f4; overflow:hidden; }
+.hr-recommend-fit-track span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#6b49e5,#2a88e5); }
+.hr-recommend-fit small { color:#9690a0; font-size:9px; }
+.hr-recommend-skills { display:flex; flex-wrap:wrap; gap:5px; }
+.hr-recommend-skills > span {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 7px; border-radius:8px; background:#f7f5fb; color:#625a70; font-size:9px;
+}
+.hr-recommend-skills > span b { color:#5236bd; font-size:10px; }
+.hr-recommend-skills > span small { color:#9a92a5; }
+.hr-recommend-skills > span.is-missing { background:#fff1f1; color:#a96b6b; }
+.hr-recommend-skills > span.is-missing b { color:#bf4a4a; }
+.hr-recommend-note {
+  display:flex; gap:6px; align-items:flex-start; margin-top:10px;
+  color:#8d8499; font-size:10px; line-height:1.45;
+}
+.hr-recommend-empty {
+  padding:18px; border:1px dashed #d8d0e8; border-radius:12px;
+  color:#8c8498; text-align:center; background:rgba(255,255,255,.7);
+}
+@media (max-width:1100px) {
+  .hr-recommend-item { grid-template-columns:32px 1fr 150px auto; }
+  .hr-recommend-skills { grid-column:2 / -1; }
+}
+@media (max-width:720px) {
+  .hr-recommend-item { grid-template-columns:32px 1fr auto; }
+  .hr-recommend-fit,.hr-recommend-skills { grid-column:2 / -1; }
+}
+
+
+/* HR Dashboard */
+.hr-dashboard-page{max-width:1600px;margin:0 auto}
+.hr-dash-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:22px 0 18px}
+.hr-dash-kpis article{padding:19px 20px;border:1px solid #e9e4f4;border-radius:19px;background:linear-gradient(145deg,#fff,#faf9ff);box-shadow:0 8px 25px rgba(50,35,95,.05)}
+.hr-dash-kpis span,.hr-dash-kpis small{display:block;color:#847c91;font-size:11px;font-weight:700}
+.hr-dash-kpis strong{display:block;margin:6px 0 5px;color:#2f2644;font-size:27px}
+.hr-dash-kpis article.danger{border-color:#ffc8b3;background:#fff7f2}.hr-dash-kpis article.danger strong{color:#da5427}
+.hr-dash-grid.two{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:16px}
+.hr-dash-panel{padding:20px;border:1px solid #e8e3f2;border-radius:20px;background:#fff;box-shadow:0 8px 26px rgba(47,33,89,.05)}
+.hr-dash-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px}
+.hr-dash-head h3{margin:0;color:#302744;font-size:16px;font-weight:850}.hr-dash-head p{margin:4px 0 0;color:#8b8396;font-size:11px}
+.hr-attention-list{display:grid;gap:8px}.hr-attention-item{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:12px;text-decoration:none;background:#faf9fd;color:#40374f}
+.hr-attention-item i{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#eee8ff;color:#6844da}.hr-attention-item strong,.hr-attention-item span{display:block}.hr-attention-item span{margin-top:2px;color:#90899a;font-size:10px}.hr-attention-item b{font-size:12px}
+.hr-attention-item.danger{background:#fff3ed}.hr-attention-item.danger i,.hr-attention-item.danger b{color:#d75227}.hr-attention-item.review{background:#fff8e9}.hr-attention-item.review i,.hr-attention-item.review b{color:#b96b0c}
+.hr-status-bars{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.hr-status-bars div{padding:17px;border-radius:14px;background:#f8f6fc}.hr-status-bars span{display:block;color:#81798f;font-size:11px}.hr-status-bars b{display:block;margin-top:4px;color:#573bc5;font-size:22px}
+.hr-people-table{display:grid}.hr-table-row{display:grid;grid-template-columns:1.5fr .55fr .55fr .55fr;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid #f0edf5;color:#625a70;font-size:11px}.hr-table-row.head{color:#948c9e;font-weight:800}.hr-table-row strong,.hr-table-row small{display:block}.hr-table-row small{margin-top:2px;color:#9c95a4;font-size:9px}.hr-table-row b{color:#5940bf}.hr-table-row .busy{color:#d75b2a;font-weight:850}
+.hr-recent-evals{display:grid;gap:8px}.hr-recent-evals article{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;border-radius:12px;background:#faf9fd}.hr-recent-evals strong,.hr-recent-evals span{display:block}.hr-recent-evals strong{color:#42384f;font-size:12px}.hr-recent-evals span{margin-top:2px;color:#918a99;font-size:10px}.hr-recent-evals b{color:#5a3bc6;font-size:18px}.hr-recent-evals small{font-size:9px}
+.hr-active-task-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.hr-active-task-grid article{padding:14px;border:1px solid #ebe7f4;border-radius:14px;background:#fcfbff}.hr-active-task-grid strong,.hr-active-task-grid span{display:block}.hr-active-task-grid strong{color:#3a314b;font-size:12px}.hr-active-task-grid span{margin-top:2px;color:#91899b;font-size:10px}.mini-progress{height:7px;margin:11px 0;border-radius:999px;background:#ebe7f4;overflow:hidden}.mini-progress span{height:100%;background:linear-gradient(90deg,#6b49e7,#2888e4);border-radius:inherit}.hr-active-task-grid footer{display:flex;justify-content:space-between;align-items:center}.hr-active-task-grid footer b{color:#573bc5;font-size:11px}.hr-dash-empty{padding:25px;text-align:center;color:#918a9b;border:1px dashed #ddd6ea;border-radius:13px;background:#fbfaff}
+@media(max-width:1100px){.hr-dash-kpis{grid-template-columns:repeat(3,1fr)}.hr-dash-grid.two{grid-template-columns:1fr}.hr-active-task-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.hr-dash-kpis{grid-template-columns:repeat(2,1fr)}.hr-active-task-grid{grid-template-columns:1fr}}
+
+.task-badge-link {
+  display:inline-flex; align-items:center; gap:4px; padding:5px 9px;
+  border-radius:999px; background:#fff4cf; color:#9a6700;
+  font-size:11px; font-weight:800;
+}
+.task-badge-link i { color:#d59000; }
+
+.data17-cleanup-card { margin-top: 18px; }
+.data17-cleanup-summary {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:14px 0;
+}
+.data17-cleanup-summary > div {
+  padding:15px 16px; border:1px solid #ebe5f5; border-radius:14px; background:#fbfaff;
+}
+.data17-cleanup-summary span { display:block; color:#847d91; font-size:11px; font-weight:700; }
+.data17-cleanup-summary strong { display:block; margin-top:5px; color:#4932ad; font-size:20px; }
+@media(max-width:650px){.data17-cleanup-summary{grid-template-columns:1fr}}
+
+
+/* FIX37 - 관리자 수강생 목록 배지 표시 */
+.student-badge-cell { min-width: 185px; }
+.admin-student-badges { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+.admin-student-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:5px 8px; border-radius:999px;
+  font-size:10px; font-weight:850; line-height:1;
+  border:1px solid transparent; white-space:nowrap;
+}
+.admin-student-badge i { font-size:10px; }
+.admin-student-badge b { font-size:9px; font-weight:900; }
+.admin-student-badge.badge-mvp {
+  color:#986000; background:#fff5d7; border-color:#f2d789;
+}
+.admin-student-badge.badge-growth {
+  color:#157348; background:#e8f8ef; border-color:#bce8cf;
+}
+.admin-student-badge.badge-consistent {
+  color:#5a3cbe; background:#f0ebff; border-color:#d9cdfd;
+}
+
+.assignment-skill-box { padding:14px; border:1px solid #e5def6; border-radius:14px; background:#faf9ff; }
+.assignment-required-skills { display:flex; flex-wrap:wrap; gap:4px; }
+.assignment-required-skills span { padding:3px 6px; border-radius:999px; background:#f0ebff; color:#6544c9; font-size:9px; font-weight:800; }
+.hr-task-attachment { display:inline-flex; align-items:center; gap:5px; margin:6px 0 10px; padding:6px 9px; border-radius:9px; background:#f4f1ff; color:#5f42c6; text-decoration:none; font-size:10px; font-weight:800; }
+
+
+/* FIX41 - 공통 역량 일괄 관리 */
+.skill-admin-page{max-width:1550px;margin:0 auto}
+.skill-admin-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.skill-admin-summary article{padding:18px 20px;border:1px solid #e8e2f3;border-radius:18px;background:linear-gradient(145deg,#fff,#faf9ff);box-shadow:0 7px 24px rgba(58,38,100,.05)}
+.skill-admin-summary span,.skill-admin-summary small{display:block;color:#898192;font-size:11px;font-weight:700}
+.skill-admin-summary strong{display:block;margin:5px 0;color:#3d3153;font-size:26px}
+.skill-admin-guide .card-body{display:flex;align-items:flex-start;gap:12px}.skill-admin-guide .card-body>i{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:#eee8ff;color:#6543d9;font-size:18px}.skill-admin-guide strong{color:#3a304d}.skill-admin-guide p{margin:3px 0 0;color:#81798d;font-size:11px}
+.skill-admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.skill-admin-card{padding:17px;border:1px solid #e7e1f1;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(51,35,88,.045)}
+.skill-admin-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.skill-admin-card-head>div{display:flex;gap:10px;min-width:0}.skill-admin-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:#f0ebff;color:#6544d3}.skill-admin-card h4{margin:0;color:#342a48;font-size:15px;font-weight:850}.skill-admin-card p{margin:4px 0 0;color:#8f8799;font-size:10px;line-height:1.45}.skill-coverage{padding:5px 8px;border-radius:999px;background:#fff0e7;color:#be6235;font-size:10px;font-weight:900}.skill-coverage.is-complete{background:#e9f8ef;color:#18844f}
+.skill-admin-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}.skill-admin-metrics div{padding:9px;border-radius:10px;background:#faf9fd}.skill-admin-metrics span{display:block;color:#948d9d;font-size:9px}.skill-admin-metrics strong{display:block;margin-top:2px;color:#54446d;font-size:14px}.skill-admin-actions{display:flex;gap:7px;justify-content:flex-end}.skill-admin-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:50px;border:1px dashed #ddd5eb;border-radius:18px;color:#8b8395;background:#fbfaff}.skill-admin-empty i{font-size:28px;color:#7453dd}.skill-admin-empty strong{color:#514660}
+@media(max-width:1050px){.skill-admin-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.skill-admin-summary,.skill-admin-grid{grid-template-columns:1fr}}
+
+/* FIX42 - 역량과제 Step 상세 지시사항 */
+.hr-step-add-form-detail{align-items:flex-start!important}
+.hr-step-create-fields{display:grid;gap:6px;min-width:0;flex:1}
+.step-admin-copy{min-width:0;flex:1}.step-admin-copy strong{display:block}.step-admin-copy p{margin:4px 0 0;color:#71697d;font-size:10px;line-height:1.5}.step-admin-copy small{display:block;margin-top:3px;color:#aaa3b2;font-size:9px}
+.hr-step-edit-collapse{margin:-2px 0 8px 38px}.hr-step-edit-form{display:grid;grid-template-columns:minmax(180px,.6fr) minmax(280px,1.4fr) auto;gap:7px;align-items:start;padding:9px;border:1px solid #ebe5f5;border-radius:11px;background:#faf9ff}
+@media(max-width:800px){.hr-step-edit-form{grid-template-columns:1fr}.hr-step-edit-collapse{margin-left:0}}
+
+/* FIX43 - 관리자 자기진도 안내 */
+.hr-self-progress-note{display:block;margin-top:7px;color:#8e8797;font-size:9px;line-height:1.4}
+.hr-self-progress-note i{color:#694bd4;margin-right:3px}
+
+/* FIX44 - 역량과제 직접 이동 */
+.hr-task-card{scroll-margin-top:22px}
+.hr-task-card:target{outline:2px solid rgba(101,68,211,.32);box-shadow:0 0 0 5px rgba(101,68,211,.08),0 12px 30px rgba(56,39,91,.08)}
+.hr-task-title-link{color:inherit;text-decoration:none}.hr-task-title-link:hover{color:#6544d3}
+.hr-recent-eval-link,.hr-active-task-link{color:inherit;text-decoration:none}.hr-recent-eval-link:hover,.hr-active-task-link:hover{transform:translateY(-1px)}
+.hr-recent-eval-link{display:flex;justify-content:space-between;align-items:center;gap:12px}.hr-active-task-link{display:block}
+
+/* FIX46 - 관리자 홈 역량과제 요약 */
+.admin-growth-home-card{margin:18px 0;padding:20px;border:1px solid #e8e2f3;border-radius:20px;background:linear-gradient(145deg,#fff,#fbf9ff);box-shadow:0 10px 30px rgba(56,39,91,.05)}
+.admin-growth-home-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.admin-growth-home-head h2{margin:2px 0 3px;color:#342a48;font-size:19px;font-weight:900}.admin-growth-home-head p{margin:0;color:#8a8294;font-size:11px}
+.admin-growth-home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.admin-growth-home-stats>a{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border:1px solid #eee8f5;border-radius:13px;background:#fff;color:inherit;text-decoration:none}.admin-growth-home-stats span{color:#8d8597;font-size:10px;font-weight:750}.admin-growth-home-stats strong{font-size:20px;color:#4d405e}.admin-growth-home-stats>a.is-attention{background:#f5f0ff;border-color:#d9cdf8}.admin-growth-home-stats>a.is-attention strong{color:#6544d3}.admin-growth-home-stats>a.is-danger{background:#fff4f1;border-color:#f3d4cd}.admin-growth-home-stats>a.is-danger strong{color:#c15b49}
+.admin-growth-home-list{border-top:1px solid #eee8f5;padding-top:13px}.admin-growth-home-list-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.admin-growth-home-list-head strong{font-size:12px;color:#44374f}.admin-growth-home-list-head span{font-size:9px;color:#9b94a2}
+.admin-growth-home-item{display:flex;align-items:center;gap:10px;padding:10px 11px;margin-top:6px;border:1px solid #eee8f5;border-radius:12px;background:#fff;color:inherit;text-decoration:none}.admin-growth-home-item:hover{border-color:#d8cdf0;background:#fcfbff}.admin-growth-home-item-icon{width:30px;height:30px;display:grid;place-items:center;flex:0 0 auto;border-radius:9px;background:#f2edff;color:#694bd4}.admin-growth-home-item.is-overdue .admin-growth-home-item-icon{background:#fff0ec;color:#c45b48}.admin-growth-home-item-copy{min-width:0;flex:1}.admin-growth-home-item-copy strong,.admin-growth-home-item-copy small{display:block}.admin-growth-home-item-copy strong{font-size:11px;color:#44384f}.admin-growth-home-item-copy small{margin-top:2px;font-size:9px;color:#938b9d}.admin-growth-home-item-action{font-size:9px;font-weight:800;color:#6c50cc}.admin-growth-home-empty{display:flex;align-items:center;gap:7px;padding:13px;color:#568469;font-size:10px}.admin-growth-home-empty i{color:#43a66b}
+@media(max-width:850px){.admin-growth-home-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.admin-growth-home-head{display:block}.admin-growth-home-head>a{margin-top:10px}.admin-growth-home-stats{grid-template-columns:1fr 1fr}.admin-growth-home-item-action{display:none}}
+
+
+/* FIX47 - 사이드바 역량과제 확인 필요 알림 */
+.ax-purple-sidebar .nav-link .growth-sidebar-alert{
+  margin-left:auto;
+  min-width:19px;
+  height:19px;
+  padding:0 5px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  background:#ef5350;
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+  line-height:1;
+  box-shadow:0 3px 8px rgba(239,83,80,.26);
+}
+.ax-purple-sidebar .nav-item.active>.nav-link .growth-sidebar-alert{
+  background:#fff;
+  color:#7352dc;
+  box-shadow:none;
+}
+
+/* 역량 과제 첨부파일 링크 */
+.hr-task-admin-attachment{display:inline-flex;align-items:center;gap:5px;margin:7px 0 3px;color:#6648cf;text-decoration:none;font-size:10px;font-weight:800}.hr-task-admin-attachment:hover{text-decoration:underline}

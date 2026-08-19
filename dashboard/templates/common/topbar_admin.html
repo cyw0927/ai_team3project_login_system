@@ -1,0 +1,93 @@
+<nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row ax-clean-navbar">
+  <div class="navbar-brand-wrapper d-flex align-items-center">
+    <a class="ax-navbar-brand" href="{% url 'admin_dashboard' %}">
+      <span class="ax-navbar-logo">AX</span>
+      <span class="ax-navbar-product">평가 시스템</span>
+    </a>
+  </div>
+
+  <div class="navbar-menu-wrapper d-flex align-items-center">
+    <button class="ax-navbar-icon-btn ax-sidebar-toggle d-none d-lg-inline-flex"
+            type="button"
+            aria-label="사이드바 접기">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <div class="ax-navbar-context d-none d-md-flex">
+      <strong>관리자</strong>
+      <span>평가 운영 및 결과 관리</span>
+    </div>
+
+    <div class="ax-navbar-spacer"></div>
+
+    <a class="ax-navbar-icon-btn position-relative"
+       href="{% url 'admin_announcements' %}"
+       aria-label="공지 관리"
+       title="공지 관리">
+      <i class="bi bi-bell"></i>
+      {% if notification_badge_count %}
+        <span class="ax-navbar-dot"></span>
+      {% endif %}
+    </a>
+
+    <div class="dropdown">
+      <button class="ax-user-menu"
+              type="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false">
+        <span class="ax-user-avatar"><i class="bi bi-person-gear"></i></span>
+        <span class="ax-user-copy d-none d-md-flex">
+          <strong>
+            {% if request.user.is_authenticated %}
+              {{ request.user.get_full_name|default:request.user.username }}
+            {% else %}
+              관리자
+            {% endif %}
+          </strong>
+          <small>Administrator</small>
+        </span>
+        <i class="bi bi-chevron-down ax-user-chevron d-none d-md-inline-block"></i>
+      </button>
+
+      <div class="dropdown-menu dropdown-menu-end ax-user-dropdown">
+        <div class="ax-dropdown-head">
+          <strong>
+            {% if request.user.is_authenticated %}
+              {{ request.user.get_full_name|default:request.user.username }}
+            {% else %}
+              관리자
+            {% endif %}
+          </strong>
+          <span>관리자 계정</span>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a class="dropdown-item" href="{% url 'admin_activity_logs' %}">
+          <i class="bi bi-clock-history"></i>
+          활동 로그
+        </a>
+        <a class="dropdown-item" href="{% url 'admin_data_management' %}">
+          <i class="bi bi-database-gear"></i>
+          데이터 관리
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="dropdown-item text-danger" type="submit">
+            <i class="bi bi-box-arrow-right"></i>
+            로그아웃
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <button class="ax-navbar-icon-btn ax-mobile-sidebar-toggle d-lg-none"
+            type="button"
+            aria-label="메뉴 열기">
+      <i class="bi bi-list"></i>
+    </button>
+  </div>
+</nav>

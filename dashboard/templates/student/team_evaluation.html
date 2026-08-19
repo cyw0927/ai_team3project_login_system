@@ -1,0 +1,162 @@
+{% extends "base_student.html" %}
+{% load dashboard_extras %}
+{% block title %}팀 평가{% endblock %}
+{% block content %}
+<div class="eval2-page-head">
+  <div>
+    <h1>팀 평가</h1>
+    <p>다른 팀의 발표와 결과물을 확인하고 항목별로 평가해주세요.</p>
+  </div>
+  {% if evaluation_open %}
+  <a class="eval2-status-link" href="{% url 'student_evaluation_status' %}"><i class="bi bi-clipboard2-check"></i> 전체 평가 현황</a>
+  {% endif %}
+</div>
+
+{% if evaluation_open %}
+<div class="eval2-summary">
+  <div class="eval2-summary-main">
+    <span class="eval2-summary-icon"><i class="bi bi-info-circle-fill"></i></span>
+    <div><b>{{ evaluation_round.name }}</b><p>본인 팀{% if my_team %}({{ my_team.name }}){% endif %}은 평가 대상에서 제외됩니다. 최종 제출 후에도 평가 기간 중에는 수정할 수 있습니다.</p></div>
+  </div>
+  <div class="eval2-progress-mini">
+    <span><b>{{ submitted_count }}</b> / {{ total_count }} 완료</span>
+    <div><i style="width:{% if total_count %}{% widthratio submitted_count total_count 100 %}{% else %}0{% endif %}%"></i></div>
+  </div>
+</div>
+
+<div class="eval2-layout">
+  <aside class="eval2-target-card">
+    <div class="eval2-card-head">
+      <div><h2>평가 대상 팀</h2><p>팀을 선택하면 오른쪽에서 바로 평가할 수 있습니다.</p></div>
+      <span class="eval2-count-badge">{{ remaining_count }}건 남음</span>
+    </div>
+
+    <div class="eval2-target-list">
+      {% for team in target_teams %}
+      <a href="?team={{ team.id }}" class="eval2-target-item {% if selected_team.id == team.id %}active{% endif %} {% if team.is_submitted %}submitted{% endif %}">
+        <span class="eval2-team-icon"><i class="bi bi-people-fill"></i></span>
+        <span class="eval2-team-copy">
+          <span class="eval2-team-title"><b>{{ team.name }}</b>{% if team.member_count %}<em>{{ team.member_count }}명</em>{% endif %}</span>
+          <small>{{ team.project_title|default:"프로젝트 발표" }}</small>
+        </span>
+        {% if team.is_submitted %}
+          <span class="eval2-state success"><i class="bi bi-check-circle-fill"></i> 완료</span>
+        {% elif team.is_draft %}
+          <span class="eval2-state draft"><i class="bi bi-pencil-fill"></i> 저장됨</span>
+        {% else %}
+          <span class="eval2-state ready">평가하기 <i class="bi bi-chevron-right"></i></span>
+        {% endif %}
+      </a>
+      {% empty %}
+      <div class="eval2-empty"><i class="bi bi-check2-circle"></i><b>평가할 다른 팀이 없습니다.</b></div>
+      {% endfor %}
+    </div>
+
+    <div class="eval2-left-footer">
+      <div><i class="bi bi-shield-check"></i><span><b>평가 데이터 보호</b><small>동일 회차·평가자·대상 팀 조합은 하나의 평가만 저장됩니다.</small></span></div>
+      {% if draft_count %}<p><i class="bi bi-pencil-square"></i> 임시저장 {{ draft_count }}건</p>{% endif %}
+    </div>
+  </aside>
+
+  <section class="eval2-form-card">
+    {% if selected_team %}
+    <div class="eval2-form-head">
+      <div class="eval2-title-wrap">
+        <span class="eval2-team-mark"><i class="bi bi-people"></i></span>
+        <div><span class="eval2-kicker">{% if selected_position %}{{ selected_position }}번째 평가 대상{% else %}팀 평가{% endif %}</span><h2>{{ selected_team.name }} 평가</h2><p>{{ selected_team.project_title|default:"프로젝트 발표" }}</p></div>
+      </div>
+      {% if selected_evaluation.is_submitted %}<span class="eval2-submitted-pill"><i class="bi bi-check2"></i> 제출 완료 · 수정 가능</span>{% elif selected_evaluation %}<span class="eval2-draft-pill">임시 저장됨</span>{% endif %}
+    </div>
+
+    <form method="post" id="teamEvalForm">{% csrf_token %}<input type="hidden" name="target_team_id" value="{{ selected_team.id }}">
+      <div class="eval2-table">
+        <div class="eval2-table-head"><span>평가 항목</span><span>점수 <small>1점 낮음 · 5점 높음</small></span></div>
+        {% for criterion in criteria %}
+        <div class="eval2-score-row" data-required="{% if criterion.is_required %}1{% else %}0{% endif %}">
+          <div class="eval2-criterion">
+            <div><b>{{ criterion.title }}</b>{% if criterion.is_required %}<span class="eval2-required">필수</span>{% else %}<span class="eval2-optional">선택</span>{% endif %}</div>
+            {% if criterion.description %}<p>{{ criterion.description }}</p>{% endif %}
+          </div>
+          <div class="eval2-score-scale">
+            {% with saved=saved_scores|dict_get:criterion.id %}
+            {% for score in score_choices %}{% if score <= criterion.max_score %}
+            <label class="eval2-score-choice">
+              <input type="radio" name="criterion_{{ criterion.id }}" value="{{ score }}" {% if saved == score %}checked{% endif %}>
+              <span>{{ score }}</span>
+            </label>
+            {% endif %}{% endfor %}
+            {% endwith %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="eval2-empty"><i class="bi bi-exclamation-circle"></i><b>등록된 팀 평가 항목이 없습니다.</b></div>
+        {% endfor %}
+      </div>
+
+      <div class="eval2-comment feedback-compose">
+        <div class="eval2-comment-head"><label for="teamComment">평가 코멘트 <span>선택</span></label><small><b id="commentCount">{{ saved_comment|length }}</b> / 500</small></div>
+        <div class="feedback-guide">
+          <span><i class="bi bi-stars"></i> 잘한 점</span>
+          <span><i class="bi bi-lightbulb"></i> 개선하면 좋을 점</span>
+          <span><i class="bi bi-arrow-up-right-circle"></i> 다음 발표에서 기대하는 점</span>
+        </div>
+        <p class="feedback-guide-copy">점수만 남기기보다 구체적인 상황이나 이유를 한 가지 이상 적어주면 더 도움이 됩니다.</p>
+        <textarea id="teamComment" name="comment" maxlength="500" rows="4" placeholder="예: 발표 흐름이 명확해서 이해하기 쉬웠습니다. 다음에는 결과 수치를 조금 더 보여주면 좋겠습니다.">{{ saved_comment }}</textarea>
+      </div>
+
+      <div class="eval2-form-bottom">
+        <div class="eval2-complete-state" id="completeState"><i class="bi bi-circle"></i><span>필수 항목을 모두 선택하면 제출할 수 있습니다.</span></div>
+        <div class="eval2-actions">
+          <button class="eval2-btn secondary" name="action" value="draft" type="submit"><i class="bi bi-save"></i> 임시저장</button>
+          <button class="eval2-btn primary" id="submitEvalBtn" name="action" value="submit" type="submit"><i class="bi bi-send-check"></i> {% if selected_evaluation.is_submitted %}수정 제출{% else %}평가 제출{% endif %}</button>
+        </div>
+      </div>
+    </form>
+
+    {% if submitted_count == total_count and total_count > 0 %}
+    <div class="eval2-next-banner"><div><i class="bi bi-check-circle-fill"></i><span><b>모든 팀 평가를 완료했습니다.</b><small>이제 같은 팀 구성원에 대한 개인 평가를 진행할 수 있습니다.</small></span></div><a href="{% url 'student_personal_evaluation' %}">개인 평가로 이동 <i class="bi bi-arrow-right"></i></a></div>
+    {% elif next_team and selected_evaluation.is_submitted %}
+    <div class="eval2-next-banner muted"><div><i class="bi bi-arrow-repeat"></i><span><b>다음 팀 평가도 이어서 진행할 수 있습니다.</b><small>{{ next_team.name }} 평가가 아직 남아 있습니다.</small></span></div><a href="?team={{ next_team.id }}">{{ next_team.name }} 평가 <i class="bi bi-arrow-right"></i></a></div>
+    {% endif %}
+
+    {% else %}
+    <div class="eval2-placeholder"><span><i class="bi bi-cursor-fill"></i></span><h2>평가할 팀을 선택하세요</h2><p>왼쪽 목록에서 팀을 고르면 평가 문항과 저장된 내용이 표시됩니다.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% else %}
+<div class="eval2-closed"><i class="bi {% if evaluation_locked %}bi-lock-fill{% elif attendance_blocked %}bi-person-x-fill{% else %}bi-calendar-x{% endif %}"></i><h2>{% if evaluation_locked %}현재 평가가 잠겨 있습니다.{% elif attendance_blocked %}다른 팀 평가가 면제되었습니다.{% else %}현재 진행 중인 팀 평가가 없습니다.{% endif %}</h2><p>{% if evaluation_locked %}관리자가 {{ evaluation_round.name }}의 평가 입력을 일시적으로 잠갔습니다. 기존 제출 내용은 유지되며 잠금 해제 후 다시 수정·제출할 수 있습니다.{% elif attendance_blocked %}발표 당일 {{ attendance.get_status_display }} 처리되어 다른 팀 평가는 면제됩니다. 같은 팀원 개인 평가는 정상적으로 진행할 수 있습니다.{% if attendance.note %} 사유: {{ attendance.note }}{% endif %}{% else %}평가 회차가 시작되면 이 화면에서 다른 팀을 평가할 수 있습니다.{% endif %}</p><a href="{% url 'student_home' %}">학생 홈으로 돌아가기</a></div>
+{% endif %}
+
+<script>
+(function(){
+  const form=document.getElementById('teamEvalForm');
+  if(!form) return;
+  const comment=form.querySelector('#teamComment');
+  const count=form.querySelector('#commentCount');
+  const state=form.querySelector('#completeState');
+  const submit=form.querySelector('#submitEvalBtn');
+  const requiredRows=[...form.querySelectorAll('.eval2-score-row[data-required="1"]')];
+  function refresh(){
+    if(comment && count) count.textContent=comment.value.length;
+    const complete=requiredRows.every(row=>row.querySelector('input[type="radio"]:checked'));
+    if(state){
+      state.classList.toggle('done',complete);
+      state.innerHTML=complete?'<i class="bi bi-check-circle-fill"></i><span>필수 평가 항목 입력 완료</span>':'<i class="bi bi-circle"></i><span>필수 항목을 모두 선택하면 제출할 수 있습니다.</span>';
+    }
+    if(submit) submit.classList.toggle('ready',complete);
+  }
+  form.addEventListener('change',refresh);
+  if(comment) comment.addEventListener('input',refresh);
+  form.addEventListener('submit',function(e){
+    const button=e.submitter;
+    if(button && button.value==='submit'){
+      const complete=requiredRows.every(row=>row.querySelector('input[type="radio"]:checked'));
+      if(!complete){e.preventDefault(); alert('필수 평가 항목을 모두 입력해주세요.'); return;}
+      if(!confirm('이 평가를 제출할까요? 평가 기간 중에는 다시 수정할 수 있습니다.')) e.preventDefault();
+    }
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

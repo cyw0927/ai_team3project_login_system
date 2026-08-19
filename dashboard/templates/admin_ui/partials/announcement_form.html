@@ -1,0 +1,8 @@
+<div class="announcement-form-grid">
+  <div class="form-field wide"><label>제목</label><input name="title" maxlength="160" placeholder="예: 3주차 팀 평가 마감 안내" required></div>
+  <div class="form-field wide"><label>내용</label><textarea name="body" rows="6" placeholder="학생에게 보여줄 공지 내용을 입력하세요." required></textarea></div>
+  <div class="form-field"><label>중요도</label><select name="priority">{% for value,label in priorities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+  <div class="form-field"><label>공개 시각</label><input type="datetime-local" name="publish_at" value="{{ now|date:'Y-m-d\\TH:i' }}"></div>
+  <div class="form-field"><label>종료 시각</label><input type="datetime-local" name="expires_at"></div>
+  <label class="switch-field"><input type="checkbox" name="is_published" value="1" checked><span>학생에게 공개</span></label>
+</div>

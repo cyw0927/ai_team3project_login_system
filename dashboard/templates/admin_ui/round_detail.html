@@ -1,0 +1,258 @@
+{% extends "base_admin.html" %}
+{% block title %}{{ evaluation_round.name }} · 회차 상세 관리{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <a href="{% url 'admin_operations' %}?round={{ evaluation_round.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      {% if evaluation_round.status == 'in_progress' %}<span class="status-badge status-progress">진행 중</span>{% if evaluation_round.evaluation_started %}<span class="badge bg-success-subtle text-success-emphasis ms-1">평가 중</span>{% else %}<span class="badge bg-warning-subtle text-warning-emphasis ms-1">평가 시작 전</span>{% endif %}
+      {% elif evaluation_round.status == 'scheduled' %}<span class="status-badge status-wait">시작 전</span>
+      {% else %}<span class="status-badge status-end">종료</span>{% endif %}
+      {% if evaluation_round.is_locked and evaluation_round.evaluation_started %}<span class="badge bg-danger-subtle text-danger"><i class="bi bi-pause-circle me-1"></i>평가 중단</span>{% endif %}
+    </div>
+    <h1 class="page-title mb-1">{{ evaluation_round.name }}</h1>
+    <p class="page-description mb-0">과제는 시작 전부터 등록할 수 있습니다. 회차 시작 후 학생 제출을 받고, 준비가 끝나면 평가 시작 후 종료합니다.</p>
+    <div class="small text-muted mt-2"><i class="bi bi-lightning-charge me-1"></i>기본 과제의 역량 반영 설정은 <a href="{% url 'admin_assignments' %}">회차·과제 관리</a>에서 지정합니다.</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_round_start %}
+    <form method="post" action="{% url 'admin_round_action' evaluation_round.id 'round_start' %}" onsubmit="return confirm('회차를 시작할까요? 학생 제출이 열립니다. 과제 등록·수정은 시작 전부터 이미 가능합니다.');">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+      <button class="btn btn-outline-primary" type="submit"><i class="bi bi-play-circle me-1"></i>회차 시작</button>
+    </form>
+    {% endif %}
+    {% if can_evaluation_start %}
+    <form method="post" action="{% url 'admin_round_action' evaluation_round.id 'evaluation_start' %}" onsubmit="return confirm('평가를 시작할까요? 시작하면 과제 등록·수정·학생 제출은 마감되고 평가 입력이 열립니다.');">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+      <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1"></i>평가 시작</button>
+    </form>
+    {% endif %}
+    {% if can_pause %}
+    <form method="post" action="{% url 'admin_round_action' evaluation_round.id 'pause' %}" onsubmit="return confirm('평가를 일시 중단할까요? 기존 평가 데이터는 유지되고 학생의 저장·제출만 잠시 막힙니다.');">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+      <button class="btn btn-outline-warning" type="submit"><i class="bi bi-pause-circle me-1"></i>평가 중단</button>
+    </form>
+    {% endif %}
+    {% if can_resume %}
+    <form method="post" action="{% url 'admin_round_action' evaluation_round.id 'resume' %}" onsubmit="return confirm('평가를 재개할까요? 학생의 저장·제출이 다시 열립니다.');">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+      <button class="btn btn-warning" type="submit"><i class="bi bi-play-circle me-1"></i>평가 재개</button>
+    </form>
+    {% endif %}
+    {% if can_end %}
+    <form method="post" action="{% url 'admin_round_action' evaluation_round.id 'end' %}" onsubmit="return confirm('이 평가를 종료할까요?');">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+      <button class="btn btn-dark" type="submit"><i class="bi bi-stop-circle me-1"></i>평가 종료</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'admin_team_assignment' %}?round={{ evaluation_round.id }}" class="btn btn-outline-primary"><i class="bi bi-diagram-3 me-1"></i>팀 편성</a>
+    <a href="{% url 'admin_evaluation_templates' %}?round={{ evaluation_round.id }}" class="btn btn-outline-primary"><i class="bi bi-ui-checks-grid me-1"></i>평가 템플릿 관리</a>
+    <form method="post" action="{% url 'admin_round_delete' evaluation_round.id %}" data-ax-critical data-ax-title="{{ evaluation_round.name }} 회차를 삭제할까요?" data-ax-message="과제·팀 편성·제출물·평가 데이터 등 연결 데이터도 함께 삭제됩니다." data-ax-note="이 작업은 되돌릴 수 없습니다. 필요한 경우 먼저 백업하세요." data-ax-button="영구 삭제">
+      {% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_operations' %}">
+      <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>회차 삭제</button>
+    </form>
+  </div>
+</div>
+
+<div class="alert {% if evaluation_round.status == 'scheduled' %}alert-secondary{% elif evaluation_round.status == 'in_progress' and not evaluation_round.evaluation_started %}alert-warning{% elif evaluation_round.status == 'in_progress' %}alert-success{% else %}alert-light{% endif %} border mb-4">
+  {% if evaluation_round.status == 'scheduled' %}
+    <strong>시작 전입니다.</strong> 관리자는 지금부터 과제를 등록·수정할 수 있습니다. 학생 제출과 평가는 아직 닫혀 있습니다.
+  {% elif evaluation_round.status == 'in_progress' and not evaluation_round.evaluation_started %}
+    <strong>진행 중 · 평가 시작 전입니다.</strong> 과제 등록·수정과 학생 제출이 가능하며, 준비가 끝나면 <b>평가 시작</b>을 누르세요.
+  {% elif evaluation_round.status == 'in_progress' and evaluation_round.is_locked %}
+    <strong>진행 중 · 평가 일시 중단 상태입니다.</strong> 기존 평가 내용은 유지되며 학생의 임시저장·제출만 잠시 차단됩니다. <b>평가 재개</b>를 누르면 이어서 진행할 수 있습니다.
+  {% elif evaluation_round.status == 'in_progress' %}
+    <strong>진행 중 · 평가 중입니다.</strong> 과제 등록·수정·학생 제출은 마감되었고 팀/개인 평가만 진행됩니다.
+  {% else %}
+    <strong>종료된 회차입니다.</strong> 과제와 평가 데이터는 조회할 수 있지만 새 입력은 제한됩니다.
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl"><div class="card ax-panel-card h-100 p-3"><div class="small text-muted">평가 준비도</div><div class="fs-3 fw-bold mt-1 text-primary">{{ ready_percent }}%</div></div></div>
+  <div class="col-6 col-xl"><div class="card ax-panel-card h-100 p-3"><div class="small text-muted">편성 팀</div><div class="fs-3 fw-bold mt-1">{{ stats.teams }}</div></div></div>
+  <div class="col-6 col-xl"><div class="card ax-panel-card h-100 p-3"><div class="small text-muted">배정 학생</div><div class="fs-3 fw-bold mt-1">{{ stats.assigned }}</div>{% if stats.unassigned %}<div class="small text-danger">미배정 {{ stats.unassigned }}명</div>{% endif %}</div></div>
+  <div class="col-6 col-xl"><div class="card ax-panel-card h-100 p-3"><div class="small text-muted">과제 제출</div><div class="fw-bold mt-1 text-success">조별 {{ stats.team_submitted }}/{{ stats.teams }}</div><div class="small text-muted">{% if individual_assignment %}개별 {{ stats.individual_submitted }}/{{ stats.individual_submitted|add:stats.individual_missing }}{% else %}개별과제 없음{% endif %}</div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-7">
+    <div class="card ax-panel-card h-100">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div><div class="small text-muted mb-1">이 회차 조별과제</div><h4 class="fw-bold mb-0">{% if team_assignment %}{{ team_assignment.title }}{% else %}조별과제 미등록{% endif %}</h4></div>
+        {% if can_assignment_manage %}
+          {% if team_assignment %}<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignmentEditModal"><i class="bi bi-pencil me-1"></i>조별과제 수정</button>
+          {% else %}<button class="btn btn-sm btn-gradient-primary" data-bs-toggle="modal" data-bs-target="#assignmentAddModal"><i class="bi bi-plus-lg me-1"></i>조별과제 등록</button>{% endif %}
+        {% endif %}
+      </div>
+      {% if team_assignment %}
+        <p class="text-muted mb-3">{{ team_assignment.description|default:"등록된 설명이 없습니다." }}</p>
+        {% if team_assignment.attachment %}<a href="{% url 'assignment_attachment_download' team_assignment.id %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-download me-1"></i>과제 첨부파일 다운로드</a>{% endif %}
+        {% if not can_assignment_manage %}<div class="small text-muted mt-3"><i class="bi bi-lock me-1"></i>과제는 회차 시작 전부터 진행 중 평가 시작 전까지만 등록·수정할 수 있습니다.</div>{% endif %}
+      {% else %}
+        <div class="empty-state py-4 mb-3">이 회차에 연결된 과제가 없습니다.</div>
+        {% if evaluation_round.status == 'scheduled' %}<div class="small text-muted">시작 전에도 과제를 등록할 수 있습니다. 학생 제출은 회차 시작 후 열립니다.</div>
+        {% elif evaluation_round.status == 'in_progress' or evaluation_round.status == 'ended' %}<div class="small text-danger">평가가 시작되어 새 과제를 등록할 수 없습니다.</div>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card ax-panel-card h-100">
+      <div class="small text-muted mb-2">평가 시작 준비 상태</div>
+      <div class="progress mb-3" style="height:8px"><div class="progress-bar" style="width:{{ ready_percent }}%"></div></div>
+      <div class="d-grid gap-2">
+        <div class="d-flex justify-content-between border rounded p-2"><span>과제 등록</span>{% if ready_checks.assignment %}<span class="text-success">완료</span>{% else %}<span class="text-danger">미등록</span>{% endif %}</div>
+        <div class="d-flex justify-content-between border rounded p-2"><span>팀 편성</span>{% if ready_checks.teams %}<span class="text-success">{{ stats.teams }}팀</span>{% else %}<span class="text-danger">미편성</span>{% endif %}</div>
+        <div class="d-flex justify-content-between border rounded p-2"><span>팀 평가 템플릿</span>{% if ready_checks.team_template %}<span class="text-success">{{ team_template_count }}개</span>{% else %}<span class="text-danger">없음</span>{% endif %}</div>
+        <div class="d-flex justify-content-between border rounded p-2"><span>개인 평가 템플릿</span>{% if ready_checks.personal_template %}<span class="text-success">{{ personal_template_count }}개</span>{% else %}<span class="text-danger">없음</span>{% endif %}</div>
+      </div>
+      {% if evaluation_round.status == 'in_progress' and not evaluation_round.evaluation_started and ready_percent < 100 %}<div class="small text-danger mt-3">준비도 100%가 되어야 평가 시작이 가능합니다.</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card ax-panel-card mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div>
+      <h5 class="fw-bold mb-1">회차 평가 템플릿 적용</h5>
+      <div class="small text-muted">평가 템플릿 관리에서 만든 템플릿을 이 회차에 적용합니다. 적용하면 문항이 회차 전용으로 복사되어 이후 원본 템플릿을 수정해도 이 회차에는 영향을 주지 않습니다.</div>
+    </div>
+    <a href="{% url 'admin_evaluation_templates' %}?round={{ evaluation_round.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear me-1"></i>템플릿 관리</a>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="border rounded p-3 h-100">
+        <div class="small text-muted mb-1">현재 팀 평가</div>
+        {% if applied_team_template %}<div class="fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ applied_team_template.name }}</div><div class="small text-muted mt-1">{{ applied_team_template.criteria.count }}문항 적용됨</div>{% else %}<div class="fw-bold text-danger">미적용</div>{% endif %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="border rounded p-3 h-100">
+        <div class="small text-muted mb-1">현재 개인 평가</div>
+        {% if applied_personal_template %}<div class="fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ applied_personal_template.name }}</div><div class="small text-muted mt-1">{{ applied_personal_template.criteria.count }}문항 적용됨</div>{% else %}<div class="fw-bold text-danger">미적용</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if can_template_apply %}
+  <form method="post" action="{% url 'admin_round_apply_templates' evaluation_round.id %}">
+    {% csrf_token %}
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">팀 평가 템플릿</label>
+        <select name="team_template_id" class="form-select">
+          <option value="">선택 안 함</option>
+          {% for template in team_template_options %}<option value="{{ template.id }}">{{ template.name }} · {{ template.criteria.count }}문항{% if template.evaluation_round %} · {{ template.evaluation_round.name }}{% else %} · 공통{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">개인 평가 템플릿</label>
+        <select name="personal_template_id" class="form-select">
+          <option value="">선택 안 함</option>
+          {% for template in personal_template_options %}<option value="{{ template.id }}">{{ template.name }} · {{ template.criteria.count }}문항{% if template.evaluation_round %} · {{ template.evaluation_round.name }}{% else %} · 공통{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-grid">
+        <button type="submit" class="btn btn-gradient-primary" onclick="return confirm('선택한 템플릿을 이 회차에 적용할까요? 기존에 적용된 같은 유형의 회차 템플릿은 교체됩니다.');"><i class="bi bi-check2-square me-1"></i>적용</button>
+      </div>
+    </div>
+  </form>
+  {% else %}
+  <div class="alert alert-light border mb-0"><i class="bi bi-lock me-1"></i>평가가 시작되었거나 종료된 회차는 템플릿을 변경할 수 없습니다.</div>
+  {% endif %}
+</div>
+
+<div class="card ax-panel-card p-0 overflow-hidden">
+  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><h5 class="fw-bold mb-1">팀 배정 · 제출 현황</h5><div class="small text-muted">팀원 구성과 과제 제출물을 확인하고 팀별 관리자 코멘트를 남길 수 있습니다.</div></div>
+    <a href="{% url 'admin_team_assignment' %}?round={{ evaluation_round.id }}" class="btn btn-sm btn-outline-primary">배정 수정</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover ax-purple-table mb-0 align-middle">
+      <thead><tr><th style="min-width:130px">팀</th><th style="min-width:220px">팀원</th><th style="min-width:260px">제출물</th><th style="min-width:330px">관리자 코멘트</th></tr></thead>
+      <tbody>
+      {% for row in team_rows %}
+        <tr>
+          <td><div class="fw-bold">{{ row.team.name }}</div>{% if row.team.project_title %}<div class="small text-muted">{{ row.team.project_title }}</div>{% endif %}</td>
+          <td><div class="d-flex flex-wrap gap-1">{% for membership in row.memberships %}<span class="badge {% if membership.is_leader %}text-bg-primary{% else %}bg-light text-dark border{% endif %}">{% if membership.is_leader %}<i class="bi bi-star-fill me-1"></i>{% endif %}{{ membership.student.name }}</span>{% empty %}<span class="text-danger small">배정된 학생 없음</span>{% endfor %}</div></td>
+          <td>
+            {% if row.submission %}
+              <div class="mb-1"><span class="badge bg-success-subtle text-success">제출 완료</span> <span class="small text-muted">{{ row.submission.submitted_at|date:"m.d H:i" }}</span></div>
+              {% if row.submission.submission_url %}<div><a href="{{ row.submission.submission_url }}" target="_blank"><i class="bi bi-link-45deg"></i> 제출 링크 열기</a></div>{% endif %}
+              {% if row.submission.attachment %}<div><a href="{% url 'submission_attachment_download' row.submission.id %}"><i class="bi bi-download"></i> 제출 파일 다운로드</a></div>{% endif %}
+              {% if row.submission.note %}<div class="small text-muted mt-1">{{ row.submission.note|linebreaksbr }}</div>{% endif %}
+              {% if row.submission.submitted_by %}<div class="small text-muted mt-1">최근 제출: {{ row.submission.submitted_by.name }}</div>{% endif %}
+            {% else %}<span class="badge bg-danger-subtle text-danger">미제출</span>{% endif %}
+          </td>
+          <td>
+            {% if row.submission %}
+              <form method="post" action="{% url 'admin_submission_comment' row.submission.id %}">
+                {% csrf_token %}<textarea name="admin_comment" rows="3" class="form-control form-control-sm" placeholder="팀에 전달할 코멘트를 입력하세요.">{{ row.submission.admin_comment }}</textarea>
+                <div class="d-flex justify-content-between align-items-center mt-2 gap-2"><span class="small text-muted">{% if row.submission.commented_at %}최근 피드백 {{ row.submission.commented_at|date:"m.d H:i" }}{% endif %}</span><button class="btn btn-sm btn-gradient-primary" type="submit">코멘트 저장</button></div>
+              </form>
+            {% else %}<span class="small text-muted">제출 후 코멘트를 작성할 수 있습니다.</span>{% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="4" class="text-center text-muted py-5">아직 이 회차에 편성된 팀이 없습니다.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+{% if individual_assignment %}
+<div class="card ax-panel-card p-0 overflow-hidden mb-4">
+  <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h5 class="fw-bold mb-1">개별과제 제출 현황</h5>
+      <div class="small text-muted">{{ individual_assignment.title }} · 학생별 1회 제출</div>
+    </div>
+    <span class="badge bg-info-subtle text-info-emphasis">제출 {{ stats.individual_submitted }} · 미제출 {{ stats.individual_missing }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover ax-purple-table mb-0 align-middle">
+      <thead><tr><th style="min-width:180px">학생</th><th style="min-width:180px">소속</th><th style="min-width:300px">제출물</th><th style="min-width:130px">상태</th></tr></thead>
+      <tbody>
+      {% for row in individual_rows %}
+        <tr>
+          <td><div class="fw-bold">{{ row.student.name }}</div><div class="small text-muted">{{ row.student.email|default:row.student.user.email|default:"이메일 없음" }}</div></td>
+          <td>{{ row.student.affiliation|default:"-" }}</td>
+          <td>
+            {% if row.submission %}
+              {% if row.submission.submission_url %}<div><a href="{{ row.submission.submission_url }}" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> 제출 링크 열기</a></div>{% endif %}
+              {% if row.submission.attachment %}<div><a href="{% url 'student_submission_attachment_download' row.submission.id %}"><i class="bi bi-download"></i> 제출 파일 다운로드</a></div>{% endif %}
+              {% if row.submission.note %}<div class="small text-muted mt-1">{{ row.submission.note|linebreaksbr }}</div>{% endif %}
+            {% else %}<span class="text-muted small">제출물 없음</span>{% endif %}
+          </td>
+          <td>{% if row.submission %}<span class="badge bg-success-subtle text-success">제출 완료</span><div class="small text-muted mt-1">{{ row.submission.submitted_at|date:"m.d H:i" }}</div>{% else %}<span class="badge bg-danger-subtle text-danger">미제출</span>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="4" class="text-center text-muted py-5">활성 학생이 없습니다.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if can_assignment_manage and not team_assignment %}
+<div class="modal fade" id="assignmentAddModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">{{ evaluation_round.name }} 조별과제 등록</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" enctype="multipart/form-data" action="{% url 'admin_assignment_create' %}">{% csrf_token %}
+    <input type="hidden" name="evaluation_round" value="{{ evaluation_round.id }}"><input type="hidden" name="assignment_type" value="team"><input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+    <div class="modal-body"><div class="mb-3"><label class="form-label">과제명</label><input name="title" class="form-control" required></div><div class="mb-3"><label class="form-label">설명</label><textarea name="description" class="form-control" rows="5"></textarea></div><div><label class="form-label">첨부파일</label><input name="attachment" type="file" class="form-control"></div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary" type="submit">등록</button></div>
+  </form>
+</div></div></div>
+{% endif %}
+
+{% if can_assignment_manage and team_assignment %}
+<div class="modal fade" id="assignmentEditModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+  <div class="modal-header"><h5 class="modal-title fw-bold">조별과제 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <form method="post" enctype="multipart/form-data" action="{% url 'admin_assignment_update' team_assignment.id %}">{% csrf_token %}
+    <input type="hidden" name="evaluation_round" value="{{ evaluation_round.id }}"><input type="hidden" name="assignment_type" value="team"><input type="hidden" name="next" value="{% url 'admin_round_detail' evaluation_round.id %}">
+    <div class="modal-body"><div class="mb-3"><label class="form-label">과제명</label><input name="title" value="{{ team_assignment.title }}" class="form-control" required></div><div class="mb-3"><label class="form-label">설명</label><textarea name="description" class="form-control" rows="5">{{ team_assignment.description }}</textarea></div><div><label class="form-label">첨부파일</label><input name="attachment" type="file" class="form-control">{% if team_assignment.attachment %}<div class="form-text">기존 파일은 새 파일을 선택할 때만 교체됩니다.</div>{% endif %}</div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-gradient-primary" type="submit">저장</button></div>
+  </form>
+</div></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,191 @@
+{% load static socialaccount %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 | AX 평가 시스템</title>
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+
+<body class="ax-login-body">
+  <main class="ax-login-shell">
+    <section class="ax-login-brand-panel">
+      <div class="ax-login-brand">
+        <div class="ax-login-logo">AX</div>
+        <div>
+          <strong>AX 평가 시스템</strong>
+          <span>Team & Peer Evaluation Platform</span>
+        </div>
+      </div>
+
+      <div class="ax-login-hero">
+        <span class="ax-login-kicker">SMART EVALUATION</span>
+        <h1>팀 프로젝트 평가를<br>더 간단하고 명확하게.</h1>
+        <p>
+          회차 관리, 팀 편성, 과제 제출, 동료 평가와 결과 확인까지
+          하나의 흐름으로 관리합니다.
+        </p>
+
+        <div class="ax-login-feature-list">
+          <div>
+            <span><i class="bi bi-diagram-3"></i></span>
+            <div>
+              <strong>팀 자동 편성</strong>
+              <small>누적 Seed를 활용한 다음 회차 팀 편성</small>
+            </div>
+          </div>
+          <div>
+            <span><i class="bi bi-ui-checks-grid"></i></span>
+            <div>
+              <strong>팀·개인 평가</strong>
+              <small>평가 규칙과 중복 평가를 자동으로 제어</small>
+            </div>
+          </div>
+          <div>
+            <span><i class="bi bi-bar-chart-line"></i></span>
+            <div>
+              <strong>결과 확인</strong>
+              <small>팀 점수, 개인 점수, 순위와 회차별 변화 확인</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ax-login-brand-footer">AX Evaluation System</div>
+    </section>
+
+    <section class="ax-login-form-panel">
+      <div class="ax-login-form-wrap">
+        <div class="ax-mobile-login-brand">
+          <div class="ax-login-logo">AX</div>
+          <strong>AX 평가 시스템</strong>
+        </div>
+
+        <header class="ax-login-form-head">
+          <span>WELCOME BACK</span>
+          <h2>로그인</h2>
+          <p>관리자는 아이디/비밀번호, 수강생은 소셜 로그인을 사용할 수 있습니다.</p>
+        </header>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="ax-login-alert {% if message.tags %}{{ message.tags }}{% endif %}">
+              <i class="bi bi-info-circle"></i>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if error_message %}
+          <div class="ax-login-alert error">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>{{ error_message }}</span>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}" class="ax-login-form">
+          {% csrf_token %}
+          {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+          {% endif %}
+
+          <div class="ax-login-field">
+            <label for="id_username">아이디 또는 이메일</label>
+            <div class="ax-login-input">
+              <i class="bi bi-person"></i>
+              <input
+                type="text"
+                name="username"
+                id="id_username"
+                class="form-control"
+                value="{{ form_data.username|default:'' }}"
+                placeholder="아이디 또는 이메일을 입력하세요"
+                autocomplete="username"
+                autofocus
+                required>
+            </div>
+          </div>
+
+          <div class="ax-login-field">
+            <label for="id_password">비밀번호</label>
+            <div class="ax-login-input">
+              <i class="bi bi-lock"></i>
+              <input
+                type="password"
+                name="password"
+                id="id_password"
+                class="form-control"
+                placeholder="비밀번호를 입력하세요"
+                autocomplete="current-password"
+                required>
+            </div>
+          </div>
+
+          <div class="ax-login-form-options">
+            <label class="ax-remember">
+              <input type="checkbox" name="remember_me" value="1"
+                     {% if request.POST.remember_me %}checked{% endif %}>
+              <span>로그인 상태 유지</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn ax-login-submit">
+            로그인
+            <i class="bi bi-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="ax-login-social">
+          <div class="ax-login-divider"><span>소셜 로그인</span></div>
+
+          <div class="ax-login-social-grid">
+            {% if google_oauth_configured %}
+              <form method="post" action="{% provider_login_url 'google' process='login' %}">
+                {% csrf_token %}
+                <button type="submit" class="ax-social-button ax-google-button">
+                  <span class="ax-social-mark">G</span>
+                  Google 로그인
+                </button>
+              </form>
+            {% else %}
+              <button type="button" class="ax-social-button ax-social-disabled" disabled
+                      title="Google OAuth 환경변수 설정 필요">
+                <span class="ax-social-mark">G</span>
+                Google 설정 필요
+              </button>
+            {% endif %}
+
+            {% if kakao_oauth_configured %}
+              <form method="post" action="{% provider_login_url 'kakao' process='login' %}">
+                {% csrf_token %}
+                <button type="submit" class="ax-social-button ax-kakao-button">
+                  <i class="bi bi-chat-fill"></i>
+                  Kakao 로그인
+                </button>
+              </form>
+            {% else %}
+              <button type="button" class="ax-social-button ax-social-disabled" disabled
+                      title="Kakao OAuth 환경변수 설정 필요">
+                <i class="bi bi-chat-fill"></i>
+                Kakao 설정 필요
+              </button>
+            {% endif %}
+          </div>
+
+          {% if not google_oauth_configured or not kakao_oauth_configured %}
+            <p class="ax-social-config-note">
+              소셜 버튼이 비활성화되어 있으면 프로젝트의 <code>.env</code> OAuth 값을 확인하세요.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,191 @@
+{% extends "base_admin.html" %}
+{% block title %}평가 회차 관리{% endblock %}
+{% block content %}
+
+<div class="ax-work-page-head">
+    <div>
+        <h3 class="page-title">
+            <span class="page-title-icon bg-gradient-primary text-white me-2">
+                <i class="bi bi-calendar2-week-fill"></i>
+            </span>
+            평가 회차 관리
+        </h3>
+        <p class="ax-page-subtitle">시작 전 → 진행 중 → 종료 흐름과 평가 시작·중단·재개 상태를 관리합니다.</p>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-4 ax-page-actions">
+    <button class="btn btn-primary ax-primary-btn" data-bs-toggle="modal" data-bs-target="#roundAddModal">
+        <i class="bi bi-plus-lg me-2"></i>평가 회차 생성
+    </button>
+</div>
+
+<div class="ax-work-card mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <div class="text-muted small mb-1">현재 선택 회차</div>
+            {% if current_round %}
+                <div class="fw-bold fs-5"><i class="bi bi-pin-angle-fill text-primary me-2"></i>{{ current_round.name }}</div>
+                <div class="text-muted small mt-1">{{ current_round.start_at|date:"Y-m-d H:i" }} ~ {{ current_round.end_at|date:"Y-m-d H:i" }}</div>
+            {% else %}
+                <div class="fw-bold">아직 현재 회차를 지정하지 않았습니다.</div>
+            {% endif %}
+        </div>
+        <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">학생·관리자 화면의 기본 회차</span>
+    </div>
+</div>
+
+<div class="row g-4 mb-4 ax-mini-stat-grid">
+    <div class="col">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small">전체</div>
+                <div class="ax-mini-stat-value">{{ stats.total|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small">예정</div>
+                <div class="ax-mini-stat-value text-primary">{{ stats.scheduled|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small">진행 중</div>
+                <div class="ax-mini-stat-value text-success">{{ stats.active|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="ax-work-card h-100 ax-mini-stat">
+            <div class="card-body">
+                <div class="text-muted small">종료</div>
+                <div class="ax-mini-stat-value text-secondary">{{ stats.ended|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ax-work-card">
+    <div class="card-body">
+        <div class="ax-section-head mb-3"><div><h4 class="card-title mb-1">회차 목록</h4><p class="card-description mb-0">회차별 과제와 현재 입력 가능 상태를 확인합니다.</p></div></div>
+    <div class="table-responsive">
+        <table class="table ax-work-table align-middle">
+            <thead>
+                <tr><th>회차명</th><th>기간</th><th>과제</th><th>상태</th><th>입력</th><th>관리</th></tr>
+            </thead>
+            <tbody>
+            {% for round in rounds %}
+                <tr>
+                    <td class="fw-bold">
+                        <a class="text-decoration-none" href="{% url 'admin_round_detail' round.id %}">{{ round.name }}</a>
+                        {% if round.is_selected_current %}<span class="badge bg-primary ms-2"><i class="bi bi-pin-angle-fill me-1"></i>현재 회차</span>{% endif %}
+                    </td>
+                    <td>{{ round.start_at|date:"Y-m-d H:i" }} ~ {{ round.end_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ round.assignment_title|default:"-" }}</td>
+                    <td>
+                        {% if round.status == "scheduled" %}<span class="status-badge status-wait">{{ round.status_display }}</span>
+                        {% elif round.status == "in_progress" %}<span class="status-badge status-progress">{{ round.status_display }}</span>{% if round.evaluation_started %}<span class="badge bg-primary-subtle text-primary-emphasis ms-1">평가 중</span>{% else %}<span class="badge bg-warning-subtle text-warning-emphasis ms-1">평가 시작 전</span>{% endif %}
+                        {% else %}<span class="status-badge status-end">{{ round.status_display }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if round.status == "in_progress" and round.evaluation_started and round.is_locked %}
+                            <span class="badge text-bg-warning"><i class="bi bi-pause-circle-fill me-1"></i>평가 일시 중단</span>
+                        {% elif round.status == "in_progress" and round.evaluation_started %}
+                            <span class="badge text-bg-success"><i class="bi bi-unlock-fill me-1"></i>평가 제출 가능</span>
+                        {% elif round.status == "in_progress" %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis">과제 제출 가능</span>
+                        {% else %}
+                            <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <a class="btn btn-sm btn-primary ax-primary-btn" href="{% url 'admin_round_detail' round.id %}">상세</a>
+                            {% if round.can_edit %}
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roundEditModal{{ round.id }}">수정</button>
+                            {% endif %}
+                            {% if round.can_round_start %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'round_start' %}" onsubmit="return confirm('회차를 시작할까요? 학생 제출이 열립니다. 과제는 시작 전부터 평가 시작 전까지 등록·수정할 수 있습니다.');">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">회차 시작</button></form>
+                            {% endif %}
+                            {% if round.can_evaluation_start %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'evaluation_start' %}" onsubmit="return confirm('평가를 시작할까요? 시작하면 과제 등록·수정·학생 제출이 마감되고 평가 입력이 열립니다.');">{% csrf_token %}<button class="btn btn-sm btn-success" type="submit">평가 시작</button></form>
+                            {% endif %}
+                            {% if round.can_lock %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'pause' %}" onsubmit="return confirm('평가를 일시 중단할까요? 기존 평가 데이터는 유지되고 학생의 저장·제출만 잠시 막힙니다.');">{% csrf_token %}<button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-pause-circle me-1"></i>평가 중단</button></form>
+                            {% endif %}
+                            {% if round.can_unlock %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'resume' %}" onsubmit="return confirm('평가를 재개할까요? 학생의 저장·제출이 다시 열립니다.');">{% csrf_token %}<button class="btn btn-sm btn-warning" type="submit"><i class="bi bi-play-circle me-1"></i>평가 재개</button></form>
+                            {% endif %}
+                            {% if round.can_end %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'end' %}" data-ax-critical data-ax-title="{{ round.name }} 회차를 종료할까요?" data-ax-message="학생의 평가 저장·제출이 닫히고 현재 회차가 종료 상태로 변경됩니다." data-ax-note="종료 후 다시 열 수 있지만 운영 흐름에 영향을 주므로 제출 현황을 먼저 확인하세요." data-ax-button="회차 종료">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">종료</button></form>
+                            {% endif %}
+                            {% if round.can_reopen %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'reopen' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-warning" type="submit">다시 열기</button></form>
+                            {% endif %}
+                            {% if not round.is_selected_current %}
+                            <form method="post" action="{% url 'admin_round_action' round.id 'set_current' %}" onsubmit="return confirm('{{ round.name }}을(를) 현재 회차로 지정할까요? 기존 현재 회차는 자동 해제됩니다.');">{% csrf_token %}<button class="btn btn-sm btn-outline-dark" type="submit"><i class="bi bi-pin-angle me-1"></i>현재 회차 지정</button></form>
+                            {% else %}
+                            <button class="btn btn-sm btn-dark" type="button" disabled><i class="bi bi-pin-angle-fill me-1"></i>현재 회차</button>
+                            {% endif %}
+                            {% if round.can_delete %}
+                            <form method="post" action="{% url 'admin_round_delete' round.id %}" data-ax-critical data-ax-title="{{ round.name }} 회차를 삭제할까요?" data-ax-message="연결된 팀 배정·평가·결과·과제 데이터가 함께 삭제될 수 있습니다." data-ax-note="이 작업은 되돌릴 수 없습니다. 필요한 경우 먼저 백업을 내려받으세요." data-ax-button="영구 삭제">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">삭제</button></form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+
+                {% if round.can_edit %}
+                <div class="modal fade" id="roundEditModal{{ round.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+                        <div class="modal-header"><h5 class="modal-title fw-bold">평가 회차 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <form method="post" action="{% url 'admin_round_update' round.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="mb-3"><label class="form-label">회차명</label><input name="name" value="{{ round.name }}" class="form-control" required></div>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label">시작 일시</label><input name="start_at" type="datetime-local" value="{{ round.start_at|date:'Y-m-d\TH:i' }}" class="form-control" required></div>
+                                    <div class="col-md-6"><label class="form-label">종료 일시</label><input name="end_at" type="datetime-local" value="{{ round.end_at|date:'Y-m-d\TH:i' }}" class="form-control" required></div>
+                                </div>
+                            </div>
+                            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">저장</button></div>
+                        </form>
+                    </div></div>
+                </div>
+                {% endif %}
+            {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">등록된 평가 회차가 없습니다.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+    </div>
+</div>
+
+<div class="ax-work-notice mt-4 mb-0">
+    <i class="bi bi-info-circle me-2"></i>
+    <b>과제 등록·수정</b>은 회차 시작 전부터 진행 중 평가 시작 전까지 가능합니다. <b>회차 시작</b> 후 학생 제출이 열리고, <b>평가 시작</b>을 누르면 과제 등록·수정·제출이 마감되며 평가가 열립니다.
+</div>
+
+<div class="modal fade" id="roundAddModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content ax-purple-modal">
+        <div class="modal-header"><h5 class="modal-title fw-bold">평가 회차 생성</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form method="post" action="{% url 'admin_round_create' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">회차명</label><input name="name" class="form-control" required></div>
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label">시작 일시</label><input name="start_at" type="datetime-local" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">종료 일시</label><input name="end_at" type="datetime-local" class="form-control" required></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button><button class="btn btn-primary ax-primary-btn" type="submit">생성</button></div>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

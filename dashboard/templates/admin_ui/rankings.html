@@ -1,0 +1,12 @@
+{% extends "base_admin.html" %}{% block title %}개인 순위{% endblock %}{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-award-fill"></i></span>
+      개인 순위
+    </h3>
+    <p class="ax-page-subtitle">회차별 개인 최종점수와 석차를 확인합니다.</p>
+  </div>
+</div><form method="get" class="mb-4"><select name="round" class="form-select" style="max-width:280px" onchange="this.form.submit()">{% for r in rounds %}<option value="{{ r.id }}" {% if selected_round and r.id == selected_round.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></form>
+<div class="ax-work-card"><div class="card-body"><div class="ax-section-head justify-content-between mb-3"><h5 class="fw-bold">종합 순위</h5>{% if selected_round %}<form method="post">{% csrf_token %}<input type="hidden" name="round_id" value="{{ selected_round.id }}"><button class="btn btn-primary ax-primary-btn">순위 재계산</button></form>{% endif %}</div><div class="table-responsive"><table class="table ax-work-table align-middle"><thead><tr><th>순위</th><th>수강생</th><th>팀</th><th>개인 60%</th><th>팀 40%</th><th>최종 점수</th></tr></thead><tbody>{% for row in rankings %}<tr {% if row.is_excluded %}class="table-light text-muted"{% endif %}><td class="fw-bold">{{ row.rank }}</td><td>{{ row.student_name }}</td><td>{{ row.team_name }}</td><td>{{ row.personal_score|floatformat:2 }}</td><td>{{ row.team_score|floatformat:2 }}</td><td class="fw-bold">{{ row.final_score|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">계산된 순위가 없습니다.</td></tr>{% endfor %}</tbody></table></div></div></div>
+{% endblock %}

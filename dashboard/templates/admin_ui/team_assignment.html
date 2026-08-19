@@ -1,0 +1,319 @@
+{% extends "base_admin.html" %}
+
+{% block title %}팀 편성{% endblock %}
+
+{% block content %}
+<div class="assignment-page">
+  <div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-diagram-3-fill"></i></span>
+      팀 편성
+    </h3>
+    <p class="ax-page-subtitle">수동 배정과 이전 성적 기반 자동 균형 편성을 관리합니다.</p>
+  </div>
+  {% if selected_round %}
+  <form method="post" action="{% url 'admin_team_dissolve_all' %}" data-ax-critical data-ax-title="현재 회차의 팀 배정을 모두 해체할까요?" data-ax-message="모든 학생의 팀 배정이 초기화됩니다. 팀 이름과 기존 평가 결과는 유지됩니다." data-ax-note="해체 직후 학생은 미배정 상태가 됩니다. 재편성 계획이 있을 때만 진행하세요." data-ax-button="전체 팀 해체">
+    {% csrf_token %}
+    <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+    <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=manual">
+    <button type="submit" class="btn btn-outline-danger">
+      <i class="bi bi-people-fill me-2"></i>전체 팀 해체
+    </button>
+  </form>
+  {% endif %}
+</div>{% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="assignment-toolbar ui-card mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-4">
+        <label class="form-label fw-semibold">평가 회차</label>
+        <form method="get" id="roundForm">
+          <input type="hidden" name="tab" value="{{ active_tab }}">
+          <select name="round" class="form-select" onchange="this.form.submit()">
+            {% for round in rounds %}
+              <option value="{{ round.id }}" {% if selected_round and round.id == selected_round.id %}selected{% endif %}>{{ round.name }}</option>
+            {% empty %}
+              <option>평가 회차 없음</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="col-lg-8">
+        <div class="assignment-summary-grid">
+          <div class="assignment-stat"><span>활성 학생</span><strong>{{ total_students }}</strong><small>명</small></div>
+          <div class="assignment-stat"><span>현재 팀</span><strong>{{ team_count }}</strong><small>개</small></div>
+          <div class="assignment-stat"><span>배정 완료</span><strong>{{ assigned_count }}</strong><small>명</small></div>
+          <div class="assignment-stat {% if unassigned_count %}is-warning{% endif %}"><span>미배정</span><strong>{{ unassigned_count }}</strong><small>명</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="assignment-tabbar" role="tablist">
+    <button class="assignment-tab {% if active_tab == 'manual' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#manual" type="button">
+      <i class="bi bi-hand-index-thumb"></i><span>수동 팀 편성</span><small>직접 배정·이동</small>
+    </button>
+    <button class="assignment-tab {% if active_tab == 'auto' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#auto" type="button">
+      <i class="bi bi-shuffle"></i><span>자동 팀 편성</span><small>조건 설정·미리보기</small>
+    </button>
+  </div>
+
+  <div class="tab-content mt-4 assignment-workspace">
+    <div class="tab-pane fade {% if active_tab == 'manual' %}show active{% endif %}" id="manual">
+      <div class="manual-layout">
+        <section class="ax-work-card unassigned-panel">
+          <div class="panel-heading">
+            <div><h5>미배정 수강생</h5><p>선택한 학생을 원하는 팀으로 배정하세요.</p></div>
+            <span class="count-pill danger">{{ unassigned_count }}명</span>
+          </div>
+
+          <div class="student-search-wrap mb-3">
+            <i class="bi bi-search"></i>
+            <input id="studentSearch" type="search" class="form-control" placeholder="이름 또는 이메일 검색">
+          </div>
+
+          <form method="post" action="{% url 'admin_manual_assign' %}" id="manualAssignForm">
+            {% csrf_token %}
+            <input type="hidden" name="round_id" value="{{ selected_round.id|default:'' }}">
+            <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=manual#manual">
+
+            <div class="select-all-row">
+              <label><input class="form-check-input me-2" type="checkbox" id="selectAllStudents">전체 선택</label>
+              <span id="selectedStudentCount">0명 선택</span>
+            </div>
+
+            <div class="unassigned-list" id="unassignedList">
+              {% for student in unassigned_students %}
+                <label class="student-pick-card" data-search="{{ student.name|lower }} {{ student.email|lower }}">
+                  <input class="form-check-input student-checkbox" type="checkbox" name="student_ids" value="{{ student.id }}">
+                  <span class="student-avatar">{{ student.name|slice:":1" }}</span>
+                  <span class="student-copy"><strong>{{ student.name }}</strong><small>{{ student.email }}</small></span>
+                </label>
+              {% empty %}
+                <div class="empty-state compact"><i class="bi bi-check-circle"></i><strong>모든 학생이 배정되었습니다.</strong><span>필요하면 오른쪽 팀 카드에서 다른 팀으로 바로 이동할 수 있습니다.</span></div>
+              {% endfor %}
+            </div>
+
+            <div class="assign-bottom">
+              <select name="team_id" class="form-select" required {% if not teams %}disabled{% endif %}>
+                <option value="">배정할 팀 선택</option>
+                {% for team in teams %}<option value="{{ team.id }}">{{ team.name }} ({{ team.members|length }}명)</option>{% endfor %}
+              </select>
+              <button class="btn btn-primary ax-primary-btn" type="submit" {% if not teams %}disabled{% endif %}><i class="bi bi-arrow-right-circle me-1"></i>배정</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="ax-work-card team-board-panel">
+          <div class="panel-heading mb-2">
+            <div><h5>현재 팀 구성</h5><p>팀원을 선택 해제하거나 다른 팀으로 즉시 이동할 수 있습니다.</p></div>
+            <a href="{% url 'admin_teams' %}{% if selected_round %}?round={{ selected_round.id }}{% endif %}" class="btn btn-sm btn-outline-secondary">팀 관리</a>
+          </div>
+          <div class="team-size-note mb-3">
+            평균 <strong>{{ average_team_size }}명</strong>
+            <span>·</span> 최소 <strong>{{ smallest_team_size }}명</strong>
+            <span>·</span> 최대 <strong>{{ largest_team_size }}명</strong>
+          </div>
+
+          <div class="team-board-grid">
+            {% for team in teams %}
+              <article class="team-assignment-card">
+                <div class="team-card-head">
+                  <div><span class="team-index">{{ forloop.counter }}</span><strong>{{ team.name }}</strong></div>
+                  <span class="count-pill {% if team.members|length > average_team_size and average_team_size %}soft-warning{% endif %}">{{ team.members|length }}명</span>
+                </div>
+                <div class="team-member-stack">
+                  {% for membership in team.memberships.all %}
+                    <div class="assigned-member-row">
+                      <span class="student-avatar small">{{ membership.student.name|slice:":1" }}</span>
+                      <div class="student-copy flex-grow-1"><strong>{{ membership.student.name }}</strong><small>{{ membership.student.email }}{% if membership.student.affiliation %} · {{ membership.student.affiliation }}{% endif %}</small><form method="post" action="{% url 'admin_team_member_role_update' membership.id %}" class="d-flex gap-1 mt-1">{% csrf_token %}<input type="text" name="role" value="{{ membership.role }}" class="form-control form-control-sm" maxlength="100" placeholder="담당 역할 (예: 백엔드)"><button type="submit" class="btn btn-sm btn-outline-primary">저장</button></form></div>
+                      <div class="member-actions dropdown">
+                        <button class="icon-btn" data-bs-toggle="dropdown" type="button" aria-label="팀원 이동"><i class="bi bi-three-dots-vertical"></i></button>
+                        <div class="dropdown-menu dropdown-menu-end p-2 move-menu">
+                          <div class="dropdown-header">다른 팀으로 이동</div>
+                          {% for target_team in teams %}
+                            {% if target_team.id != team.id %}
+                            <form method="post" action="{% url 'admin_manual_assign' %}">
+                              {% csrf_token %}
+                              <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+                              <input type="hidden" name="student_ids" value="{{ membership.student.id }}">
+                              <input type="hidden" name="team_id" value="{{ target_team.id }}">
+                              <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=manual#manual">
+                              <button class="dropdown-item rounded" type="submit">{{ target_team.name }}</button>
+                            </form>
+                            {% endif %}
+                          {% endfor %}
+                          <div class="dropdown-divider"></div>
+                          <form method="post" action="{% url 'admin_manual_unassign' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+                            <input type="hidden" name="membership_ids" value="{{ membership.id }}">
+                            <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=manual#manual">
+                            <button class="dropdown-item rounded text-danger" type="submit"><i class="bi bi-person-dash me-2"></i>미배정으로 이동</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  {% empty %}
+                    <div class="empty-team-slot"><i class="bi bi-person-plus"></i><span>팀원이 없습니다.</span></div>
+                  {% endfor %}
+                </div>
+              </article>
+            {% empty %}
+              <div class="empty-state"><i class="bi bi-people"></i><strong>생성된 팀이 없습니다.</strong><span>팀 관리에서 팀을 먼저 만들거나 자동 편성을 사용하세요.</span><a href="{% url 'admin_teams' %}" class="btn btn-primary btn-sm mt-2">팀 관리 열기</a></div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="tab-pane fade {% if active_tab == 'auto' %}show active{% endif %}" id="auto">
+      <div class="auto-layout">
+        <section class="ax-work-card auto-setting-card">
+          <div class="panel-heading"><div><h5>자동 편성 조건</h5><p>조건을 바꿔가며 미리보기한 뒤 확정하세요.</p></div><span class="step-badge">STEP 1</span></div>
+          <form method="post" action="{% url 'admin_auto_preview' %}" id="autoPreviewForm">
+            {% csrf_token %}
+            <input type="hidden" name="round_id" value="{{ selected_round.id|default:'' }}">
+            <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=auto#auto">
+
+            <div class="auto-control-block">
+              <label>전체 활성 수강생</label>
+              <div class="static-value"><strong>{{ total_students }}</strong><span>명</span></div>
+            </div>
+            <div class="auto-control-block">
+              <label for="teamCountInput">예정 팀 수</label>
+              <div class="number-control"><button type="button" data-step="-1">−</button><input id="teamCountInput" type="number" name="team_count" min="1" max="{{ total_students|default:1 }}" value="{{ form_data.team_count|default:1 }}" required><button type="button" data-step="1">+</button></div>
+              <small id="teamSizePreview">팀당 인원을 계산합니다.</small>
+            </div>
+            <div class="auto-control-block">
+              <label>편성 방식</label>
+              <label class="rule-option"><input type="radio" name="assignment_rule" value="seed" {% if form_data.assignment_rule != 'random' %}checked{% endif %}><span class="rule-icon"><i class="bi bi-bar-chart-steps"></i></span><span><strong>Z식 성적 균형</strong><small>직전 회차 최종점수를 시드로 분산</small></span></label>
+              <label class="rule-option"><input type="radio" name="assignment_rule" value="random" {% if form_data.assignment_rule == 'random' %}checked{% endif %}><span class="rule-icon"><i class="bi bi-dice-5"></i></span><span><strong>균등 랜덤</strong><small>인원수를 최대한 고르게 무작위 배정</small></span></label>
+            </div>
+            <div class="auto-control-block">
+              <label>균형 옵션</label>
+              <label class="switch-option"><span><strong>직전 팀원 중복 최소화</strong><small>랜덤 편성 시 같은 팀 재결합을 가능한 한 피합니다.</small></span><input class="form-check-input" type="checkbox" id="avoidPreviousSwitch" {% if form_data.avoid_previous != '0' %}checked{% endif %}><input type="hidden" name="avoid_previous" id="avoidPreviousValue" value="{{ form_data.avoid_previous|default:'1' }}"></label>
+            </div>
+            <button class="btn btn-primary w-100 py-2" type="submit"><i class="bi bi-stars me-2"></i>{% if preview_teams %}조건으로 다시 편성{% else %}미리보기 생성{% endif %}</button>
+          </form>
+        </section>
+
+        <section class="ax-work-card auto-preview-card">
+          <div class="panel-heading">
+            <div><h5>편성 미리보기</h5><p>확정하기 전까지 실제 팀 구성은 변경되지 않습니다.</p></div>
+            <span class="step-badge">STEP 2</span>
+          </div>
+          {% if preview_teams %}
+            <div class="preview-summary">
+              <div><strong>{{ preview_teams|length }}</strong><span>개 팀</span></div>
+              <div><strong>{{ total_students }}</strong><span>명 대상</span></div>
+              <div><strong>미반영</strong><span>현재는 미리보기</span></div>
+            </div>
+            <div class="preview-team-grid">
+              {% for team in preview_teams %}
+                <article class="preview-team-card">
+                  <div class="team-card-head"><div><span class="team-index">{{ forloop.counter }}</span><strong>{{ team.name }}</strong></div><span class="count-pill">{{ team.members|length }}명</span></div>
+                  <div class="preview-members">
+                    {% for member in team.members %}
+                      <div class="preview-member-row">
+                        <span class="student-avatar small">{{ member.name|slice:":1" }}</span>
+                        <strong>{{ member.name }}</strong>
+                        {% if member.seed_rank %}<span class="seed-chip">{{ member.seed_number }}시드 · {{ member.seed_rank }}위</span><span class="score-chip">{{ member.seed_score|floatformat:2 }}</span>{% else %}<span class="seed-chip muted">랜덤</span>{% endif %}
+                      </div>
+                    {% empty %}<div class="empty-team-slot">팀원이 없습니다.</div>{% endfor %}
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+            <div class="preview-actions">
+              <div class="preview-warning"><i class="bi bi-exclamation-circle"></i><span>확정하면 이 회차의 기존 팀원 배정이 미리보기 구성으로 교체됩니다.</span></div>
+              <form method="post" action="{% url 'admin_auto_confirm' %}"
+                    onsubmit="return confirm('현재 미리보기 구성으로 팀 편성을 확정할까요?\\n이 회차의 기존 팀원 배정은 새 구성으로 교체됩니다.');">
+                {% csrf_token %}
+                <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+                <input type="hidden" name="next" value="/management/team-assignment/?round={{ selected_round.id }}&tab=auto#auto">
+                <button class="btn btn-success px-4" type="submit">
+                  <i class="bi bi-check2-circle me-2"></i>이 구성으로 적용
+                </button>
+              </form>
+            </div>
+          {% else %}
+            <div class="empty-state auto-empty"><i class="bi bi-diagram-3"></i><strong>아직 미리보기가 없습니다.</strong><span>왼쪽에서 팀 수와 편성 방식을 정한 뒤 미리보기를 생성하세요.</span></div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(function (button) {
+    button.addEventListener('shown.bs.tab', function (event) {
+      const target = event.target.getAttribute('data-bs-target');
+      const tab = target === '#auto' ? 'auto' : 'manual';
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      url.hash = target;
+      window.history.replaceState({}, '', url);
+      const hiddenTab = document.querySelector('#roundForm input[name="tab"]');
+      if (hiddenTab) hiddenTab.value = tab;
+    });
+  });
+
+  const search = document.getElementById('studentSearch');
+  if (search) search.addEventListener('input', function () {
+    const keyword = this.value.trim().toLowerCase();
+    document.querySelectorAll('.student-pick-card').forEach(function (row) {
+      row.style.display = row.dataset.search.includes(keyword) ? '' : 'none';
+    });
+  });
+
+  const selectAll = document.getElementById('selectAllStudents');
+  const checkboxes = Array.from(document.querySelectorAll('.student-checkbox'));
+  const countLabel = document.getElementById('selectedStudentCount');
+  function updateSelectedCount() {
+    const count = checkboxes.filter(cb => cb.checked).length;
+    if (countLabel) countLabel.textContent = count + '명 선택';
+    if (selectAll) selectAll.checked = checkboxes.length > 0 && count === checkboxes.length;
+  }
+  if (selectAll) selectAll.addEventListener('change', function () { checkboxes.forEach(cb => cb.checked = this.checked); updateSelectedCount(); });
+  checkboxes.forEach(cb => cb.addEventListener('change', updateSelectedCount));
+
+  const teamCountInput = document.getElementById('teamCountInput');
+  const sizePreview = document.getElementById('teamSizePreview');
+  const totalStudents = Number('{{ total_students|default:0 }}');
+  function updateTeamSize() {
+    if (!teamCountInput || !sizePreview) return;
+    const teamCount = Math.max(1, Number(teamCountInput.value || 1));
+    const base = Math.floor(totalStudents / teamCount);
+    const extra = totalStudents % teamCount;
+    sizePreview.textContent = extra ? `팀당 ${base}~${base + 1}명 · ${extra}개 팀이 1명 더 배정` : `팀당 ${base}명으로 균등 편성`;
+  }
+  document.querySelectorAll('.number-control button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      if (!teamCountInput) return;
+      const next = Number(teamCountInput.value || 1) + Number(this.dataset.step || 0);
+      const max = Number(teamCountInput.max || totalStudents || 1);
+      teamCountInput.value = Math.min(Math.max(1, next), max);
+      updateTeamSize();
+    });
+  });
+  if (teamCountInput) { teamCountInput.addEventListener('input', updateTeamSize); updateTeamSize(); }
+
+  const avoidSwitch = document.getElementById('avoidPreviousSwitch');
+  const avoidValue = document.getElementById('avoidPreviousValue');
+  if (avoidSwitch && avoidValue) avoidSwitch.addEventListener('change', function () { avoidValue.value = this.checked ? '1' : '0'; });
+})();
+</script>
+{% endblock %}

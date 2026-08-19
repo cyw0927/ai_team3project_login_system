@@ -1,0 +1,49 @@
+{% extends "base_student.html" %}
+{% block title %}알림 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-student-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-bell-fill"></i></span>
+      공지·알림
+    </h3>
+    <p class="ax-page-subtitle">운영진 공지와 새 알림을 확인합니다.</p>
+  </div>
+</div>
+
+<div class="notification-page-grid">
+  <section class="card ax-student-panel notification-panel">
+    <div class="admin-section-head compact"><div><h2>지금 확인할 내용</h2><p>현재 평가 상태를 기준으로 자동 생성됩니다.</p></div></div>
+    <div class="notification-stack">
+      {% for item in notices %}
+        <a href="{% url item.url %}" class="system-notice {{ item.level }}">
+          <span class="notice-icon"><i class="bi {{ item.icon }}"></i></span>
+          <span><b>{{ item.title }}</b><small>{{ item.body }}</small></span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      {% empty %}
+        <div class="notification-empty"><i class="bi bi-check2-circle"></i><b>지금 필요한 작업이 없습니다.</b><span>새로운 평가 일정이나 결과가 생기면 여기에 표시됩니다.</span></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card ax-student-panel notification-panel">
+    <div class="admin-section-head compact"><div><h2>공지사항</h2><p>관리자가 등록한 최신 공지입니다.</p></div></div>
+    <div class="announcement-list">
+      {% for item in announcements %}
+        <article class="announcement-card priority-{{ item.priority }} {% if item.was_unread %}is-unread{% endif %}">
+          <div class="announcement-meta">
+            <span class="announcement-priority">{{ item.get_priority_display }}</span>
+            {% if item.was_unread %}<span class="new-chip">NEW</span>{% endif %}
+            <time>{{ item.publish_at|date:"Y-m-d H:i" }}</time>
+          </div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.body|linebreaksbr }}</p>
+        </article>
+      {% empty %}
+        <div class="notification-empty"><i class="bi bi-megaphone"></i><b>등록된 공지가 없습니다.</b><span>새 공지가 등록되면 이곳에서 확인할 수 있습니다.</span></div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

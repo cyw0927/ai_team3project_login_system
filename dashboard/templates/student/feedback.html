@@ -1,0 +1,41 @@
+{% extends "base_student.html" %}
+{% block title %}튜터 피드백 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-student-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-chat-square-heart-fill"></i></span>
+      튜터 피드백
+    </h3>
+    <p class="ax-page-subtitle">평가 회차별로 튜터가 남긴 개인 피드백을 확인합니다.</p>
+  </div>
+</div>
+
+<section class="student-feedback-page">
+  {% for feedback in feedbacks %}
+  <article class="student-feedback-card {% if feedback.was_unread %}is-new{% endif %}">
+    <div class="student-feedback-head">
+      <div>
+        <span class="student-feedback-round">{{ feedback.evaluation_round.name }}</span>
+        {% if feedback.was_unread %}<span class="new-chip">NEW</span>{% endif %}
+      </div>
+      <time>{{ feedback.updated_at|date:"Y.m.d H:i" }}</time>
+    </div>
+    <div class="student-feedback-body">
+      <i class="bi bi-chat-quote-fill"></i>
+      <p>{{ feedback.comment|linebreaksbr }}</p>
+    </div>
+    <footer>
+      <span><i class="bi bi-person-badge"></i> 튜터 피드백</span>
+      {% if feedback.created_by %}<span>{{ feedback.created_by.get_full_name|default:feedback.created_by.username }}</span>{% endif %}
+    </footer>
+  </article>
+  {% empty %}
+  <div class="student-feedback-empty">
+    <i class="bi bi-chat-square-dots"></i>
+    <strong>아직 등록된 튜터 피드백이 없습니다.</strong>
+    <span>튜터가 개인 피드백을 남기면 사이드바에 알림이 표시됩니다.</span>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

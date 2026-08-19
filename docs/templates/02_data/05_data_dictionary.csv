@@ -1,0 +1,25 @@
+테이블,컬럼,한글명,데이터 타입,길이,NULL,PK/FK,기본값,허용값,설명,관련 BR
+STUDENT,user_id,사용자,OneToOne FK,,N,FK,,,auth_user 연결,공통
+EVALUATION_ROUND,status,회차 상태,VARCHAR,20,N,,scheduled,scheduled/in_progress/ended,3단계 상태,공통
+EVALUATION_ROUND,evaluation_started,평가 시작 여부,BOOLEAN,,N,,False,,평가 구간 분리,공통
+EVALUATION_ROUND,personal_weight,개인 가중치,SMALLINT,,N,,60,0~100,개인 비중,BR-08
+EVALUATION_ROUND,team_weight,팀 가중치,SMALLINT,,N,,40,0~100,팀 비중,BR-08
+TEAM_MEMBERSHIP,team_id,팀,FK,,N,FK,,,팀 소속,"BR-01~04,09"
+TEAM_MEMBERSHIP,student_id,학생,FK,,N,FK,,,동일회차 복수팀 차단,"BR-01~04,09"
+TEAM_EVALUATION,evaluator_id,평가자,FK,,N,FK,,,학생 평가자,"BR-01,05,06"
+TEAM_EVALUATION,target_team_id,대상 팀,FK,,N,FK,,,자기 팀 제외,"BR-01,05,06"
+TEAM_EVALUATION_SCORE,score,팀 문항 점수,SMALLINT,,N,,,1~5,문항 점수,BR-06
+PERSONAL_EVALUATION,evaluator_id,평가자,FK,,N,FK,,,같은 팀 평가자,"BR-02~05,07"
+PERSONAL_EVALUATION,target_student_id,대상 학생,FK,,N,FK,,,자기/타팀 제외,"BR-02~05,07"
+PERSONAL_EVALUATION_SCORE,score,개인 문항 점수,SMALLINT,,N,,,1~5,문항 점수,BR-07
+TEAM_RESULT,score,팀 점수,NUMERIC,"8,2",N,,0,,타 팀 평가 기반,BR-06
+TEAM_RESULT,rank,팀 순위,INTEGER,,Y,,,,competition ranking,BR-06
+STUDENT_RESULT,team_score,팀점수,NUMERIC,"8,2",N,,0,,최종점수 구성,BR-08
+STUDENT_RESULT,personal_score,개인점수,NUMERIC,"8,2",N,,0,,팀원 평가 기반,"BR-07,08"
+STUDENT_RESULT,base_score,기본 최종점수,NUMERIC,"8,2",N,,0,,가중합,BR-08
+STUDENT_RESULT,final_score,최종점수,NUMERIC,"8,2",N,,0,,누적 시드 원본,"BR-08,09"
+STUDENT_RESULT,rank,개인 석차,INTEGER,,Y,,,,전체 석차,BR-08
+RESULT_PUBLISH_SETTING,show_team_first_place,팀1위 공개,BOOLEAN,,N,,True,,공개 설정,BR-10
+RESULT_PUBLISH_SETTING,show_all_team_ranks,전체 팀순위 공개,BOOLEAN,,N,,True,,공개 설정,BR-10
+RESULT_PUBLISH_SETTING,show_personal_score,개인점수 공개,BOOLEAN,,N,,True,,공개 설정,BR-10
+RESULT_PUBLISH_SETTING,show_overall_rank,개인 전체석차 공개,BOOLEAN,,N,,True,,공개 설정,BR-10

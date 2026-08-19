@@ -1,0 +1,98 @@
+{% extends "base_admin.html" %}
+{% block title %}보낸 메시지 | AX 평가 시스템{% endblock %}
+{% block content %}
+<div class="ax-admin-message-page">
+  <div class="admin-dashboard-head ax-admin-message-head">
+    <div>
+      <span class="ax-admin-message-eyebrow"><i class="bi bi-send"></i> MESSAGE HISTORY</span>
+      <h1>보낸 메시지</h1>
+      <p>수강생에게 보낸 메시지의 읽음 상태를 확인하고, 미확인 메시지는 회수할 수 있습니다.</p>
+    </div>
+    <a class="sample-blue-btn" href="{% url 'admin_students' %}"><i class="bi bi-plus-lg"></i> 새 메시지 보내기</a>
+  </div>
+
+  <div class="ax-admin-message-summary">
+    <div class="ax-admin-message-stat">
+      <span><i class="bi bi-send-check"></i></span>
+      <div><small>전체 발송</small><strong>{{ total_count }}<em>건</em></strong></div>
+    </div>
+    <div class="ax-admin-message-stat is-unread">
+      <span><i class="bi bi-envelope-exclamation"></i></span>
+      <div><small>미확인</small><strong>{{ unread_count }}<em>건</em></strong></div>
+    </div>
+    <div class="ax-admin-message-stat">
+      <span><i class="bi bi-arrow-counterclockwise"></i></span>
+      <div><small>회수됨</small><strong>{{ recalled_count }}<em>건</em></strong></div>
+    </div>
+  </div>
+
+  <section class="ax-admin-message-card">
+    <div class="ax-admin-message-toolbar">
+      <div>
+        <h2>발송 내역</h2>
+        <p>삭제는 관리자 기록에서만 숨기며, 회수는 학생이 읽기 전 메시지만 가능합니다.</p>
+      </div>
+      <form class="ax-admin-message-search" method="get">
+        <i class="bi bi-search"></i>
+        <input name="q" value="{{ q }}" placeholder="학생 이름, 제목, 내용 검색">
+        <button type="submit">검색</button>
+      </form>
+    </div>
+
+    <form method="post" id="messageBulkForm">
+      {% csrf_token %}
+      <div class="ax-message-bulkbar">
+        <label><input type="checkbox" id="messageSelectAll"> 전체 선택</label>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-warning btn-sm" type="submit" name="action" value="recall" onclick="return confirm('선택한 미확인 메시지를 회수할까요? 이미 읽은 메시지는 회수되지 않습니다.')"><i class="bi bi-arrow-counterclockwise"></i> 선택 회수</button>
+          <button class="btn btn-outline-danger btn-sm" type="submit" name="action" value="delete" onclick="return confirm('선택한 발송 기록을 관리자 목록에서 삭제할까요? 학생이 받은 메시지는 유지됩니다.')"><i class="bi bi-trash3"></i> 선택 삭제</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="sample-table ax-message-history-table">
+          <thead><tr><th style="width:44px"></th><th>상태</th><th>받는 학생</th><th>등급</th><th>메시지</th><th>보낸 시각</th><th>읽은 시각</th><th>관리</th></tr></thead>
+          <tbody>
+          {% for item in internal_messages %}
+          <tr class="{% if item.recalled_at %}is-recalled-row{% elif not item.read_at %}is-unread-row{% endif %}">
+            <td><input class="message-row-check" type="checkbox" name="message_ids" value="{{ item.id }}"></td>
+            <td>
+              {% if item.recalled_at %}<span class="ax-history-status recalled"><i class="bi bi-arrow-counterclockwise"></i> 회수됨</span>
+              {% elif item.read_at %}<span class="ax-history-status read"><i class="bi bi-check2-circle"></i> 읽음</span>
+              {% else %}<span class="ax-history-status unread"><i class="bi bi-circle-fill"></i> 미확인</span>{% endif %}
+            </td>
+            <td><b>{{ item.recipient.name }}</b><small class="table-subcopy">{{ item.recipient.email }}</small></td>
+            <td>{% if item.priority == 'urgent' %}<span class="ax-history-priority urgent">긴급</span>{% elif item.priority == 'important' %}<span class="ax-history-priority important">중요</span>{% else %}<span class="ax-history-priority normal">일반</span>{% endif %}</td>
+            <td><b>{{ item.title }}</b><small class="table-subcopy">{{ item.body|truncatechars:78 }}</small></td>
+            <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{% if item.read_at %}{{ item.read_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+            <td>
+              <div class="d-flex gap-1 flex-wrap">
+                {% if not item.read_at and not item.recalled_at %}
+                <button type="submit" class="btn btn-sm btn-outline-warning" name="action" value="recall" onclick="document.querySelectorAll('.message-row-check').forEach(x=>x.checked=false); this.closest('tr').querySelector('.message-row-check').checked=true; return confirm('이 메시지를 회수할까요?');">회수</button>
+                {% endif %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" name="action" value="delete" onclick="document.querySelectorAll('.message-row-check').forEach(x=>x.checked=false); this.closest('tr').querySelector('.message-row-check').checked=true; return confirm('이 발송 기록을 삭제할까요?');">삭제</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8"><div class="dashboard-empty-state"><i class="bi bi-send"></i><b>보낸 메시지가 없습니다.</b><span>수강생 관리에서 개인 메시지를 보낼 수 있습니다.</span></div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-3"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ page_obj.previous_page_number }}">이전</a></li>{% endif %}<li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ page_obj.next_page_number }}">다음</a></li>{% endif %}</ul></nav>
+    {% endif %}
+  </section>
+</div>
+<script>
+(() => {
+  const all = document.getElementById('messageSelectAll');
+  if (!all) return;
+  all.addEventListener('change', () => document.querySelectorAll('.message-row-check').forEach(x => x.checked = all.checked));
+})();
+</script>
+{% endblock %}

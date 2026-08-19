@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AX 평가 시스템 관리자{% endblock %}</title>
+
+  <!-- 기존 AX 화면용 Bootstrap / Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- 기존 페이지 콘텐츠 스타일을 먼저 읽고 Purple shell이 덮어쓰도록 한다. -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260818-49">
+
+  <!-- 새 관리자 공통 서식 -->
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=20260819-60">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="ax-purple-admin" data-scroll-key="{% block scroll_storage_key %}ax-admin-return-scroll{% endblock %}">
+  <div class="container-scroller">
+    {% include "common/topbar_admin.html" %}
+
+    <div class="container-fluid page-body-wrapper">
+      {% include "common/sidebar_admin.html" %}
+
+      <div class="main-panel">
+        <div class="content-wrapper">
+          {% include "common/messages.html" %}
+          {% block content %}{% endblock %}
+        </div>
+
+        {% include "common/footer_admin.html" %}
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="axCriticalConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content ax-critical-modal">
+        <div class="modal-header border-0 pb-0">
+          <div class="d-flex align-items-center gap-3">
+            <span class="ax-critical-icon"><i class="bi bi-shield-exclamation"></i></span>
+            <div><div class="ax-critical-eyebrow">IMPORTANT ACTION</div><h5 class="modal-title fw-bold" id="axCriticalConfirmTitle">중요 작업 확인</h5></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <p class="mb-0" id="axCriticalConfirmMessage"></p>
+          <div class="ax-critical-note mt-3"><i class="bi bi-info-circle-fill"></i><span id="axCriticalConfirmNote">작업 내용을 다시 확인한 뒤 진행하세요.</span></div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-danger" id="axCriticalConfirmSubmit">계속 진행</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/common.js' %}?v=20260818-49"></script>
+  <script src="{% static 'js/admin.js' %}?v=20260818-49"></script>
+
+  <script>
+  (() => {
+    const modalEl = document.getElementById('axCriticalConfirmModal');
+    if (!modalEl || !window.bootstrap) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const title = document.getElementById('axCriticalConfirmTitle');
+    const message = document.getElementById('axCriticalConfirmMessage');
+    const note = document.getElementById('axCriticalConfirmNote');
+    const submit = document.getElementById('axCriticalConfirmSubmit');
+    let pendingForm = null;
+
+    document.addEventListener('submit', (event) => {
+      const form = event.target.closest('form[data-ax-critical]');
+      if (!form || form.dataset.axConfirmed === '1') return;
+      event.preventDefault();
+      pendingForm = form;
+      title.textContent = form.dataset.axTitle || '중요 작업을 진행할까요?';
+      message.textContent = form.dataset.axMessage || '이 작업은 현재 운영 데이터에 영향을 줄 수 있습니다.';
+      note.textContent = form.dataset.axNote || '작업 내용을 다시 확인한 뒤 진행하세요.';
+      submit.textContent = form.dataset.axButton || '계속 진행';
+      submit.className = form.dataset.axTone === 'warning' ? 'btn btn-warning' : 'btn btn-danger';
+      modal.show();
+    }, true);
+
+    submit.addEventListener('click', () => {
+      if (!pendingForm) return;
+      pendingForm.dataset.axConfirmed = '1';
+      modal.hide();
+      pendingForm.requestSubmit();
+      pendingForm = null;
+    });
+  })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

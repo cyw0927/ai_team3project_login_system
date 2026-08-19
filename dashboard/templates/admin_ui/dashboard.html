@@ -1,0 +1,269 @@
+{% extends "base_admin.html" %}
+{% block title %}관리자 홈 | AX 평가 시스템{% endblock %}
+
+{% block content %}
+<div class="ax-saas-page-head">
+  <div>
+    <span class="ax-saas-kicker">ADMIN DASHBOARD</span>
+    <h1>관리자 홈</h1>
+    <p>현재 평가 운영 상태와 필요한 작업을 한눈에 확인합니다.</p>
+  </div>
+  <div class="ax-saas-head-actions">
+    <a href="{% url 'admin_rounds' %}" class="btn btn-light border">
+      <i class="bi bi-calendar3 me-1"></i> 회차 관리
+    </a>
+    <a href="{% url 'admin_assignments' %}?open=create" class="btn btn-primary ax-primary-btn">
+      <i class="bi bi-plus-lg me-1"></i> 과제 등록
+    </a>
+  </div>
+</div>
+
+<section class="ax-current-round-card {% if not current_round %}is-empty{% endif %}">
+  {% if current_round %}
+  <div class="ax-current-round-card-top">
+    <div class="ax-current-round-card-title">
+      <span class="ax-current-round-eyebrow"><i class="bi bi-bullseye"></i> CURRENT ROUND</span>
+      <div class="ax-current-round-name-row">
+        <h2>{{ current_round.name }}</h2>
+        {% if current_round.status == 'in_progress' %}
+          <span class="ax-current-round-status live"><i class="bi bi-circle-fill"></i> 진행 중</span>
+        {% elif current_round.status == 'scheduled' %}
+          <span class="ax-current-round-status scheduled"><i class="bi bi-clock"></i> 시작 전</span>
+        {% else %}
+          <span class="ax-current-round-status ended"><i class="bi bi-check-circle"></i> 종료</span>
+        {% endif %}
+      </div>
+      <p class="ax-current-round-period"><i class="bi bi-calendar3"></i> {{ current_round.start_at|date:"Y.m.d H:i" }} <span>~</span> {{ current_round.end_at|date:"Y.m.d H:i" }}</p>
+    </div>
+    <div class="ax-current-round-card-actions">
+      <a href="{% url 'admin_rounds' %}" class="btn ax-current-round-switch"><i class="bi bi-arrow-repeat"></i> 회차 변경</a>
+      <a href="{% url 'admin_round_detail' current_round.id %}" class="btn ax-current-round-detail">상세 보기 <i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+
+  <div class="ax-current-round-metrics">
+    <div class="ax-round-metric">
+      <span class="ax-round-metric-icon"><i class="bi bi-people"></i></span>
+      <div><small>수강생</small><strong>{{ stats.student_count }}<em>명</em></strong></div>
+    </div>
+    <div class="ax-round-metric">
+      <span class="ax-round-metric-icon"><i class="bi bi-diagram-3"></i></span>
+      <div><small>운영 팀</small><strong>{{ stats.active_team_count }}<em>팀</em></strong></div>
+    </div>
+    <div class="ax-round-metric">
+      <span class="ax-round-metric-icon"><i class="bi bi-check2-circle"></i></span>
+      <div><small>평가 완료율</small><strong>{{ stats.overall_percent }}<em>%</em></strong></div>
+    </div>
+    <div class="ax-round-metric assignment">
+      <span class="ax-round-metric-icon"><i class="bi bi-folder2-open"></i></span>
+      <div><small>연결 과제</small><strong>{% if current_assignment %}{{ current_assignment.title|truncatechars:28 }}{% else %}<span class="is-empty-value">미등록</span>{% endif %}</strong></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="ax-current-round-empty">
+    <span class="ax-current-round-empty-icon"><i class="bi bi-calendar-plus"></i></span>
+    <div><small>CURRENT ROUND</small><h2>현재 회차가 지정되지 않았습니다.</h2><p>회차 관리에서 운영할 회차를 선택해 주세요.</p></div>
+    <a href="{% url 'admin_rounds' %}" class="btn ax-current-round-switch">회차 선택</a>
+  </div>
+  {% endif %}
+</section>
+
+<section class="ax-admin-alert-center {% if not admin_alerts %}is-clear{% endif %}">
+  <div class="ax-admin-alert-head">
+    <div>
+      <span class="ax-saas-kicker">ACTION CENTER</span>
+      <h2>지금 확인할 항목</h2>
+      <p>현재 회차에서 관리자 조치가 필요한 항목만 모았습니다.</p>
+    </div>
+    {% if admin_alerts %}<span class="ax-admin-alert-count">{{ admin_alerts|length }}건</span>{% else %}<span class="ax-admin-alert-clear"><i class="bi bi-check-circle-fill"></i> 정상</span>{% endif %}
+  </div>
+  {% if admin_alerts %}
+  <div class="ax-admin-alert-list">
+    {% for alert in admin_alerts %}
+    <a href="{% url alert.url_name %}" class="ax-admin-alert-item {{ alert.level }}">
+      <span class="ax-admin-alert-icon"><i class="bi {{ alert.icon }}"></i></span>
+      <span class="ax-admin-alert-copy"><strong>{{ alert.title }}</strong><small>{{ alert.detail }}</small></span>
+      <span class="ax-admin-alert-action">{{ alert.action }} <i class="bi bi-chevron-right"></i></span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="ax-admin-alert-empty"><i class="bi bi-shield-check"></i><div><strong>현재 긴급하게 처리할 항목이 없습니다.</strong><span>회차 운영 상태가 정상입니다.</span></div></div>
+  {% endif %}
+</section><section class="admin-growth-home-card">
+  <div class="admin-growth-home-head">
+    <div>
+      <span class="ax-saas-kicker">GROWTH TASKS</span>
+      <h2>역량 과제</h2>
+      <p>개별 성장 과제의 진행·검토·지연 상태를 관리자 홈에서 바로 확인합니다.</p>
+    </div>
+    <a href="{% url 'admin_hr_tasks' %}" class="btn btn-outline-primary">
+      전체 과제 <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="admin-growth-home-stats">
+    <a href="{% url 'admin_hr_tasks' %}?status=in_progress"><span>진행 중</span><strong>{{ growth_task_summary.active }}</strong></a>
+    <a href="{% url 'admin_hr_tasks' %}?status=review" class="{% if growth_task_summary.review %}is-attention{% endif %}"><span>검토 요청</span><strong>{{ growth_task_summary.review }}</strong></a>
+    <a href="{% url 'admin_hr_tasks' %}" class="{% if growth_task_summary.overdue %}is-danger{% endif %}"><span>지연</span><strong>{{ growth_task_summary.overdue }}</strong></a>
+    <a href="{% url 'admin_hr_tasks' %}?status=scheduled"><span>예정</span><strong>{{ growth_task_summary.scheduled }}</strong></a>
+  </div>
+
+  <div class="admin-growth-home-list">
+    <div class="admin-growth-home-list-head">
+      <strong>확인 필요</strong>
+      <span>검토 요청과 지연 과제를 우선 표시합니다.</span>
+    </div>
+    {% for task in growth_attention_tasks %}
+    <a href="{% url 'admin_hr_tasks' %}?q={{ task.title|urlencode }}#task-{{ task.id }}" class="admin-growth-home-item {% if task.status == 'review' %}is-review{% else %}is-overdue{% endif %}">
+      <span class="admin-growth-home-item-icon">
+        <i class="bi {% if task.status == 'review' %}bi-search{% else %}bi-exclamation-triangle{% endif %}"></i>
+      </span>
+      <span class="admin-growth-home-item-copy">
+        <strong>{{ task.title }}</strong>
+        <small>{{ task.assignee.name|default:"담당 수강생 미지정" }} · {% if task.status == 'review' %}검토 요청{% else %}마감 {{ task.due_date }}{% endif %}</small>
+      </span>
+      <span class="admin-growth-home-item-action">바로가기 <i class="bi bi-chevron-right"></i></span>
+    </a>
+    {% empty %}
+    <div class="admin-growth-home-empty">
+      <i class="bi bi-check-circle-fill"></i>
+      <span>현재 확인이 필요한 역량 과제가 없습니다.</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+
+
+<section class="ax-saas-card ax-admin-flow-card">
+  <div class="ax-saas-card-head">
+    <div>
+      <span class="ax-saas-kicker">OPERATION FLOW</span>
+      <h2>현재 회차 운영 단계</h2>
+      <p>{% if current_round %}{{ current_round.name }}의 준비 상태와 다음 작업을 순서대로 확인합니다.{% else %}회차를 만든 뒤 운영 단계를 진행할 수 있습니다.{% endif %}</p>
+    </div>
+    <a href="{% url 'admin_operations' %}" class="ax-text-link">운영 화면 <i class="bi bi-chevron-right"></i></a>
+  </div>
+
+  {% if current_round %}
+  <div class="ax-admin-flow">
+    {% for step in workflow_steps %}
+      <a href="{% url step.url_name %}" class="ax-admin-flow-step {% if step.done %}done{% elif step.current %}current{% endif %}">
+        <span class="ax-admin-flow-number">{% if step.done %}<i class="bi bi-check-lg"></i>{% else %}{{ step.number }}{% endif %}</span>
+        <span class="ax-admin-flow-copy"><strong>{{ step.label }}</strong><small>{{ step.detail }}</small></span>
+        {% if step.done %}<span class="ax-admin-flow-state">완료</span>{% elif step.current %}<span class="ax-admin-flow-state">다음 작업</span>{% else %}<span class="ax-admin-flow-state">대기</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="ax-admin-flow-empty">
+    <div><i class="bi bi-calendar-plus"></i></div>
+    <div><strong>먼저 평가 회차를 생성하세요.</strong><span>회차를 만들면 팀 편성부터 결과 공개까지 단계별 진행 상태가 표시됩니다.</span></div>
+    <a href="{% url 'admin_rounds' %}" class="btn btn-primary ax-primary-btn">회차 만들기</a>
+  </div>
+  {% endif %}
+</section>
+
+<div class="ax-admin-section-title"><span>운영 현황</span><small>현재 시스템 상태를 빠르게 확인합니다.</small></div>
+<div class="ax-kpi-grid">
+  <a class="ax-kpi-card" href="{% url 'admin_assignments' %}">
+    <div class="ax-kpi-icon"><i class="bi bi-folder2-open"></i></div>
+    <div class="ax-kpi-copy">
+      <span>전체 과제</span>
+      <strong>{{ stats.assignment_count }}</strong>
+      <small>등록된 과제 수</small>
+    </div>
+  </a>
+
+  <a class="ax-kpi-card" href="{% url 'admin_rounds' %}">
+    <div class="ax-kpi-icon"><i class="bi bi-play-circle"></i></div>
+    <div class="ax-kpi-copy">
+      <span>진행 중 회차</span>
+      <strong>{{ stats.in_progress_round_count }}</strong>
+      <small>현재 운영 중</small>
+    </div>
+  </a>
+
+  <a class="ax-kpi-card" href="{% url 'admin_students' %}">
+    <div class="ax-kpi-icon"><i class="bi bi-people"></i></div>
+    <div class="ax-kpi-copy">
+      <span>활성 수강생</span>
+      <strong>{{ stats.student_count }}</strong>
+      <small>평가 대상 학생</small>
+    </div>
+  </a>
+
+  <a class="ax-kpi-card danger" href="{% url 'admin_missing_evaluations' %}{% if current_round %}?round={{ current_round.id }}{% endif %}">
+    <div class="ax-kpi-icon"><i class="bi bi-exclamation-circle"></i></div>
+    <div class="ax-kpi-copy">
+      <span>미제출 평가</span>
+      <strong>{{ stats.missing_submission_count }}</strong>
+      <small>확인이 필요한 항목</small>
+    </div>
+  </a>
+</div>
+
+<div class="ax-dashboard-grid ax-dashboard-grid-top ax-dashboard-home-row">
+  <section class="ax-saas-card ax-dashboard-main-card ax-dashboard-recent-card">
+    <div class="ax-saas-card-head">
+      <div><h2>최근 과제 및 회차</h2><p>최근 등록된 과제와 연결된 평가 회차입니다.</p></div>
+      <a href="{% url 'admin_assignments' %}" class="ax-text-link">전체 보기 <i class="bi bi-chevron-right"></i></a>
+    </div>
+    {% if recent_assignments %}
+    <div class="table-responsive">
+      <table class="table ax-saas-table align-middle">
+        <thead><tr><th>과제</th><th>회차</th><th>기간</th><th>상태</th><th></th></tr></thead>
+        <tbody>
+        {% for assignment in recent_assignments %}
+          <tr>
+            <td><div class="ax-assignment-title"><strong>{{ assignment.title }}</strong><small>{{ assignment.description|default:"설명 없음"|truncatechars:44 }}</small></div></td>
+            <td>{{ assignment.evaluation_round.name }}</td>
+            <td class="text-muted">{{ assignment.evaluation_round.start_at|date:"m.d" }} ~ {{ assignment.evaluation_round.end_at|date:"m.d" }}</td>
+            <td>
+              {% if assignment.evaluation_round.status == 'in_progress' and assignment.evaluation_round.evaluation_started %}<span class="ax-status-pill success">평가 진행중</span>
+              {% elif assignment.evaluation_round.status == 'in_progress' %}<span class="ax-status-pill info">진행중 · 평가 전</span>
+              {% elif assignment.evaluation_round.status == 'scheduled' %}<span class="ax-status-pill neutral">예정</span>
+              {% else %}<span class="ax-status-pill muted">종료</span>{% endif %}
+            </td>
+            <td class="text-end"><a href="{% url 'admin_assignments' %}?edit={{ assignment.id }}" class="btn btn-sm btn-light border">관리</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="ax-empty-block"><i class="bi bi-inbox"></i><strong>등록된 과제가 없습니다.</strong><span>새 과제를 등록하면 이곳에 표시됩니다.</span></div>{% endif %}
+  </section>
+
+  <aside class="ax-saas-card ax-quick-card ax-dashboard-quick-card">
+    <div class="ax-saas-card-head"><div><h2>빠른 실행</h2><p>자주 사용하는 핵심 작업</p></div></div>
+    <div class="ax-quick-clean">
+      <a href="{% url 'admin_students' %}"><span><i class="bi bi-people"></i></span><div><strong>수강생 관리</strong><small>{{ stats.student_count }}명 등록</small></div><i class="bi bi-chevron-right"></i></a>
+      <a href="{% url 'admin_team_assignment' %}"><span><i class="bi bi-diagram-3"></i></span><div><strong>팀 편성</strong><small>{{ stats.active_team_count }}개 팀 운영</small></div><i class="bi bi-chevron-right"></i></a>
+      <a href="{% url 'admin_evaluation_templates' %}"><span><i class="bi bi-ui-checks-grid"></i></span><div><strong>평가 템플릿</strong><small>문항과 평가 기준 관리</small></div><i class="bi bi-chevron-right"></i></a>
+      <a href="{% url 'admin_result_settings' %}"><span><i class="bi bi-eye"></i></span><div><strong>결과 공개</strong><small>학생에게 보여줄 결과 설정</small></div><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </aside>
+</div>
+
+<section class="ax-saas-card ax-evaluation-status-card ax-dashboard-progress-card">
+  <div class="ax-saas-card-head">
+    <div><h2>평가 진행 현황</h2><p>{% if current_round %}{{ current_round.name }}{% else %}진행 가능한 회차 없음{% endif %}</p></div>
+    <a href="{% url 'admin_missing_evaluations' %}" class="ax-text-link">미제출 확인 <i class="bi bi-chevron-right"></i></a>
+  </div>
+  <div class="ax-progress-clean ax-progress-clean-wide">
+    <div class="ax-progress-row">
+      <div class="ax-progress-row-head"><span>팀 평가</span><strong>{{ stats.team_submission_count }} / {{ stats.team_required }}</strong></div>
+      <div class="progress"><div class="progress-bar" style="width:{% if stats.team_required %}{% widthratio stats.team_submission_count stats.team_required 100 %}{% else %}0{% endif %}%"></div></div>
+    </div>
+    <div class="ax-progress-row">
+      <div class="ax-progress-row-head"><span>개인 평가</span><strong>{{ stats.personal_submission_count }} / {{ stats.personal_required }}</strong></div>
+      <div class="progress"><div class="progress-bar" style="width:{% if stats.personal_required %}{% widthratio stats.personal_submission_count stats.personal_required 100 %}{% else %}0{% endif %}%"></div></div>
+    </div>
+    <div class="ax-overall-clean">
+      <div><span>전체 완료율</span><strong>{{ stats.overall_percent }}%</strong></div>
+      <div class="progress"><div class="progress-bar" style="width:{{ stats.overall_percent|default:0 }}%"></div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
