@@ -97,26 +97,145 @@
             <h4 class="card-title mb-1">{{ selected_round.name }} 자동편성용 Seed</h4>
             <p class="card-description mb-0">과거 종료 회차 최종점수의 가중 평균입니다.</p>
           </div>
-          <span class="ax-status-pill info">{{ seed_rows|length }}명</span>
+          <span class="ax-status-pill info">{% if seed_page_obj %}{{ seed_page_obj.paginator.count }}{% else %}{{ seed_rows|length }}{% endif %}명</span>
         </div>
+
+        {% if seed_rows %}
+        <div class="seed-pot-visual mb-3">
+          <div class="seed-pot-head">
+            <div>
+              <span class="seed-pot-kicker">FIFA POT VIEW</span>
+              <strong>누적 Seed 포트 분포</strong>
+            </div>
+            <small>누적 순위를 기준으로 자동 분류됩니다.</small>
+          </div>
+
+          <div class="seed-pot-cards">
+            {% for pot in pot_summary %}
+            <article class="seed-pot-card pot-{{ pot.grade|lower }}">
+              <div class="seed-pot-letter">{{ pot.grade }}</div>
+              <div>
+                <strong>{{ pot.label }}</strong>
+                <span>{{ pot.range_label }}</span>
+              </div>
+              <b>{{ pot.count }}명</b>
+            </article>
+            {% endfor %}
+          </div>
+
+          <div class="seed-pot-stack" aria-label="Seed 포트 분포">
+            {% for pot in pot_summary %}
+            {% if pot.ratio %}
+            <span class="pot-{{ pot.grade|lower }}" style="width:{{ pot.ratio }}%" title="{{ pot.grade }} POT {{ pot.count }}명"></span>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
 
         <div class="table-responsive">
           <table class="table ax-work-table align-middle">
-            <thead><tr><th>Seed</th><th>수강생</th><th>이메일</th><th>가중 누적점수</th></tr></thead>
+            <thead><tr><th>Seed</th><th>Pot</th><th>수강생</th><th>이메일</th><th>가중 누적점수</th><th class="text-end">상세</th></tr></thead>
             <tbody>
             {% for row in seed_rows %}
-            <tr>
+            <tr class="seed-student-row">
               <td><span class="ax-seed-rank-clean">{{ row.seed_rank }}</span></td>
+              <td><span class="pot-chip pot-{{ row.pot_grade|lower }}">{{ row.pot_grade }} POT</span></td>
               <td class="fw-bold">{{ row.student_name }}</td>
               <td class="text-muted">{{ row.email|default:"-" }}</td>
               <td class="fw-bold text-primary">{{ row.seed_score|floatformat:2 }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary seed-detail-toggle"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#seedDetail{{ row.student_id }}"
+                        aria-expanded="false"
+                        aria-controls="seedDetail{{ row.student_id }}">
+                  계산 근거 <i class="bi bi-chevron-down ms-1"></i>
+                </button>
+              </td>
+            </tr>
+            <tr class="seed-detail-table-row">
+              <td colspan="6" class="p-0 border-0">
+                <div class="collapse" id="seedDetail{{ row.student_id }}">
+                  <div class="seed-student-detail">
+                    <div class="seed-student-detail-head">
+                      <div>
+                        <span>SEED DETAIL</span>
+                        <strong>{{ row.student_name }}</strong>
+                        <small>{{ row.seed_rank }}위 · {{ row.pot_grade }} POT · 누적 Seed {{ row.seed_score|floatformat:2 }}</small>
+                      </div>
+                      <div class="seed-student-formula-summary">
+                        <div><span>적용 가중치 합</span><strong>{{ row.seed_total_weight }}</strong></div>
+                        <div><span>가중 합계</span><strong>{{ row.seed_weighted_total|floatformat:2 }}</strong></div>
+                        <div><span>최종 Seed</span><strong>{{ row.seed_score|floatformat:2 }}</strong></div>
+                      </div>
+                    </div>
+
+                    <div class="seed-formula-note">
+                      <i class="bi bi-calculator"></i>
+                      <span>
+                        회차 Seed = (팀점수 × 팀비율 + 개인점수 × 개인비율) ÷ 100.
+                        최종 Seed = 각 회차 Seed에 회차 반영 가중치를 적용한 가중평균입니다.
+                      </span>
+                    </div>
+
+                    <div class="table-responsive">
+                      <table class="table table-sm seed-breakdown-table align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>반영 회차</th>
+                            <th>팀 점수</th>
+                            <th>개인 점수</th>
+                            <th>팀:개인</th>
+                            <th>회차 Seed</th>
+                            <th>회차 반영</th>
+                            <th>최종 Seed 기여</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                        {% for detail in row.breakdown_rows %}
+                          <tr>
+                            <td>
+                              <strong>{{ detail.round_name }}</strong>
+                              <small>{{ detail.start_at|date:"Y.m.d" }}</small>
+                            </td>
+                            <td>{{ detail.team_score|floatformat:2 }}</td>
+                            <td>{{ detail.personal_score|floatformat:2 }}</td>
+                            <td><span class="seed-weight-ratio">{{ detail.team_weight }}:{{ detail.personal_weight }}</span></td>
+                            <td class="fw-bold">{{ detail.base_score|floatformat:2 }}</td>
+                            <td><span class="seed-round-weight">{{ detail.round_weight }}%</span></td>
+                            <td class="fw-bold text-primary">+{{ detail.contribution_score|floatformat:2 }}</td>
+                          </tr>
+                        {% empty %}
+                          <tr><td colspan="7" class="text-center text-muted py-3">Seed 계산에 반영된 과거 회차가 없습니다.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-5">사용 가능한 이전 성적이 없습니다.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-5">사용 가능한 이전 성적이 없습니다.</td></tr>
             {% endfor %}
             </tbody>
           </table>
         </div>
+        {% if seed_page_obj and seed_page_obj.paginator.num_pages > 1 %}
+        <nav class="seed-pagination">
+          <span>{{ seed_page_obj.number }} / {{ seed_page_obj.paginator.num_pages }} 페이지</span>
+          <div class="btn-group btn-group-sm">
+            {% if seed_page_obj.has_previous %}
+            <a class="btn btn-outline-secondary" href="?round={{ selected_round.id }}&page={{ seed_page_obj.previous_page_number }}">이전</a>
+            {% endif %}
+            {% if seed_page_obj.has_next %}
+            <a class="btn btn-outline-secondary" href="?round={{ selected_round.id }}&page={{ seed_page_obj.next_page_number }}">다음</a>
+            {% endif %}
+          </div>
+        </nav>
+        {% endif %}
       </div>
     </div>
   </div>

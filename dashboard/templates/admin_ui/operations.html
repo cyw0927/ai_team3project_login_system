@@ -36,7 +36,7 @@
               {% if round.can_unlock %}<form method="post" action="{% url 'admin_round_action' round.id 'resume' %}">{% csrf_token %}<button class="btn btn-sm btn-warning">평가 재개</button></form>{% endif %}
               {% if round.can_end %}<form method="post" action="{% url 'admin_round_action' round.id 'end' %}" onsubmit="return confirm('평가를 종료할까요?');">{% csrf_token %}<button class="btn btn-sm btn-dark">종료</button></form>{% endif %}
               {% if round.can_reopen %}<form method="post" action="{% url 'admin_round_action' round.id 'reopen' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">재오픈</button></form>{% endif %}
-              <form method="post" action="{% url 'admin_round_delete' round.id %}" data-ax-critical data-ax-title="{{ round.name }} 회차를 삭제할까요?" data-ax-message="과제·팀·제출물·평가 데이터도 함께 삭제됩니다." data-ax-note="삭제한 회차는 복구할 수 없습니다." data-ax-button="영구 삭제">{% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_operations' %}"><button class="btn btn-sm btn-outline-danger">삭제</button></form>
+              <form method="post" action="{% url 'admin_round_delete' round.id %}" onsubmit="return confirm('{{ round.name }} 회차를 삭제할까요?\n연결된 팀·과제·평가·결과 데이터도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.');">{% csrf_token %}<input type="hidden" name="next" value="{% url 'admin_operations' %}"><button class="btn btn-sm btn-outline-danger">삭제</button></form>
             </div></td>
           </tr>
         {% empty %}<tr><td colspan="5" class="text-center py-5 text-muted">아직 평가 회차가 없습니다.</td></tr>{% endfor %}

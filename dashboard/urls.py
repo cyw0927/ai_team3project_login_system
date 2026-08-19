@@ -21,6 +21,7 @@ urlpatterns = [
     path("results/", views.student_results, name="student_results"),
     path("self-review/", views.student_self_review, name="student_self_review"),
     path("feedback/", views.student_feedback, name="student_feedback"),
+    path("feedback/<int:feedback_id>/read/", views.student_feedback_read, name="student_feedback_read"),
     path("notifications/", views.student_notifications, name="student_notifications"),
     path("messages/", views.student_messages, name="student_messages"),
     path("messages/<int:message_id>/read/", views.student_message_read, name="student_message_read"),

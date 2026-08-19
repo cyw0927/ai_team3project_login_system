@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260818-49">
 
   <!-- 새 관리자 공통 서식 -->
-  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=20260819-60">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=20260819-65">
 
   {% block extra_head %}{% endblock %}
 </head>
@@ -88,11 +88,36 @@
     }, true);
 
     submit.addEventListener('click', () => {
-      if (!pendingForm) return;
-      pendingForm.dataset.axConfirmed = '1';
-      modal.hide();
-      pendingForm.requestSubmit();
+      if (!pendingForm || submit.disabled) return;
+
+      const form = pendingForm;
       pendingForm = null;
+      submit.disabled = true;
+
+      // 중요: data-ax-critical 속성을 제거한 뒤 다시 submit한다.
+      // dataset 플래그만 쓰면 다른 submit listener와 충돌해
+      // 확인창은 닫히지만 실제 POST가 전달되지 않는 경우가 있었다.
+      form.removeAttribute('data-ax-critical');
+      form.dataset.axConfirmed = '1';
+
+      modal.hide();
+
+      // requestSubmit()을 사용해 CSRF/HTML form 동작은 그대로 유지하면서
+      // 현재 공통 확인 인터셉터만 확실하게 우회한다.
+      window.setTimeout(() => {
+        try {
+          form.requestSubmit();
+        } finally {
+          submit.disabled = false;
+        }
+      }, 0);
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      // 사용자가 취소/X로 닫은 경우 대기 폼을 버린다.
+      // 확인 버튼으로 닫힌 경우에는 위에서 이미 pendingForm=null 처리된다.
+      if (pendingForm) pendingForm = null;
+      submit.disabled = false;
     });
   })();
   </script>

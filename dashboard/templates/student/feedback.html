@@ -12,6 +12,12 @@
 </div>
 
 <section class="student-feedback-page">
+  {% if unread_feedback_count %}
+  <div class="student-feedback-unread-summary">
+    <i class="bi bi-bell-fill"></i>
+    아직 읽지 않은 튜터 피드백이 <strong>{{ unread_feedback_count }}개</strong> 있습니다.
+  </div>
+  {% endif %}
   {% for feedback in feedbacks %}
   <article class="student-feedback-card {% if feedback.was_unread %}is-new{% endif %}">
     <div class="student-feedback-head">
@@ -26,8 +32,20 @@
       <p>{{ feedback.comment|linebreaksbr }}</p>
     </div>
     <footer>
-      <span><i class="bi bi-person-badge"></i> 튜터 피드백</span>
-      {% if feedback.created_by %}<span>{{ feedback.created_by.get_full_name|default:feedback.created_by.username }}</span>{% endif %}
+      <div class="student-feedback-meta">
+        <span><i class="bi bi-person-badge"></i> 튜터 피드백</span>
+        {% if feedback.created_by %}<span>{{ feedback.created_by.get_full_name|default:feedback.created_by.username }}</span>{% endif %}
+      </div>
+      {% if feedback.was_unread %}
+      <form method="post" action="{% url 'student_feedback_read' feedback.id %}">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-primary student-feedback-read-btn" type="submit">
+          <i class="bi bi-check2-circle me-1"></i>읽음
+        </button>
+      </form>
+      {% else %}
+      <span class="student-feedback-read-state"><i class="bi bi-check2-all"></i> 읽음</span>
+      {% endif %}
     </footer>
   </article>
   {% empty %}

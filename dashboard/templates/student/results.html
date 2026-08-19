@@ -11,10 +11,20 @@
       </h3>
       <p class="ax-page-subtitle">관리자가 공개한 점수와 평가 항목별 강점·보완점을 확인합니다.</p>
     </div>
+    {% if available_result_rounds %}
+    <form method="get" class="student-result-round-select">
+      <label for="resultRoundSelect">회차 선택</label>
+      <select id="resultRoundSelect" name="round" class="form-select" onchange="this.form.submit()">
+        {% for round in available_result_rounds %}
+        <option value="{{ round.id }}" {% if round.selected %}selected{% endif %}>{{ round.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
   </div>
 
   {% if result_published %}
-  <section class="card ax-student-panel ax-result-summary mb-4">
+  <section id="result-detail" class="card ax-student-panel ax-result-summary mb-4">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
@@ -152,7 +162,8 @@
       </div>
       <div class="ax-history-list">
         {% for item in result.score_history %}
-        <div class="ax-history-row {% if forloop.last %}current{% endif %}">
+        <a href="{% url 'student_results' %}?round={{ item.round_id }}#result-detail"
+           class="ax-history-row {% if item.is_selected %}current{% endif %}">
           <div class="ax-history-round">
             <span class="ax-history-dot"></span>
             <div><strong>{{ item.round_name }}</strong><small>{{ item.start_at|date:"Y.m.d" }}{% if item.rank %} · {{ item.rank }}위{% endif %}</small></div>
@@ -162,7 +173,8 @@
             <div><small>개인</small><strong>{{ item.personal_score|floatformat:2 }}</strong></div>
             <div class="final"><small>최종</small><strong>{{ item.final_score|floatformat:2 }}</strong></div>
           </div>
-        </div>
+          <span class="ax-history-open"><i class="bi bi-chevron-right"></i></span>
+        </a>
         {% endfor %}
       </div>
     </div>

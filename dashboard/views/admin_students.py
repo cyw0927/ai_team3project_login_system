@@ -261,6 +261,10 @@ def admin_students(request):
             if student.has_missing_evaluation:
                 missing_student_count += 1
 
+    paginator = Paginator(students, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    students = list(page_obj.object_list)
+
     all_students = Student.objects.all()
     stats = {
         "total": all_students.count(),
@@ -280,6 +284,7 @@ def admin_students(request):
         "admin_ui/students.html",
         _base_context(
             students=students,
+            page_obj=page_obj,
             teams=teams,
             current_round=current_round,
             query=query,

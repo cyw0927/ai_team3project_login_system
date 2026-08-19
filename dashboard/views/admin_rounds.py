@@ -280,14 +280,37 @@ def admin_round_update(request, round_id):
 @require_POST
 @transaction.atomic
 def admin_round_delete(request, round_id):
+    """회차와 연결 데이터를 안전하게 실제 삭제한다."""
     evaluation_round = get_object_or_404(EvaluationRound, pk=round_id)
-    _sync_round_statuses()
-    evaluation_round.refresh_from_db()
-    if request.method != "POST":
-        return _redirect_back(request, "admin_rounds")
     name = evaluation_round.name
-    evaluation_round.delete()
-    messages.success(request, f"{name} 회차를 삭제했습니다.")
+    was_current = evaluation_round.is_current
+
+    # 평가 점수의 criterion FK가 PROTECT이므로 회차 템플릿이 삭제되기 전에
+    # 해당 회차 평가 점수 행을 먼저 지워야 회차 CASCADE 삭제가 막히지 않는다.
+    TeamEvaluationScore.objects.filter(
+        evaluation__evaluation_round=evaluation_round
+    ).delete()
+    PersonalEvaluationScore.objects.filter(
+        evaluation__evaluation_round=evaluation_round
+    ).delete()
+
+    deleted_count, _ = EvaluationRound.objects.filter(pk=evaluation_round.pk).delete()
+    if deleted_count <= 0 or EvaluationRound.objects.filter(pk=round_id).exists():
+        messages.error(request, f"{name} 회차 삭제에 실패했습니다. 다시 시도해주세요.")
+        return _redirect_back(request, "admin_rounds")
+
+    # 현재 회차를 지웠다면 남은 진행중 회차 → 최신 회차 순으로 하나를 자동 지정한다.
+    if was_current:
+        replacement = (
+            EvaluationRound.objects.filter(status=EvaluationRound.Status.IN_PROGRESS)
+            .order_by("-start_at")
+            .first()
+            or EvaluationRound.objects.order_by("-start_at").first()
+        )
+        if replacement:
+            EvaluationRound.objects.filter(pk=replacement.pk).update(is_current=True)
+
+    messages.success(request, f"{name} 회차와 연결 데이터를 삭제했습니다.")
     return _redirect_back(request, "admin_rounds")
 
 @admin_required

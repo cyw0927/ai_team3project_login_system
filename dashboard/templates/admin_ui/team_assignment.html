@@ -131,7 +131,7 @@
                   <span class="count-pill {% if team.members|length > average_team_size and average_team_size %}soft-warning{% endif %}">{{ team.members|length }}명</span>
                 </div>
                 <div class="team-member-stack">
-                  {% for membership in team.memberships.all %}
+                  {% for membership in team.membership_rows %}
                     <div class="assigned-member-row">
                       <span class="student-avatar small">{{ membership.student.name|slice:":1" }}</span>
                       <div class="student-copy flex-grow-1"><strong>{{ membership.student.name }}</strong><small>{{ membership.student.email }}{% if membership.student.affiliation %} · {{ membership.student.affiliation }}{% endif %}</small><form method="post" action="{% url 'admin_team_member_role_update' membership.id %}" class="d-flex gap-1 mt-1">{% csrf_token %}<input type="text" name="role" value="{{ membership.role }}" class="form-control form-control-sm" maxlength="100" placeholder="담당 역할 (예: 백엔드)"><button type="submit" class="btn btn-sm btn-outline-primary">저장</button></form></div>
@@ -195,8 +195,16 @@
             </div>
             <div class="auto-control-block">
               <label>편성 방식</label>
-              <label class="rule-option"><input type="radio" name="assignment_rule" value="seed" {% if form_data.assignment_rule != 'random' %}checked{% endif %}><span class="rule-icon"><i class="bi bi-bar-chart-steps"></i></span><span><strong>Z식 성적 균형</strong><small>직전 회차 최종점수를 시드로 분산</small></span></label>
+              <label class="rule-option"><input type="radio" name="assignment_rule" value="seed" {% if form_data.assignment_rule == 'seed' or not form_data.assignment_rule %}checked{% endif %}><span class="rule-icon"><i class="bi bi-bar-chart-steps"></i></span><span><strong>Z식 성적 균형</strong><small>누적 Seed 순위를 Z식으로 균등 분산</small></span></label>
+              <label class="rule-option pot-rule-option"><input type="radio" name="assignment_rule" value="pot" {% if form_data.assignment_rule == 'pot' %}checked{% endif %}><span class="rule-icon"><i class="bi bi-trophy"></i></span><span><strong>FIFA 포트 추첨</strong><small>A 20% · B 30% · C 80% · D 100% 구간별 랜덤 추첨</small></span></label>
               <label class="rule-option"><input type="radio" name="assignment_rule" value="random" {% if form_data.assignment_rule == 'random' %}checked{% endif %}><span class="rule-icon"><i class="bi bi-dice-5"></i></span><span><strong>균등 랜덤</strong><small>인원수를 최대한 고르게 무작위 배정</small></span></label>
+            </div>
+            <div class="pot-rule-guide">
+              <div><span class="pot-badge pot-a">A</span><strong>상위 20%</strong></div>
+              <div><span class="pot-badge pot-b">B</span><strong>20~30%</strong></div>
+              <div><span class="pot-badge pot-c">C</span><strong>30~80%</strong></div>
+              <div><span class="pot-badge pot-d">D</span><strong>80~100%</strong></div>
+              <small>FIFA 조추첨처럼 같은 등급 포트 안에서는 랜덤으로 섞고, 각 팀에 포트가 최대한 고르게 퍼지도록 배치합니다.</small>
             </div>
             <div class="auto-control-block">
               <label>균형 옵션</label>
@@ -212,6 +220,18 @@
             <span class="step-badge">STEP 2</span>
           </div>
           {% if preview_teams %}
+            {% if preview_teams.0.assignment_rule == 'pot' and pot_quality %}
+            <div class="pot-preview-quality {% if pot_quality.status == 'good' %}is-good{% else %}is-warning{% endif %}">
+              <div class="pot-preview-quality-icon">
+                <i class="bi {% if pot_quality.status == 'good' %}bi-shield-check{% else %}bi-exclamation-triangle{% endif %}"></i>
+              </div>
+              <div class="pot-preview-quality-copy">
+                <strong>{{ pot_quality.label }}</strong>
+                <span>{{ pot_quality.message }}</span>
+                {% if pot_quality_warnings %}<small>{{ pot_quality_warnings|join:" · " }}</small>{% endif %}
+              </div>
+            </div>
+            {% endif %}
             <div class="preview-summary">
               <div><strong>{{ preview_teams|length }}</strong><span>개 팀</span></div>
               <div><strong>{{ total_students }}</strong><span>명 대상</span></div>
@@ -220,13 +240,39 @@
             <div class="preview-team-grid">
               {% for team in preview_teams %}
                 <article class="preview-team-card">
-                  <div class="team-card-head"><div><span class="team-index">{{ forloop.counter }}</span><strong>{{ team.name }}</strong></div><span class="count-pill">{{ team.members|length }}명</span></div>
+                  <div class="team-card-head">
+                    <div><span class="team-index">{{ forloop.counter }}</span><strong>{{ team.name }}</strong></div>
+                    <div class="preview-team-head-right">
+                      <span class="count-pill">{{ team.members|length }}명</span>
+                      {% if team.assignment_rule == 'pot' %}
+                      <div class="team-pot-summary">
+                        <span class="pot-a">A {{ team.pot_counts.A }}</span>
+                        <span class="pot-b">B {{ team.pot_counts.B }}</span>
+                        <span class="pot-c">C {{ team.pot_counts.C }}</span>
+                        <span class="pot-d">D {{ team.pot_counts.D }}</span>
+                        {% if team.pot_counts.U %}<span class="pot-u">U {{ team.pot_counts.U }}</span>{% endif %}
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
                   <div class="preview-members">
                     {% for member in team.members %}
                       <div class="preview-member-row">
                         <span class="student-avatar small">{{ member.name|slice:":1" }}</span>
                         <strong>{{ member.name }}</strong>
-                        {% if member.seed_rank %}<span class="seed-chip">{{ member.seed_number }}시드 · {{ member.seed_rank }}위</span><span class="score-chip">{{ member.seed_score|floatformat:2 }}</span>{% else %}<span class="seed-chip muted">랜덤</span>{% endif %}
+                        {% if member.pot_grade %}
+                          <span class="pot-chip pot-{{ member.pot_grade|lower }}">{% if member.pot_grade == 'U' %}미분류{% else %}{{ member.pot_grade }} POT{% endif %}</span>
+                          {% if member.pot_grade == 'U' %}
+                            <span class="seed-chip muted">Seed 없음</span>
+                          {% else %}
+                            <span class="seed-chip">{{ member.seed_rank }}위</span>
+                            <span class="score-chip">{{ member.seed_score|floatformat:2 }}</span>
+                          {% endif %}
+                        {% elif member.seed_rank %}
+                          <span class="seed-chip">{{ member.seed_number }}시드 · {{ member.seed_rank }}위</span><span class="score-chip">{{ member.seed_score|floatformat:2 }}</span>
+                        {% else %}
+                          <span class="seed-chip muted">랜덤</span>
+                        {% endif %}
                       </div>
                     {% empty %}<div class="empty-team-slot">팀원이 없습니다.</div>{% endfor %}
                   </div>

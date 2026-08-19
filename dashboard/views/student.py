@@ -730,30 +730,62 @@ def student_evaluation_status(request):
 
 @student_required
 def student_results(request):
-    """학생 본인에게 공개된 가장 최근 결과만 보여준다."""
+    """학생 본인에게 공개된 결과를 회차별로 선택해서 보여준다."""
     now = timezone.now()
-    settings_qs = (
+    settings_qs = list(
         ResultPublishSetting.objects.filter(evaluation_round__student_results__student=request.student)
         .select_related("evaluation_round")
         .distinct()
         .order_by("-evaluation_round__start_at")
     )
 
+    visible_settings = [
+        setting for setting in settings_qs
+        if setting.is_published or (setting.publish_at and setting.publish_at <= now)
+    ]
+
+    selected_round_id = (request.GET.get("round") or "").strip()
     publish_setting = None
-    for setting in settings_qs:
-        if setting.is_published or (setting.publish_at and setting.publish_at <= now):
-            publish_setting = setting
-            break
+    if selected_round_id.isdigit():
+        publish_setting = next(
+            (
+                setting for setting in visible_settings
+                if setting.evaluation_round_id == int(selected_round_id)
+            ),
+            None,
+        )
+
+    if publish_setting is None and visible_settings:
+        publish_setting = visible_settings[0]
 
     if not publish_setting:
-        return render(request, "student/results.html", _base_context(result_published=False, result={}))
+        return render(
+            request,
+            "student/results.html",
+            _base_context(result_published=False, result={}, available_result_rounds=[]),
+        )
 
     evaluation_round = publish_setting.evaluation_round
     student_result = StudentResult.objects.filter(
         evaluation_round=evaluation_round, student=request.student, is_excluded=False
     ).first()
     if not student_result:
-        return render(request, "student/results.html", _base_context(result_published=False, result={}))
+        return render(
+            request,
+            "student/results.html",
+            _base_context(
+                result_published=False,
+                result={},
+                available_result_rounds=[
+                    {
+                        "id": setting.evaluation_round_id,
+                        "name": setting.evaluation_round.name,
+                        "selected": setting.evaluation_round_id == evaluation_round.id,
+                    }
+                    for setting in visible_settings
+                ],
+            ),
+        )
 
     membership = TeamMembership.objects.filter(
         team__evaluation_round=evaluation_round, student=request.student
@@ -912,12 +944,14 @@ def student_results(request):
             continue
         score_history.append(
             {
+                "round_id": history_setting.evaluation_round_id,
                 "round_name": history_setting.evaluation_round.name,
                 "start_at": history_setting.evaluation_round.start_at,
                 "team_score": history_result.team_score,
                 "personal_score": history_result.personal_score,
                 "final_score": history_result.final_score,
                 "rank": history_result.rank if history_setting.show_overall_rank else None,
+                "is_selected": history_setting.evaluation_round_id == evaluation_round.id,
             }
         )
 
@@ -959,6 +993,7 @@ def student_results(request):
         )
 
     result = {
+        "round_id": evaluation_round.id,
         "round_name": evaluation_round.name,
         "team_name": team.name if team else "-",
         "team_rank": team_result.rank if (team_result and publish_setting.show_all_team_ranks) else None,
@@ -977,7 +1012,23 @@ def student_results(request):
         "show_personal_score": publish_setting.show_personal_score,
         "show_overall_rank": publish_setting.show_overall_rank,
     }
-    return render(request, "student/results.html", _base_context(result_published=True, result=result))
+    available_result_rounds = [
+        {
+            "id": setting.evaluation_round_id,
+            "name": setting.evaluation_round.name,
+            "selected": setting.evaluation_round_id == evaluation_round.id,
+        }
+        for setting in visible_settings
+    ]
+    return render(
+        request,
+        "student/results.html",
+        _base_context(
+            result_published=True,
+            result=result,
+            available_result_rounds=available_result_rounds,
+        ),
+    )
 
 @student_required
 def student_profile(request):
@@ -1096,33 +1147,39 @@ def student_announcement_read(request, announcement_id):
 
 @student_required
 def student_feedback(request):
-    """튜터가 남긴 개인 피드백을 회차별로 보여주고 확인 시 읽음 처리한다."""
+    """튜터 개인 피드백을 회차별로 보여준다. 읽음 처리는 학생이 직접 누를 때만 한다."""
     feedbacks = list(
         AdminStudentComment.objects.filter(student=request.student)
         .select_related("evaluation_round", "created_by")
         .order_by("-evaluation_round__start_at", "-updated_at")
     )
-
-    unread_ids = [item.id for item in feedbacks if item.read_at is None]
-    if unread_ids:
-        AdminStudentComment.objects.filter(
-            id__in=unread_ids,
-            student=request.student,
-        ).update(read_at=timezone.now())
-        for item in feedbacks:
-            if item.id in unread_ids:
-                item.was_unread = True
-            else:
-                item.was_unread = False
-    else:
-        for item in feedbacks:
-            item.was_unread = False
+    for item in feedbacks:
+        item.was_unread = item.read_at is None
 
     return render(
         request,
         "student/feedback.html",
-        _base_context(feedbacks=feedbacks),
+        _base_context(
+            feedbacks=feedbacks,
+            unread_feedback_count=sum(1 for item in feedbacks if item.was_unread),
+        ),
     )
+
+
+@student_required
+@require_POST
+def student_feedback_read(request, feedback_id):
+    """본인에게 온 튜터 피드백 한 건을 명시적으로 읽음 처리한다."""
+    feedback = get_object_or_404(
+        AdminStudentComment,
+        pk=feedback_id,
+        student=request.student,
+    )
+    if feedback.read_at is None:
+        feedback.read_at = timezone.now()
+        feedback.save(update_fields=["read_at", "updated_at"])
+        messages.success(request, "튜터 피드백을 읽음 처리했습니다.")
+    return redirect("student_feedback")
 
 
 @student_required

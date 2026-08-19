@@ -334,6 +334,9 @@ def admin_missing_evaluations(request):
         "draft_count": 0,
         "not_started_count": 0,
         "exempt_team_count": 0,
+        "team_incomplete_evaluators": 0,
+        "personal_incomplete_evaluators": 0,
+        "partial_excluded_evaluators": 0,
     }
 
     if selected_round:
@@ -429,6 +432,42 @@ def admin_missing_evaluations(request):
                     "state_label": "임시저장" if state == "draft" else "미시작",
                     "attendance_label": dict(RoundAttendance.Status.choices).get(attendance_status, "출석"),
                 })
+
+        # FIX62 점수 규칙을 관리자에게도 명확히 보여주기 위한 평가자 단위 상태.
+        complete_team_ids = _complete_team_evaluator_ids(selected_round)
+        complete_personal_ids = _complete_personal_evaluator_ids(selected_round)
+
+        membership_team_map = {m.student_id: m.team_id for m in memberships_qs}
+        active_team_ids = {team.id for team in active_teams}
+        team_member_ids = {}
+        for membership in memberships_qs:
+            team_member_ids.setdefault(membership.team_id, set()).add(membership.student_id)
+
+        team_eligible_ids = {
+            student_id
+            for student_id, own_team_id in membership_team_map.items()
+            if attendance_map.get(student_id, RoundAttendance.Status.PRESENT) == RoundAttendance.Status.PRESENT
+            and len(active_team_ids - {own_team_id}) > 0
+        }
+        personal_eligible_ids = {
+            student_id
+            for student_id, own_team_id in membership_team_map.items()
+            if len(team_member_ids.get(own_team_id, set()) - {student_id}) > 0
+        }
+        summary["team_incomplete_evaluators"] = len(team_eligible_ids - complete_team_ids)
+        summary["personal_incomplete_evaluators"] = len(personal_eligible_ids - complete_personal_ids)
+
+        partial_team_ids = {
+            evaluator_id
+            for evaluator_id in team_eligible_ids - complete_team_ids
+            if any(key[0] == evaluator_id and evaluation.is_submitted for key, evaluation in team_eval_map.items())
+        }
+        partial_personal_ids = {
+            evaluator_id
+            for evaluator_id in personal_eligible_ids - complete_personal_ids
+            if any(key[0] == evaluator_id and evaluation.is_submitted for key, evaluation in personal_eval_map.items())
+        }
+        summary["partial_excluded_evaluators"] = len(partial_team_ids | partial_personal_ids)
 
         if evaluation_type in {"team", "personal"}:
             rows = [row for row in rows if row["type"] == evaluation_type]
@@ -909,6 +948,7 @@ def admin_seed_management(request):
     seed_rows = []
     history_rounds = []
     selected_round_results = []
+    pot_summary = []
 
     if selected_round:
         history_rounds = list(
@@ -924,15 +964,106 @@ def admin_seed_management(request):
             .select_related("user")
             .order_by("user__first_name", "user__username")
         )
+        student_ids = list(seed_scores.keys())
+        seed_breakdowns = {student_id: [] for student_id in student_ids}
+
+        breakdown_results = (
+            StudentResult.objects.filter(
+                evaluation_round__in=history_rounds,
+                student_id__in=student_ids,
+                is_excluded=False,
+            )
+            .exclude(final_score__isnull=True)
+            .select_related("evaluation_round")
+            .order_by("evaluation_round__start_at", "evaluation_round_id")
+        )
+
+        for result in breakdown_results:
+            round_obj = result.evaluation_round
+            history_weight = int(round_obj.seed_weight or 0)
+            team_weight = int(round_obj.seed_team_weight or 0)
+            personal_weight = int(round_obj.seed_personal_weight or 0)
+            score_weight_total = team_weight + personal_weight
+
+            if history_weight <= 0 or score_weight_total <= 0:
+                continue
+
+            seed_base_score = (
+                (result.team_score * Decimal(team_weight))
+                + (result.personal_score * Decimal(personal_weight))
+            ) / Decimal(score_weight_total)
+
+            seed_breakdowns.setdefault(result.student_id, []).append({
+                "round_name": round_obj.name,
+                "start_at": round_obj.start_at,
+                "team_score": result.team_score,
+                "personal_score": result.personal_score,
+                "team_weight": team_weight,
+                "personal_weight": personal_weight,
+                "round_weight": history_weight,
+                "base_score": seed_base_score,
+                "weighted_points": seed_base_score * Decimal(history_weight),
+            })
+
         for student in students:
+            detail_rows = seed_breakdowns.get(student.id, [])
+            total_weight = sum(item["round_weight"] for item in detail_rows)
+            weighted_total = sum(
+                (item["weighted_points"] for item in detail_rows),
+                Decimal("0"),
+            )
+            for item in detail_rows:
+                item["contribution_score"] = (
+                    item["weighted_points"] / Decimal(total_weight)
+                    if total_weight
+                    else Decimal("0")
+                )
+
             seed_rows.append({
+                "student_id": student.id,
                 "student_name": student.name,
                 "email": student.user.email,
                 "seed_score": seed_scores.get(student.id),
+                "seed_total_weight": total_weight,
+                "seed_weighted_total": weighted_total,
+                "breakdown_rows": list(reversed(detail_rows)),
             })
         seed_rows.sort(key=lambda row: float(row["seed_score"] or 0), reverse=True)
+        pot_counts = {"A": 0, "B": 0, "C": 0, "D": 0}
+        total_seed_rows = len(seed_rows)
+        a_cut = math.ceil(total_seed_rows * 0.20) if total_seed_rows else 0
+        b_cut = math.ceil(total_seed_rows * 0.30) if total_seed_rows else 0
+        c_cut = math.ceil(total_seed_rows * 0.80) if total_seed_rows else 0
         for index, row in enumerate(seed_rows, start=1):
             row["seed_rank"] = index
+            percentile = (index / total_seed_rows) * 100 if total_seed_rows else 100
+            if index <= a_cut:
+                pot_grade = "A"
+            elif index <= b_cut:
+                pot_grade = "B"
+            elif index <= c_cut:
+                pot_grade = "C"
+            else:
+                pot_grade = "D"
+            row["pot_grade"] = pot_grade
+            row["percentile"] = round(percentile, 1)
+            pot_counts[pot_grade] += 1
+
+        pot_summary = []
+        for grade, label, range_label in [
+            ("A", "최상위 포트", "상위 20%"),
+            ("B", "상위 포트", "20~30%"),
+            ("C", "중간 포트", "30~80%"),
+            ("D", "하위 포트", "80~100%"),
+        ]:
+            count = pot_counts[grade]
+            pot_summary.append({
+                "grade": grade,
+                "label": label,
+                "range_label": range_label,
+                "count": count,
+                "ratio": round((count / total_seed_rows) * 100, 1) if total_seed_rows else 0,
+            })
 
         selected_round_results = list(
             StudentResult.objects.filter(
@@ -940,6 +1071,12 @@ def admin_seed_management(request):
                 is_excluded=False,
             ).select_related("student__user").order_by("rank", "-final_score")
         )
+
+    seed_page_obj = None
+    if seed_rows:
+        seed_paginator = Paginator(seed_rows, 50)
+        seed_page_obj = seed_paginator.get_page(request.GET.get("page"))
+        seed_rows = list(seed_page_obj.object_list)
 
     return render(
         request,
@@ -949,6 +1086,8 @@ def admin_seed_management(request):
             selected_round=selected_round,
             history_rounds=history_rounds,
             seed_rows=seed_rows,
+            seed_page_obj=seed_page_obj,
+            pot_summary=pot_summary,
             selected_round_results=selected_round_results,
         ),
     )

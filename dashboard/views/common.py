@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
@@ -445,16 +446,136 @@ def _badge_rank_map(evaluation_round, result_rows=None):
     return rank_map
 
 
+def _complete_team_evaluator_ids(evaluation_round):
+    """팀 평가 의무를 전부 끝낸 평가자만 반환한다.
+
+    예: 다른 팀 4개를 평가해야 하는 학생이 2개만 제출했다면,
+    그 학생이 제출한 2개 팀 평가도 점수 집계에서는 전부 무효 처리한다.
+    모든 대상 팀을 최종 제출한 순간부터 해당 학생의 제출분 전체가 반영된다.
+    """
+    active_teams = list(
+        Team.objects.filter(
+            evaluation_round=evaluation_round,
+            is_active=True,
+        ).values_list("id", flat=True)
+    )
+    if not active_teams:
+        return set()
+
+    memberships = {
+        membership.student_id: membership.team_id
+        for membership in TeamMembership.objects.filter(
+            team__evaluation_round=evaluation_round,
+            student__is_active=True,
+            student__user__is_active=True,
+        ).select_related("student__user")
+    }
+    if not memberships:
+        return set()
+
+    exempt_student_ids = set(
+        RoundAttendance.objects.filter(
+            evaluation_round=evaluation_round,
+            student_id__in=memberships.keys(),
+            status__in={
+                RoundAttendance.Status.ABSENT,
+                RoundAttendance.Status.EXCUSED,
+            },
+        ).values_list("student_id", flat=True)
+    )
+
+    submitted_map = {}
+    submitted_pairs = TeamEvaluation.objects.filter(
+        evaluation_round=evaluation_round,
+        evaluator_id__in=memberships.keys(),
+        target_team_id__in=active_teams,
+        is_submitted=True,
+    ).values_list("evaluator_id", "target_team_id")
+
+    for evaluator_id, target_team_id in submitted_pairs:
+        submitted_map.setdefault(evaluator_id, set()).add(target_team_id)
+
+    complete_ids = set()
+    active_team_set = set(active_teams)
+    for evaluator_id, own_team_id in memberships.items():
+        # 결석/공결자는 타팀 평가 의무 자체가 없으므로 집계 평가자로 사용하지 않는다.
+        if evaluator_id in exempt_student_ids:
+            continue
+
+        required_targets = active_team_set - {own_team_id}
+        if not required_targets:
+            continue
+
+        submitted_targets = submitted_map.get(evaluator_id, set()) & required_targets
+        if submitted_targets >= required_targets:
+            complete_ids.add(evaluator_id)
+
+    return complete_ids
+
+
+def _complete_personal_evaluator_ids(evaluation_round):
+    """개인 평가 의무를 전부 끝낸 평가자만 반환한다.
+
+    같은 팀에서 본인을 제외한 평가 대상 전원을 최종 제출해야
+    그 평가자의 개인 평가 데이터 전체가 점수 계산에 포함된다.
+    """
+    memberships = list(
+        TeamMembership.objects.filter(
+            team__evaluation_round=evaluation_round,
+            student__is_active=True,
+            student__user__is_active=True,
+        ).values_list("student_id", "team_id")
+    )
+    if not memberships:
+        return set()
+
+    team_members = {}
+    student_team = {}
+    for student_id, team_id in memberships:
+        student_team[student_id] = team_id
+        team_members.setdefault(team_id, set()).add(student_id)
+
+    submitted_map = {}
+    submitted_pairs = PersonalEvaluation.objects.filter(
+        evaluation_round=evaluation_round,
+        evaluator_id__in=student_team.keys(),
+        is_submitted=True,
+    ).values_list("evaluator_id", "target_student_id")
+
+    for evaluator_id, target_student_id in submitted_pairs:
+        submitted_map.setdefault(evaluator_id, set()).add(target_student_id)
+
+    complete_ids = set()
+    for evaluator_id, team_id in student_team.items():
+        required_targets = team_members.get(team_id, set()) - {evaluator_id}
+        if not required_targets:
+            continue
+
+        submitted_targets = submitted_map.get(evaluator_id, set()) & required_targets
+        if submitted_targets >= required_targets:
+            complete_ids.add(evaluator_id)
+
+    return complete_ids
+
+
 def _recalculate_round_results(evaluation_round):
     """팀 40% + 개인 60% 기준 결과를 다시 계산한다.
 
-    팀 점수: 해당 팀이 받은 제출 완료 팀 평가 항목 점수의 평균
-    개인 점수: 해당 학생이 받은 제출 완료 개인 평가 항목 점수의 평균
+    핵심 규칙:
+    - 평가자가 본인의 필수 평가 대상을 전부 최종 제출해야 그 평가자의 데이터 전체를 반영한다.
+    - 일부만 제출한 평가자는 제출한 대상까지 포함해 해당 회차 점수 집계에서 전부 제외한다.
+    - 모든 필수 평가를 완료한 순간 그 평가자의 기존 제출분 전체가 다시 반영된다.
+
+    팀 점수: '팀 평가 전체 완료자'가 해당 팀에 준 점수의 평균
+    개인 점수: '개인 평가 전체 완료자'가 해당 학생에게 준 점수의 평균
     최종 점수: 회차별 개인/팀 가중치 적용 + 관리자 보정점수
     """
     # 재계산 전에 이전 순위/제외 상태를 초기화해 팀 이동·비활성화 후에도 낡은 결과가 남지 않게 한다.
     TeamResult.objects.filter(evaluation_round=evaluation_round).update(is_excluded=True, rank=None)
     StudentResult.objects.filter(evaluation_round=evaluation_round).update(is_excluded=True, rank=None)
+
+    complete_team_evaluator_ids = _complete_team_evaluator_ids(evaluation_round)
+    complete_personal_evaluator_ids = _complete_personal_evaluator_ids(evaluation_round)
 
     teams = Team.objects.filter(evaluation_round=evaluation_round, is_active=True)
     team_score_map = {}
@@ -463,13 +584,17 @@ def _recalculate_round_results(evaluation_round):
         team_score_qs = TeamEvaluationScore.objects.filter(
             evaluation__evaluation_round=evaluation_round,
             evaluation__target_team=team,
+            evaluation__evaluator_id__in=complete_team_evaluator_ids,
             evaluation__is_submitted=True,
         )
         team_avg = team_score_qs.aggregate(avg=Avg("score"))["avg"] or 0
-        submitted_team_evaluations = TeamEvaluation.objects.filter(
-            evaluation_round=evaluation_round, target_team=team, is_submitted=True
+        valid_team_evaluations = TeamEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            target_team=team,
+            evaluator_id__in=complete_team_evaluator_ids,
+            is_submitted=True,
         ).count()
-        team_excluded = submitted_team_evaluations == 0
+        team_excluded = valid_team_evaluations == 0
         team_score_map[team.id] = float(team_avg)
         TeamResult.objects.update_or_create(
             evaluation_round=evaluation_round,
@@ -492,16 +617,20 @@ def _recalculate_round_results(evaluation_round):
         personal_score_qs = PersonalEvaluationScore.objects.filter(
             evaluation__evaluation_round=evaluation_round,
             evaluation__target_student=student,
+            evaluation__evaluator_id__in=complete_personal_evaluator_ids,
             evaluation__is_submitted=True,
         )
         personal_avg = personal_score_qs.aggregate(avg=Avg("score"))["avg"] or 0
-        submitted_personal_evaluations = PersonalEvaluation.objects.filter(
-            evaluation_round=evaluation_round, target_student=student, is_submitted=True
+        valid_personal_evaluations = PersonalEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            target_student=student,
+            evaluator_id__in=complete_personal_evaluator_ids,
+            is_submitted=True,
         ).count()
         team = student_team_map.get(student.id)
         team_avg = team_score_map.get(team.id, 0) if team else 0
         team_result = TeamResult.objects.filter(evaluation_round=evaluation_round, team=team).first() if team else None
-        excluded = submitted_personal_evaluations == 0 or not team_result or team_result.is_excluded
+        excluded = valid_personal_evaluations == 0 or not team_result or team_result.is_excluded
         personal_weight = float(evaluation_round.personal_weight) / 100
         team_weight = float(evaluation_round.team_weight) / 100
         base_score = float(personal_avg) * personal_weight + float(team_avg) * team_weight
@@ -801,6 +930,84 @@ def _snake_seed_assignment(students, team_count, seed_scores):
         team_index = position if row % 2 == 0 else team_count - 1 - position
         buckets[team_index].append(student)
     return buckets
+
+def _pot_seed_assignment(students, team_count, seed_scores, previous_team_map=None):
+    """누적 Seed 기반 FIFA 포트 추첨.
+
+    A/B/C/D 누적 기준은 20% / 30% / 80% / 100%.
+    소수 인원에서도 A 포트가 사라지지 않도록 누적 인원 경계는 ceil로 계산한다.
+    Seed가 전혀 없는 학생은 U(미분류)로 두고 마지막에 균등 랜덤 배치한다.
+    """
+    previous_team_map = previous_team_map or {}
+    seeded = [student for student in students if student.id in seed_scores]
+    unseeded = [student for student in students if student.id not in seed_scores]
+    ordered = sorted(
+        seeded,
+        key=lambda student: (float(seed_scores.get(student.id, 0)), -student.id),
+        reverse=True,
+    )
+    total = len(ordered)
+
+    grade_map = {student.id: "U" for student in unseeded}
+    pots = {"A": [], "B": [], "C": [], "D": []}
+    a_cut = math.ceil(total * 0.20) if total else 0
+    b_cut = math.ceil(total * 0.30) if total else 0
+    c_cut = math.ceil(total * 0.80) if total else 0
+
+    for rank, student in enumerate(ordered, start=1):
+        if rank <= a_cut:
+            grade = "A"
+        elif rank <= b_cut:
+            grade = "B"
+        elif rank <= c_cut:
+            grade = "C"
+        else:
+            grade = "D"
+        grade_map[student.id] = grade
+        pots[grade].append(student)
+
+    for grade in pots:
+        random.shuffle(pots[grade])
+    random.shuffle(unseeded)
+
+    total_students = len(students)
+    base_size = total_students // team_count
+    extra = total_students % team_count
+    capacities = [base_size + (1 if idx < extra else 0) for idx in range(team_count)]
+    buckets = [[] for _ in range(team_count)]
+    bucket_grade_counts = [{grade: 0 for grade in ("A", "B", "C", "D", "U")} for _ in range(team_count)]
+    bucket_previous_teams = [set() for _ in range(team_count)]
+
+    def place(student, grade):
+        prev_team = previous_team_map.get(student.id)
+        candidates = [idx for idx in range(team_count) if len(buckets[idx]) < capacities[idx]]
+        if not candidates:
+            candidates = list(range(team_count))
+        candidates.sort(
+            key=lambda idx: (
+                bucket_grade_counts[idx][grade],
+                1 if prev_team and prev_team in bucket_previous_teams[idx] else 0,
+                len(buckets[idx]),
+                random.random(),
+            )
+        )
+        chosen = candidates[0]
+        buckets[chosen].append(student)
+        bucket_grade_counts[chosen][grade] += 1
+        if prev_team:
+            bucket_previous_teams[chosen].add(prev_team)
+
+    for grade in ("A", "B", "C", "D"):
+        for student in pots[grade]:
+            place(student, grade)
+    for student in unseeded:
+        place(student, "U")
+
+    return buckets, grade_map, {
+        "A": len(pots["A"]), "B": len(pots["B"]), "C": len(pots["C"]), "D": len(pots["D"]),
+        "U": len(unseeded),
+    }
+
 
 def _balanced_random_assignment(students, team_count, previous_team_map=None):
     """랜덤 균등 편성. 가능하면 직전 회차 같은 조합을 피한다."""

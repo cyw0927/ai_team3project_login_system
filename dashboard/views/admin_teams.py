@@ -212,10 +212,11 @@ def admin_team_assignment(request):
     member_map = {team.id: [] for team in teams}
     assigned_ids = set()
     for membership in memberships:
-        member_map.setdefault(membership.team_id, []).append(membership.student)
+        member_map.setdefault(membership.team_id, []).append(membership)
         assigned_ids.add(membership.student_id)
     for team in teams:
-        team.members = member_map.get(team.id, [])
+        team.membership_rows = member_map.get(team.id, [])
+        team.members = [membership.student for membership in team.membership_rows]
 
     unassigned_students = list(
         Student.objects.filter(is_active=True, user__is_active=True)
@@ -227,6 +228,32 @@ def admin_team_assignment(request):
     preview_teams = request.session.get("team_assignment_preview", [])
     if preview_teams and str(request.session.get("team_assignment_round_id")) != str(getattr(selected_round, "id", "")):
         preview_teams = []
+
+    pot_quality = None
+    pot_quality_warnings = []
+    if preview_teams and preview_teams[0].get("assignment_rule") == "pot":
+        unseeded_count = sum(team.get("pot_counts", {}).get("U", 0) for team in preview_teams)
+        if unseeded_count:
+            pot_quality_warnings.append(f"Seed 미분류 {unseeded_count}명은 U로 균등 랜덤 배치")
+        for grade in ("A", "B", "C", "D"):
+            counts = [team.get("pot_counts", {}).get(grade, 0) for team in preview_teams]
+            spread = max(counts) - min(counts) if counts else 0
+            if spread > 1:
+                pot_quality_warnings.append(
+                    f"{grade} POT 팀간 차이 {spread}명"
+                )
+        if pot_quality_warnings:
+            pot_quality = {
+                "status": "warning",
+                "label": "포트 분산 확인 필요",
+                "message": "일부 포트가 특정 팀에 상대적으로 몰렸습니다. 다시 추첨하면 다른 조합을 확인할 수 있습니다.",
+            }
+        else:
+            pot_quality = {
+                "status": "good",
+                "label": "포트 균형 양호",
+                "message": "A/B/C/D 포트가 팀별로 가능한 범위 안에서 고르게 분산되었습니다.",
+            }
 
     total_students = Student.objects.filter(is_active=True, user__is_active=True).count()
     assigned_count = len(assigned_ids)
@@ -254,6 +281,8 @@ def admin_team_assignment(request):
             unassigned_students=unassigned_students,
             teams=teams,
             preview_teams=preview_teams,
+            pot_quality=pot_quality,
+            pot_quality_warnings=pot_quality_warnings,
             form_data={
                 "team_count": auto_settings.get("team_count", len(teams) or ""),
                 "assignment_rule": auto_settings.get("assignment_rule", "seed"),
@@ -409,7 +438,7 @@ def admin_auto_preview(request):
     request.session.modified = True
     seed_scores = {}
     previous_round = _previous_round_for(evaluation_round)
-    if assignment_rule == "seed" and previous_round:
+    if assignment_rule in {"seed", "pot"} and previous_round:
         # 이전 회차 중 실제 원본 평가가 있는 회차는 최신 결과로 다시 집계한다.
         previous_rounds = EvaluationRound.objects.filter(
             start_at__lt=evaluation_round.start_at,
@@ -426,19 +455,32 @@ def admin_auto_preview(request):
         # RFP의 누적 시드 요구에 맞춰 이전 모든 회차 final_score의 학생별 평균을 사용한다.
         seed_scores = _cumulative_seed_scores_before(evaluation_round)
 
+    grade_map = {}
+    pot_counts = {}
     if assignment_rule == "seed" and seed_scores:
         buckets = _snake_seed_assignment(students, team_count, seed_scores)
         messages.info(request, "이전 평가들의 개인 최종점수 누적 평균을 기준으로 Z식 시드 편성을 적용했습니다.")
+    elif assignment_rule == "pot" and seed_scores:
+        buckets, grade_map, pot_counts = _pot_seed_assignment(
+            students,
+            team_count,
+            seed_scores,
+            previous_team_map,
+        )
+        messages.info(
+            request,
+            "누적 Seed 순위를 A/B/C/D 포트로 나눈 뒤 포트별 랜덤 추첨 방식으로 편성했습니다.",
+        )
     else:
-        if assignment_rule == "seed":
+        if assignment_rule in {"seed", "pot"}:
             messages.warning(request, "이전 회차 성적 데이터가 없어 균등 랜덤 방식으로 미리보기를 만들었습니다.")
         buckets = _balanced_random_assignment(students, team_count, previous_team_map)
     seed_rank_map = {}
 
     if seed_scores:
         ranked_students = sorted(
-            students,
-            key=lambda student: (float(seed_scores.get(student.id, 0)), -student.id),
+            [student for student in students if student.id in seed_scores],
+            key=lambda student: (float(seed_scores[student.id]), -student.id),
             reverse=True,
         )
         seed_rank_map = {
@@ -453,18 +495,29 @@ def admin_auto_preview(request):
 
     preview = []
     for idx, bucket in enumerate(buckets, start=1):
+        members = [
+            {
+                "name": s.name,
+                "seed_rank": seed_rank_map.get(s.id),
+                "seed_number": seed_number_map.get(s.id),
+                "seed_score": float(seed_scores[s.id]) if s.id in seed_scores else None,
+                "pot_grade": grade_map.get(s.id),
+            }
+            for s in bucket
+        ]
+        team_pot_counts = {"A": 0, "B": 0, "C": 0, "D": 0, "U": 0}
+        if assignment_rule == "pot":
+            for member in members:
+                grade = member.get("pot_grade")
+                if grade in team_pot_counts:
+                    team_pot_counts[grade] += 1
+
         preview.append({
             "name": f"{idx}팀",
             "student_ids": [s.id for s in bucket],
-            "members": [
-                {
-                    "name": s.name,
-                    "seed_rank": seed_rank_map.get(s.id),
-                    "seed_number": seed_number_map.get(s.id),
-                    "seed_score": float(seed_scores.get(s.id, 0)) if seed_scores else None,
-                }
-                for s in bucket
-            ],
+            "members": members,
+            "pot_counts": team_pot_counts,
+            "assignment_rule": assignment_rule,
         })
     request.session["team_assignment_preview"] = preview
     request.session["team_assignment_round_id"] = evaluation_round.id

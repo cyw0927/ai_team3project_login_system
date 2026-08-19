@@ -97,7 +97,7 @@
             <h5 class="fw-bold mb-1">수강생 목록</h5>
             <div class="text-muted small">등록된 수강생의 실제 DB 정보를 표시합니다.</div>
         </div>
-        <span class="badge bg-light text-primary border">{{ students|length }}명 표시</span>
+        <span class="badge bg-light text-primary border">전체 {{ page_obj.paginator.count|default:students|length }}명 · 현재 {{ students|length }}명</span>
     </div>
 
     <div class="table-responsive">
@@ -200,6 +200,27 @@
 </div>
     </div>
 </div>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="student-list-pagination" aria-label="수강생 목록 페이지">
+  <div class="student-list-page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 페이지</div>
+  <div class="btn-group btn-group-sm">
+    {% if page_obj.has_previous %}
+    <a class="btn btn-outline-secondary" href="?q={{ query|urlencode }}&team={{ team_filter|urlencode }}&page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for number in page_obj.paginator.page_range %}
+      {% if number == page_obj.number %}
+      <span class="btn btn-primary disabled">{{ number }}</span>
+      {% elif number >= page_obj.number|add:"-2" and number <= page_obj.number|add:"2" %}
+      <a class="btn btn-outline-secondary" href="?q={{ query|urlencode }}&team={{ team_filter|urlencode }}&page={{ number }}">{{ number }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a class="btn btn-outline-secondary" href="?q={{ query|urlencode }}&team={{ team_filter|urlencode }}&page={{ page_obj.next_page_number }}"><i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
 
 <!-- 선택 학생 일괄 메시지 -->
 
