@@ -1,8 +1,7 @@
 """Result calculation service.
 
-The public view modules call this service so score aggregation and ranking
-are no longer owned by the HTTP view layer. Helper calculations remain in
-``views.common`` for this first refactor step and will be migrated separately.
+Score aggregation, ranking and result-side post processing live in the service
+layer. HTTP views only trigger this service and render its results.
 """
 
 from django.db.models import Avg
@@ -12,11 +11,13 @@ from ..models import (
     StudentBadge, StudentResult, Team, TeamEvaluation, TeamEvaluationScore,
     TeamMembership, TeamResult,
 )
-from ..views.common import (
-    _apply_assignment_skill_impacts,
-    _badge_rank_map,
-    _complete_personal_evaluator_ids,
-    _complete_team_evaluator_ids,
+from .evaluation_completion_service import (
+    complete_personal_evaluator_ids,
+    complete_team_evaluator_ids,
+)
+from .result_support_service import (
+    apply_assignment_skill_impacts,
+    badge_rank_map,
 )
 from .scoring_policy import tutor_weight_for
 
@@ -38,8 +39,8 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
     TeamResult.objects.filter(evaluation_round=evaluation_round).update(is_excluded=True, rank=None)
     StudentResult.objects.filter(evaluation_round=evaluation_round).update(is_excluded=True, rank=None)
 
-    complete_team_evaluator_ids = _complete_team_evaluator_ids(evaluation_round)
-    complete_personal_evaluator_ids = _complete_personal_evaluator_ids(evaluation_round)
+    complete_team_ids = complete_team_evaluator_ids(evaluation_round)
+    complete_personal_ids = complete_personal_evaluator_ids(evaluation_round)
 
     team_weight_percent = int(evaluation_round.team_weight or 0)
     personal_weight_percent = int(evaluation_round.personal_weight or 0)
@@ -62,14 +63,14 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
         team_score_qs = TeamEvaluationScore.objects.filter(
             evaluation__evaluation_round=evaluation_round,
             evaluation__target_team=team,
-            evaluation__evaluator_id__in=complete_team_evaluator_ids,
+            evaluation__evaluator_id__in=complete_team_ids,
             evaluation__is_submitted=True,
         )
         team_avg = team_score_qs.aggregate(avg=Avg("score"))["avg"] or 0
         valid_team_evaluations = TeamEvaluation.objects.filter(
             evaluation_round=evaluation_round,
             target_team=team,
-            evaluator_id__in=complete_team_evaluator_ids,
+            evaluator_id__in=complete_team_ids,
             is_submitted=True,
         ).count()
         team_excluded = valid_team_evaluations == 0
@@ -111,14 +112,14 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
         personal_score_qs = PersonalEvaluationScore.objects.filter(
             evaluation__evaluation_round=evaluation_round,
             evaluation__target_student=student,
-            evaluation__evaluator_id__in=complete_personal_evaluator_ids,
+            evaluation__evaluator_id__in=complete_personal_ids,
             evaluation__is_submitted=True,
         )
         personal_avg = personal_score_qs.aggregate(avg=Avg("score"))["avg"] or 0
         valid_personal_evaluations = PersonalEvaluation.objects.filter(
             evaluation_round=evaluation_round,
             target_student=student,
-            evaluator_id__in=complete_personal_evaluator_ids,
+            evaluator_id__in=complete_personal_ids,
             is_submitted=True,
         ).count()
         team = student_team_map.get(student.id)
@@ -174,8 +175,8 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
             result.rank = current_rank
             result.save(update_fields=["rank", "updated_at"])
 
-    _apply_assignment_skill_impacts(evaluation_round, ordered)
-    current_badge_ranks = _badge_rank_map(evaluation_round, ordered)
+    apply_assignment_skill_impacts(evaluation_round, ordered)
+    current_badge_ranks = badge_rank_map(evaluation_round, ordered)
 
     mvp_student_ids = [
         student_id
@@ -201,7 +202,7 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
         .order_by("-start_at")
         .first()
     )
-    previous_badge_ranks = _badge_rank_map(previous_round) if previous_round else {}
+    previous_badge_ranks = badge_rank_map(previous_round) if previous_round else {}
 
     growth_student_ids = []
     improvements = []
