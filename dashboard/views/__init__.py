@@ -1,7 +1,6 @@
 from ..services.seed_service import cumulative_seed_scores_before
 
 from .auth import *
-from .student import *
 from .admin_dashboard import *
 from .admin_students import *
 from .admin_rounds import *
@@ -12,7 +11,7 @@ from .errors import *
 from .admin_hr_tasks import *
 from .admin_hr_dashboard import *
 
-# Dedicated thin views override legacy implementations imported above.
+from .student_core import student_home, student_team_info
 from .student_results import student_results
 from .student_evaluations import (
     student_evaluation_status,
@@ -25,6 +24,24 @@ from .student_assignments import (
     student_submission_attachment_download,
     submission_attachment_download,
 )
+from .student_account import (
+    student_announcement_read,
+    student_feedback,
+    student_feedback_read,
+    student_message_read,
+    student_messages,
+    student_notifications,
+    student_profile,
+    student_self_review,
+)
+from .student_hr import (
+    hr_task_attachment_download,
+    student_hr_task_step_toggle,
+    student_hr_task_submit,
+    student_hr_tasks,
+)
+
+# Dedicated admin views override legacy implementations imported above.
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
