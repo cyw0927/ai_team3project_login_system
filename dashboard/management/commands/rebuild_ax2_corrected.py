@@ -3,7 +3,7 @@ import json
 from django.db import connection
 
 from dashboard.management.commands.reset_and_import_ax2_data_v2 import Command as V2Command
-from dashboard.models import Student
+from dashboard.models import Student, TeamEvaluation
 
 
 class Command(V2Command):
@@ -28,10 +28,10 @@ class Command(V2Command):
                 raw_type,
                 source["filename"],
                 source["sha256"],
-                item["source_row"],
-                json.dumps(item["payload"], ensure_ascii=False),
+                source_row["source_row"],
+                json.dumps(source_row["payload"], ensure_ascii=False),
             )
-            for item in source["rows"]
+            for source_row in source["rows"]
         ]
         with connection.cursor() as cursor:
             cursor.executemany(sql, params)
@@ -45,3 +45,31 @@ class Command(V2Command):
             affiliation="AX2 공식 재구축 데이터"
         )
         return students, teams
+
+    @classmethod
+    def _create_canonical_evaluations(
+        cls,
+        evaluation_round,
+        personal,
+        team,
+        students,
+        teams,
+        personal_template,
+        team_template,
+    ):
+        V2Command._create_canonical_evaluations(
+            evaluation_round,
+            personal,
+            team,
+            students,
+            teams,
+            personal_template,
+            team_template,
+        )
+
+        # 원본에는 보존하되, 자기 팀을 평가한 행은 시스템상 유효 제출로 세지 않는다.
+        for evaluation in TeamEvaluation.objects.filter(
+            evaluation_round=evaluation_round
+        ).select_related("target_team"):
+            if evaluation.target_team.memberships.filter(student_id=evaluation.evaluator_id).exists():
+                evaluation.delete()
