@@ -56,3 +56,7 @@ from .admin_results import admin_evaluation_results
 # Prefer the thin dedicated missing-evaluations view. The legacy implementation
 # remains in admin_evaluations.py during the staged refactor.
 from .admin_missing import admin_missing_evaluations
+
+# Student management now supports whole-result filtering by evaluation status,
+# rather than hiding only rows on the current pagination page.
+from .admin_students_filtered import admin_students
