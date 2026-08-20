@@ -92,9 +92,9 @@
                 {% if item.criterion.description %}<small>{{ item.criterion.description }}</small>{% endif %}
               </div>
               <div class="tutor-score-options" role="group" aria-label="{{ item.criterion.title }} 점수">
-                {% for score in "12345" %}
+                {% for score in item.options %}
                 <label class="tutor-score-choice">
-                  <input type="radio" name="score_{{ item.criterion.id }}" value="{{ score }}" {% if item.value|stringformat:'s' == score %}checked{% endif %} {% if not can_edit %}disabled{% endif %} required>
+                  <input type="radio" name="score_{{ item.criterion.id }}" value="{{ score }}" {% if item.value == score %}checked{% endif %} {% if not can_edit %}disabled{% endif %} required>
                   <span>{{ score }}</span>
                 </label>
                 {% endfor %}
@@ -138,9 +138,9 @@
 .tutor-score-options { display:flex; gap:8px; }
 .tutor-score-choice { margin:0; cursor:pointer; }
 .tutor-score-choice input { position:absolute; opacity:0; pointer-events:none; }
-.tutor-score-choice span { display:flex; width:40px; height:40px; align-items:center; justify-content:center; border:1px solid #d9deea; border-radius:10px; background:#fff; font-weight:700; transition:.15s ease; }
+.tutor-score-choice span { display:flex; min-width:40px; height:40px; padding:0 10px; align-items:center; justify-content:center; border:1px solid #d9deea; border-radius:10px; background:#fff; font-weight:700; transition:.15s ease; }
 .tutor-score-choice input:checked + span { background:#5f46e8; color:#fff; border-color:#5f46e8; box-shadow:0 5px 14px rgba(95,70,232,.2); }
 .tutor-score-choice input:disabled + span { opacity:.55; cursor:not-allowed; }
-@media (max-width: 768px) { .tutor-criterion-row { grid-template-columns:1fr; gap:12px; } .tutor-score-options { justify-content:space-between; } .tutor-score-choice span { width:44px; } }
+@media (max-width: 768px) { .tutor-criterion-row { grid-template-columns:1fr; gap:12px; } .tutor-score-options { justify-content:space-between; flex-wrap:wrap; } .tutor-score-choice span { min-width:44px; } }
 </style>
 {% endblock %}
