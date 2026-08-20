@@ -386,6 +386,119 @@
   gap: 1rem !important;
 }
 
+/* Admin-wide rhythm: keep cards, toolbars and notices on the same visual grid. */
+.ax-work-page-head,
+.ax-mini-stat-grid,
+.ax-management-toolbar,
+.ax-section-head {
+  min-width: 0;
+}
+.ax-mini-stat-grid > [class*="col-"] {
+  display: flex;
+}
+.ax-mini-stat-grid .ax-mini-stat {
+  width: 100%;
+  min-height: 104px;
+}
+.ax-mini-stat-grid .ax-mini-stat .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px 22px;
+}
+.ax-management-toolbar {
+  gap: 14px;
+}
+.ax-management-toolbar > * {
+  min-width: 0;
+}
+.ax-work-card .table-responsive {
+  border-radius: 0 0 16px 16px;
+}
+
+/* Missing-evaluation rule: stop rendering as one very long thin strip. */
+.evaluation-completion-rule {
+  display: grid !important;
+  grid-template-columns: 48px minmax(280px, 1.35fr) minmax(360px, 1fr) !important;
+  align-items: center !important;
+  gap: 18px !important;
+  min-height: 116px;
+  padding: 22px 24px !important;
+  border: 1px solid #e9e3fb !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 10px 26px rgba(72, 53, 134, .05);
+}
+.evaluation-completion-rule-icon {
+  width: 44px !important;
+  height: 44px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px !important;
+  font-size: 1.15rem;
+}
+.evaluation-completion-rule > div:nth-child(2) {
+  min-width: 0;
+  padding-right: 8px;
+}
+.evaluation-completion-rule > div:nth-child(2) strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #252b3d;
+  font-size: .94rem;
+}
+.evaluation-completion-rule > div:nth-child(2) span {
+  display: block;
+  color: #7a8193;
+  font-size: .79rem;
+  line-height: 1.55;
+}
+.evaluation-completion-rule-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px !important;
+  min-width: 0;
+}
+.evaluation-completion-rule-stats > span {
+  min-width: 0;
+  min-height: 56px;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 8px !important;
+  border: 1px solid #ece8f7;
+  border-radius: 12px !important;
+  background: #faf9fe;
+  color: #697086;
+  text-align: center;
+  white-space: normal !important;
+}
+.evaluation-completion-rule-stats > span b {
+  color: #34285d;
+  font-size: 1rem;
+}
+.evaluation-completion-rule-stats > span.is-warning {
+  border-color: #f4dfaa;
+  background: #fffaf0;
+}
+
+/* Keep dense admin filters aligned to the same control height. */
+.ax-management-toolbar .form-select,
+.ax-management-toolbar .form-control,
+.ax-management-toolbar .input-group-text,
+.ax-management-toolbar .btn {
+  min-height: 40px;
+}
+.ax-management-toolbar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .template-layout {
     grid-template-columns: 1fr !important;
@@ -393,6 +506,12 @@
   .template-list-panel {
     border-right: 0;
     border-bottom: 1px solid #ece8f5;
+  }
+  .evaluation-completion-rule {
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+  }
+  .evaluation-completion-rule-stats {
+    grid-column: 1 / -1;
   }
 }
 
@@ -415,5 +534,13 @@
   .criterion-table {
     table-layout: auto;
     min-width: 900px;
+  }
+  .evaluation-completion-rule {
+    grid-template-columns: 1fr !important;
+    padding: 20px !important;
+  }
+  .evaluation-completion-rule-stats {
+    grid-column: auto;
+    grid-template-columns: 1fr !important;
   }
 }
