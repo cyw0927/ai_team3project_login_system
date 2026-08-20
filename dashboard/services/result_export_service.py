@@ -77,10 +77,13 @@ def build_result_workbook(evaluation_round):
         .annotate(c=Count("id"))
         .values_list("team_id", "c")
     )
+    # Exported "제출 평가 수" is the peer/student count that produced TeamResult.
+    # Tutor/staff reviews are tracked separately and must not inflate this number.
     evaluation_counts = dict(
         TeamEvaluation.objects.filter(
             evaluation_round=evaluation_round,
             is_submitted=True,
+            evaluator__user__is_staff=False,
         )
         .values("target_team_id")
         .annotate(c=Count("id"))
