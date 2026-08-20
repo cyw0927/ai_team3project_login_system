@@ -2,7 +2,6 @@ from ..services.seed_service import cumulative_seed_scores_before
 
 from .auth import *
 from .student import *
-from .student_assignment_compat import assignment_attachment_download
 from .admin_dashboard import *
 from .admin_students import *
 from .admin_rounds import *
@@ -19,6 +18,12 @@ from .student_evaluations import (
     student_evaluation_status,
     student_personal_evaluation,
     student_team_evaluation,
+)
+from .student_assignments import (
+    assignment_attachment_download,
+    student_assignment_info,
+    student_submission_attachment_download,
+    submission_attachment_download,
 )
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
