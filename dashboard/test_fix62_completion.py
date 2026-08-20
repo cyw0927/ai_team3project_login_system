@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -29,8 +30,8 @@ class CompleteEvaluatorAggregationTests(TestCase):
         now = timezone.now()
         cls.round = EvaluationRound.objects.create(
             name="FIX62 테스트",
-            start_at=now - timezone.timedelta(hours=1),
-            end_at=now + timezone.timedelta(days=1),
+            start_at=now - timedelta(hours=1),
+            end_at=now + timedelta(days=1),
             status=EvaluationRound.Status.IN_PROGRESS,
             evaluation_started=True,
             team_weight=40,
@@ -157,12 +158,7 @@ class CompleteEvaluatorAggregationTests(TestCase):
         self.assertEqual(after.score, Decimal("4"))
 
     def test_partial_personal_evaluator_is_excluded_from_all_submitted_personal_scores(self):
-        # 3팀은 D/E 두 명이므로 개인평가 완료자는 상대 1명 평가만 하면 된다.
-        # D가 E에게 준 3점은 완료 상태다.
-        self._submit_personal(self.students["d"], self.students["e"], 3)
-
-        # 1팀은 A/B 두 명이라 A가 B를 평가하면 완료가 되어버리므로,
-        # 개인 FIX62 검증용으로 C를 1팀에 추가해 A의 필수 대상 수를 2명으로 만든다.
+        # 개인 FIX62 검증용으로 C를 1팀에 옮겨 A의 필수 개인평가 대상을 B/C 두 명으로 만든다.
         TeamMembership.objects.filter(student=self.students["c"]).delete()
         TeamMembership.objects.create(team=self.team1, student=self.students["c"])
 
