@@ -1,4 +1,20 @@
-from .common import *
+from django.contrib import messages
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from .common import _base_context, _sync_round_statuses, admin_required
+from ..models import (
+    Assignment,
+    EvaluationCriterion,
+    EvaluationRound,
+    EvaluationTemplate,
+    Student,
+    StudentAssignmentSubmission,
+    Team,
+    TeamAssignmentSubmission,
+)
 
 
 @admin_required
