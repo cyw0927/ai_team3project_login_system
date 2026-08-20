@@ -26,6 +26,7 @@ _cumulative_seed_scores_before = _service_cumulative_seed_scores_before
 
 from .auth import *
 from .student import *
+from .student_assignment_compat import assignment_attachment_download
 from .admin_dashboard import *
 from .admin_students import *
 from .admin_rounds import *
