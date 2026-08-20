@@ -70,7 +70,7 @@
         <header class="ax-login-form-head">
           <span>WELCOME BACK</span>
           <h2>로그인</h2>
-          <p>관리자는 아이디/비밀번호, 수강생은 소셜 로그인을 사용할 수 있습니다.</p>
+          <p>관리자와 수강생 모두 아이디/비밀번호 또는 지원되는 소셜 로그인을 사용할 수 있습니다.</p>
         </header>
 
         {% if messages %}
@@ -133,6 +133,7 @@
                      {% if request.POST.remember_me %}checked{% endif %}>
               <span>로그인 상태 유지</span>
             </label>
+            <a href="{% url 'signup' %}" class="text-decoration-none fw-semibold">회원가입</a>
           </div>
 
           <button type="submit" class="btn ax-login-submit">
@@ -142,7 +143,7 @@
         </form>
 
         <div class="ax-login-social">
-          <div class="ax-login-divider"><span>소셜 로그인</span></div>
+          <div class="ax-login-divider"><span>소셜 로그인 / 가입</span></div>
 
           <div class="ax-login-social-grid">
             {% if google_oauth_configured %}
@@ -150,7 +151,7 @@
                 {% csrf_token %}
                 <button type="submit" class="ax-social-button ax-google-button">
                   <span class="ax-social-mark">G</span>
-                  Google 로그인
+                  Google로 계속
                 </button>
               </form>
             {% else %}
@@ -166,7 +167,7 @@
                 {% csrf_token %}
                 <button type="submit" class="ax-social-button ax-kakao-button">
                   <i class="bi bi-chat-fill"></i>
-                  Kakao 로그인
+                  Kakao로 계속
                 </button>
               </form>
             {% else %}
@@ -184,6 +185,10 @@
             </p>
           {% endif %}
         </div>
+
+        <p class="text-center mt-4 mb-0 text-secondary">
+          처음인가요? <a href="{% url 'signup' %}" class="fw-bold text-decoration-none">수강생 회원가입</a>
+        </p>
       </div>
     </section>
   </main>

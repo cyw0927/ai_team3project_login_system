@@ -3,9 +3,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from dashboard.views.auth import signup_page
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
+    path("signup/", signup_page, name="signup"),
     path("", include("dashboard.urls")),
 ]
 
