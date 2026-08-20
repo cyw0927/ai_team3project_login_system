@@ -1,28 +1,15 @@
-# Bind service implementations to the legacy common helper names before view modules
-# import them via ``from .common import *``. This keeps old imports working without
-# mutating each already-imported view module at runtime.
+# Legacy views still import _recalculate_round_results from common via wildcard.
+# Keep this single compatibility binding until those large legacy modules are split.
+# Seed/team-assignment helpers are no longer monkey-patched: dedicated views import
+# their services directly.
 from . import common as _common_module
-from ..services.result_service import _recalculate_round_results as _service_recalculate_round_results
-from ..services.seed_service import (
-    cumulative_seed_scores_before as _service_cumulative_seed_scores_before,
-    previous_round_for as _service_previous_round_for,
-)
-from ..services.team_assignment_service import (
-    balanced_random_assignment as _service_balanced_random_assignment,
-    pot_seed_assignment as _service_pot_seed_assignment,
-    snake_seed_assignment as _service_snake_seed_assignment,
-)
+from ..services.result_service import recalculate_round_results
+from ..services.seed_service import cumulative_seed_scores_before
 
-_common_module._recalculate_round_results = _service_recalculate_round_results
-_common_module._cumulative_seed_scores_before = _service_cumulative_seed_scores_before
-_common_module._previous_round_for = _service_previous_round_for
-_common_module._snake_seed_assignment = _service_snake_seed_assignment
-_common_module._pot_seed_assignment = _service_pot_seed_assignment
-_common_module._balanced_random_assignment = _service_balanced_random_assignment
+_common_module._recalculate_round_results = recalculate_round_results
 
-# Public helper aliases retained for existing tests/tools.
-_recalculate_round_results = _service_recalculate_round_results
-_cumulative_seed_scores_before = _service_cumulative_seed_scores_before
+# Public helper alias retained for existing tests/tools during the refactor.
+_recalculate_round_results = recalculate_round_results
 
 from .auth import *
 from .student import *
@@ -54,7 +41,7 @@ from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
 
 # Prefer the thin dedicated missing-evaluations view. The legacy implementation
-# remains in admin_evaluations.py during the staged refactor.
+# remains in admin_evaluations.py for staged compatibility.
 from .admin_missing import admin_missing_evaluations
 
 # Student management now supports whole-result filtering by evaluation status,
@@ -63,3 +50,7 @@ from .admin_students_filtered import admin_students
 
 # FIFA-style team assignment uses administrator-adjustable A/B/C/D boundaries.
 from .admin_team_assignment_configurable import admin_auto_preview
+
+# Tutor evaluates whole teams after evaluation start. This import is intentionally
+# last because it replaces old handlers with the three-part scoring policy.
+from .admin_tutor import admin_result_weights_save, admin_round_create, admin_tutor_evaluations

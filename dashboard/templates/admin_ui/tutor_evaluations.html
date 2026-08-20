@@ -1,0 +1,146 @@
+{% extends "base_admin.html" %}
+{% block title %}튜터 평가{% endblock %}
+{% block content %}
+<div class="ax-work-page-head">
+  <div>
+    <h3 class="page-title">
+      <span class="page-title-icon bg-gradient-primary text-white me-2"><i class="bi bi-person-workspace"></i></span>
+      튜터 평가
+    </h3>
+    <p class="ax-page-subtitle">학생 개인이 아니라 조 전체를 평가합니다. 저장한 점수는 같은 조 학생에게 동일한 튜터 점수로 반영됩니다.</p>
+  </div>
+</div>
+
+<div class="ax-work-card mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-5">
+        <label class="form-label fw-semibold">평가 회차</label>
+        <form method="get">
+          <select name="round" class="form-select" onchange="this.form.submit()">
+            {% for round in rounds %}
+            <option value="{{ round.id }}" {% if selected_round and round.id == selected_round.id %}selected{% endif %}>{{ round.name }}</option>
+            {% empty %}<option>평가 회차 없음</option>{% endfor %}
+          </select>
+        </form>
+      </div>
+      {% if selected_round %}
+      <div class="col-lg-7">
+        <div class="d-flex gap-2 flex-wrap justify-content-lg-end">
+          <span class="ax-status-pill info">튜터 비중 {{ tutor_weight }}%</span>
+          <span class="ax-status-pill {% if completed_count == team_count and team_count %}success{% else %}warning{% endif %}">
+            평가 완료 {{ completed_count }}/{{ team_count }}팀
+          </span>
+          {% if can_edit %}
+          <span class="ax-status-pill success"><i class="bi bi-unlock me-1"></i>입력 가능</span>
+          {% elif selected_round.evaluation_started and selected_round.is_locked %}
+          <span class="ax-status-pill warning"><i class="bi bi-pause-circle me-1"></i>평가 일시중지</span>
+          {% else %}
+          <span class="ax-status-pill secondary"><i class="bi bi-lock me-1"></i>평가 시작 후 활성화</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if selected_round %}
+<div class="ax-work-notice mb-4">
+  <i class="bi bi-info-circle-fill me-2"></i>
+  현재 산식은 <strong>학생 팀 평가 {{ selected_round.team_weight }}% + 동료 개인 평가 {{ selected_round.personal_weight }}% + 튜터 팀 평가 {{ tutor_weight }}%</strong>입니다.
+  튜터 비중이 0%보다 큰 회차는 해당 팀의 튜터 평가가 제출되기 전까지 그 팀 학생의 최종 순위를 확정하지 않습니다.
+</div>
+
+{% if not criteria %}
+<div class="ax-work-card"><div class="card-body text-center py-5 text-muted">
+  <i class="bi bi-ui-checks-grid fs-2 d-block mb-2"></i>
+  이 회차에 적용된 팀 평가 문항이 없습니다. 먼저 평가 템플릿을 적용해 주세요.
+</div></div>
+{% else %}
+<div class="row g-4">
+  {% for row in tutor_rows %}
+  <div class="col-12" id="team-{{ row.team.id }}">
+    <div class="ax-work-card tutor-eval-card">
+      <div class="card-body">
+        <div class="ax-section-head mb-3">
+          <div>
+            <div class="section-eyebrow">TEAM EVALUATION</div>
+            <h4 class="card-title mb-1">{{ row.team.name }}</h4>
+            <p class="card-description mb-0">조 전체에 동일하게 적용되는 튜터 평가입니다.</p>
+          </div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            {% if row.team_tutor_average != None %}<span class="ax-status-pill info">튜터 평균 {{ row.team_tutor_average|floatformat:2 }}</span>{% endif %}
+            {% if row.evaluation and row.evaluation.is_submitted %}
+            <span class="ax-status-pill success"><i class="bi bi-check-circle me-1"></i>제출 완료</span>
+            {% else %}
+            <span class="ax-status-pill warning">미제출</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <form method="post" class="tutor-team-eval-form">
+          {% csrf_token %}
+          <input type="hidden" name="round_id" value="{{ selected_round.id }}">
+          <input type="hidden" name="team_id" value="{{ row.team.id }}">
+
+          <div class="tutor-criteria-list">
+            {% for item in row.criterion_rows %}
+            <div class="tutor-criterion-row">
+              <div class="tutor-criterion-copy">
+                <strong>{{ forloop.counter }}. {{ item.criterion.title }}</strong>
+                {% if item.criterion.description %}<small>{{ item.criterion.description }}</small>{% endif %}
+              </div>
+              <div class="tutor-score-options" role="group" aria-label="{{ item.criterion.title }} 점수">
+                {% for score in item.options %}
+                <label class="tutor-score-choice">
+                  <input type="radio" name="score_{{ item.criterion.id }}" value="{{ score }}" {% if item.value == score %}checked{% endif %} {% if not can_edit %}disabled{% endif %} required>
+                  <span>{{ score }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="mt-4">
+            <label class="form-label fw-semibold">튜터 코멘트</label>
+            <textarea class="form-control" name="comment" rows="3" placeholder="이 팀의 강점, 보완점, 발표 피드백 등을 작성하세요." {% if not can_edit %}disabled{% endif %}>{% if row.evaluation %}{{ row.evaluation.comment }}{% endif %}</textarea>
+            <div class="form-text">코멘트는 팀 단위로 저장됩니다.</div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-primary ax-primary-btn" type="submit" {% if not can_edit %}disabled{% endif %}>
+              <i class="bi bi-check2-circle me-2"></i>{% if row.evaluation and row.evaluation.is_submitted %}평가 수정 저장{% else %}평가 제출{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="ax-work-card"><div class="card-body text-center py-5 text-muted">평가할 활성 팀이 없습니다.</div></div></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% else %}
+<div class="ax-work-card"><div class="card-body text-center py-5 text-muted">평가 회차가 없습니다.</div></div>
+{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.tutor-eval-card { scroll-margin-top: 90px; }
+.tutor-criteria-list { border-top: 1px solid var(--bs-border-color); }
+.tutor-criterion-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px; align-items:center; padding:18px 0; border-bottom:1px solid var(--bs-border-color); }
+.tutor-criterion-copy { display:flex; flex-direction:column; gap:5px; }
+.tutor-criterion-copy small { color:#7a8293; }
+.tutor-score-options { display:flex; gap:8px; }
+.tutor-score-choice { margin:0; cursor:pointer; }
+.tutor-score-choice input { position:absolute; opacity:0; pointer-events:none; }
+.tutor-score-choice span { display:flex; min-width:40px; height:40px; padding:0 10px; align-items:center; justify-content:center; border:1px solid #d9deea; border-radius:10px; background:#fff; font-weight:700; transition:.15s ease; }
+.tutor-score-choice input:checked + span { background:#5f46e8; color:#fff; border-color:#5f46e8; box-shadow:0 5px 14px rgba(95,70,232,.2); }
+.tutor-score-choice input:disabled + span { opacity:.55; cursor:not-allowed; }
+@media (max-width: 768px) { .tutor-criterion-row { grid-template-columns:1fr; gap:12px; } .tutor-score-options { justify-content:space-between; flex-wrap:wrap; } .tutor-score-choice span { min-width:44px; } }
+</style>
+{% endblock %}
