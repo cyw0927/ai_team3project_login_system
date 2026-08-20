@@ -50,3 +50,7 @@ _admin_teams_module._previous_round_for = _service_previous_round_for
 _admin_teams_module._snake_seed_assignment = _service_snake_seed_assignment
 _admin_teams_module._pot_seed_assignment = _service_pot_seed_assignment
 _admin_teams_module._balanced_random_assignment = _service_balanced_random_assignment
+
+# Prefer the thin dedicated view for result pages. The legacy function remains
+# in student.py temporarily so existing imports outside the package do not break.
+from .student_results import student_results
