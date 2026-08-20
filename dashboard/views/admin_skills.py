@@ -1,4 +1,4 @@
-"""Admin skill dictionary management views."""
+"""Admin skill dictionary and student skill profile views."""
 
 from django.contrib import messages
 from django.db import transaction
@@ -6,7 +6,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .common import _base_context, admin_required
+from .common import _base_context, _redirect_back, admin_required
 from ..models import AssignmentSkill, HRTaskSkill, Skill, Student, StudentSkill
 
 
@@ -174,3 +174,109 @@ def admin_skill_delete(request, skill_id):
         f"{name} 역량을 삭제했습니다. 연결된 수강생 프로필 {profile_count}개도 함께 정리했습니다.",
     )
     return redirect("admin_skills")
+
+
+@admin_required
+@require_POST
+@transaction.atomic
+def admin_students_bulk_skill_save(request):
+    target_mode = (request.POST.get("target_mode") or "selected").strip()
+    selected_ids = [
+        int(value)
+        for value in request.POST.getlist("student_ids")
+        if str(value).isdigit()
+    ]
+
+    if target_mode == "all_active":
+        target_students = list(
+            Student.objects.filter(is_active=True, user__is_active=True)
+            .select_related("user")
+            .order_by("user__first_name", "user__username")
+        )
+    else:
+        target_students = list(
+            Student.objects.filter(pk__in=selected_ids)
+            .select_related("user")
+            .order_by("user__first_name", "user__username")
+        )
+
+    if not target_students:
+        messages.error(request, "역량을 적용할 수강생을 선택해주세요.")
+        return _redirect_back(request, "admin_students")
+
+    skill_ids = request.POST.getlist("skill_id")
+    scores = request.POST.getlist("skill_score")
+    notes = request.POST.getlist("skill_note")
+    rows = []
+    used_skill_ids = set()
+    errors = []
+
+    for index, raw_skill_id in enumerate(skill_ids):
+        raw_skill_id = (raw_skill_id or "").strip()
+        raw_score = (scores[index] if index < len(scores) else "").strip()
+        note = (notes[index] if index < len(notes) else "").strip()
+
+        if not raw_skill_id and not raw_score and not note:
+            continue
+        if not raw_skill_id:
+            errors.append(f"{index + 1}번째 행의 역량을 선택해주세요.")
+            continue
+        if not raw_skill_id.isdigit():
+            errors.append(f"{index + 1}번째 행의 역량값이 올바르지 않습니다.")
+            continue
+
+        skill_id = int(raw_skill_id)
+        if skill_id in used_skill_ids:
+            errors.append(f"{index + 1}번째 행에 같은 역량이 중복되었습니다.")
+            continue
+        used_skill_ids.add(skill_id)
+
+        try:
+            score = int(raw_score)
+        except (TypeError, ValueError):
+            errors.append(f"{index + 1}번째 행의 점수를 입력해주세요.")
+            continue
+
+        if not 0 <= score <= 100:
+            errors.append(f"{index + 1}번째 행의 점수는 0~100 사이여야 합니다.")
+            continue
+        if len(note) > 300:
+            errors.append(f"{index + 1}번째 행의 메모는 300자 이하로 입력해주세요.")
+            continue
+
+        skill = Skill.objects.filter(pk=skill_id).first()
+        if not skill:
+            errors.append(f"{index + 1}번째 행의 역량을 찾을 수 없습니다.")
+            continue
+        rows.append((skill, score, note))
+
+    if errors:
+        for error in errors[:6]:
+            messages.error(request, error)
+        if len(errors) > 6:
+            messages.error(request, f"외 {len(errors) - 6}건의 입력 오류가 있습니다.")
+        return _redirect_back(request, "admin_students")
+    if not rows:
+        messages.error(request, "입력할 역량을 한 개 이상 추가해주세요.")
+        return _redirect_back(request, "admin_students")
+
+    created_count = updated_count = 0
+    for student in target_students:
+        for skill, score, note in rows:
+            _, created = StudentSkill.objects.update_or_create(
+                student=student,
+                skill=skill,
+                defaults={"score": score, "note": note},
+            )
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+
+    target_label = "전체 활성 수강생" if target_mode == "all_active" else "선택 수강생"
+    messages.success(
+        request,
+        f"{target_label} {len(target_students)}명에게 역량 {len(rows)}개를 일괄 적용했습니다. "
+        f"(신규 {created_count}개 / 수정 {updated_count}개)",
+    )
+    return _redirect_back(request, "admin_students")
