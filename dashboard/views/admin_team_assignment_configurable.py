@@ -10,7 +10,7 @@ from ..models import (
     TeamEvaluationScore,
     TeamMembership,
 )
-from ..services.result_service import _recalculate_round_results
+from ..services.result_service import recalculate_round_results
 from ..services.seed_service import cumulative_seed_scores_before, previous_round_for
 from ..services.team_assignment_service import (
     balanced_random_assignment,
@@ -95,7 +95,7 @@ def admin_auto_preview(request):
                 or PersonalEvaluationScore.objects.filter(evaluation__evaluation_round=prior_round).exists()
             )
             if has_raw_scores:
-                _recalculate_round_results(prior_round)
+                recalculate_round_results(prior_round)
         seed_scores = cumulative_seed_scores_before(evaluation_round)
 
     grade_map = {}
