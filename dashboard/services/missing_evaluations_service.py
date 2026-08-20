@@ -7,6 +7,7 @@ from dashboard.models import (
     TeamEvaluation,
     TeamMembership,
 )
+from dashboard.services.official_import_service import official_response_counts
 
 
 def build_missing_evaluations_data(
@@ -30,6 +31,16 @@ def build_missing_evaluations_data(
     }
 
     query = (query or "").strip().lower()
+
+    # 공식 CSV import 회차는 raw 응답 자체가 제출 완료 원본이다.
+    # canonical 테이블의 unique 제약/소속 투영 때문에 생긴 가짜 미제출 조합을 만들지 않는다.
+    official_counts = official_response_counts(selected_round)
+    if official_counts:
+        summary["total_missing"] = 0
+        summary["official_import"] = True
+        summary["official_team_responses"] = official_counts["team"]
+        summary["official_personal_responses"] = official_counts["personal"]
+        return {"rows": [], "summary": summary}
 
     if selected_round:
         memberships_qs = list(
@@ -137,7 +148,6 @@ def build_missing_evaluations_data(
                     }
                 )
 
-        # Reuse the existing FIX62 completion rules supplied by the view layer.
         complete_team_ids = complete_team_evaluator_ids(selected_round)
         complete_personal_ids = complete_personal_evaluator_ids(selected_round)
 
