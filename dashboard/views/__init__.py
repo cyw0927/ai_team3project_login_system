@@ -60,3 +60,6 @@ from .admin_missing import admin_missing_evaluations
 # Student management now supports whole-result filtering by evaluation status,
 # rather than hiding only rows on the current pagination page.
 from .admin_students_filtered import admin_students
+
+# FIFA-style team assignment uses administrator-adjustable A/B/C/D boundaries.
+from .admin_team_assignment_configurable import admin_auto_preview
