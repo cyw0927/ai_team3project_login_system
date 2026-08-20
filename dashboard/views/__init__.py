@@ -2,7 +2,6 @@ from ..services.seed_service import cumulative_seed_scores_before
 
 from .auth import *
 from .admin_dashboard import *
-from .admin_students import *
 from .admin_rounds import *
 from .admin_teams import *
 from .admin_evaluations import *
@@ -42,7 +41,7 @@ from .student_hr import (
     student_hr_tasks,
 )
 
-# Dedicated admin views override remaining legacy implementations imported above.
+# Dedicated admin views.
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
@@ -53,12 +52,31 @@ from .admin_result_export import admin_evaluation_results_excel_export
 from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
 from .admin_student_list import admin_students
 from .admin_student_excel import admin_students_excel_export, admin_students_excel_upload
+from .admin_student_crud import (
+    admin_student_create,
+    admin_student_delete,
+    admin_student_reset_password,
+    admin_student_toggle_active,
+    admin_student_update,
+)
+from .admin_student_detail import (
+    admin_student_comment_delete,
+    admin_student_comment_save,
+    admin_student_detail,
+    admin_student_skill_delete,
+    admin_student_skill_save,
+)
+from .admin_student_messages import (
+    admin_student_message_send,
+    admin_students_bulk_message_send,
+)
 from .admin_skills import (
     admin_skill_create,
     admin_skill_delete,
     admin_skill_sync_all,
     admin_skill_update,
     admin_skills,
+    admin_students_bulk_skill_save,
 )
 from .admin_team_assignment_configurable import admin_auto_preview
 from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
