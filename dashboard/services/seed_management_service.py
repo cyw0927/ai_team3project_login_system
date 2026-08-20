@@ -1,12 +1,12 @@
 """Admin Seed-management data preparation and weight validation."""
 
-import math
 from decimal import Decimal
 
 from django.core.paginator import Paginator
 
 from dashboard.models import EvaluationRound, Student, StudentResult
 from dashboard.services.seed_service import cumulative_seed_scores_before
+from dashboard.services.team_assignment_service import DEFAULT_POT_CUTOFFS, pot_count_preview
 
 
 def parse_seed_weights(seed_weight_raw, team_weight_raw, personal_weight_raw):
@@ -124,20 +124,24 @@ def build_seed_management_context(selected_round, page_number=None):
             })
 
         seed_rows.sort(key=lambda row: float(row["seed_score"] or 0), reverse=True)
-        pot_counts = {"A": 0, "B": 0, "C": 0, "D": 0}
         total_seed_rows = len(seed_rows)
-        a_cut = math.ceil(total_seed_rows * 0.20) if total_seed_rows else 0
-        b_cut = math.ceil(total_seed_rows * 0.50) if total_seed_rows else 0
-        c_cut = math.ceil(total_seed_rows * 0.80) if total_seed_rows else 0
+        a_pct, b_pct, c_pct = DEFAULT_POT_CUTOFFS
+        expected_counts = pot_count_preview(total_seed_rows, DEFAULT_POT_CUTOFFS)
+        rank_limits = {
+            "A": expected_counts["A"],
+            "B": expected_counts["A"] + expected_counts["B"],
+            "C": expected_counts["A"] + expected_counts["B"] + expected_counts["C"],
+        }
+        pot_counts = {"A": 0, "B": 0, "C": 0, "D": 0}
 
         for index, row in enumerate(seed_rows, start=1):
             row["seed_rank"] = index
             percentile = (index / total_seed_rows) * 100 if total_seed_rows else 100
-            if index <= a_cut:
+            if index <= rank_limits["A"]:
                 pot_grade = "A"
-            elif index <= b_cut:
+            elif index <= rank_limits["B"]:
                 pot_grade = "B"
-            elif index <= c_cut:
+            elif index <= rank_limits["C"]:
                 pot_grade = "C"
             else:
                 pot_grade = "D"
@@ -146,10 +150,10 @@ def build_seed_management_context(selected_round, page_number=None):
             pot_counts[pot_grade] += 1
 
         for grade, label, range_label in [
-            ("A", "최상위 포트", "상위 20%"),
-            ("B", "상위 포트", "20~50%"),
-            ("C", "중간 포트", "50~80%"),
-            ("D", "하위 포트", "80~100%"),
+            ("A", "최상위 포트", f"상위 {a_pct}%"),
+            ("B", "상위 포트", f"{a_pct}~{b_pct}%"),
+            ("C", "중간 포트", f"{b_pct}~{c_pct}%"),
+            ("D", "하위 포트", f"{c_pct}~100%"),
         ]:
             count = pot_counts[grade]
             pot_summary.append({
