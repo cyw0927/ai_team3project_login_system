@@ -1,3 +1,4 @@
+from django.db import connection
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
@@ -13,12 +14,50 @@ from dashboard.models import (
     TeamResult,
 )
 
+RAW_TABLE = "dashboard_officialevaluationresponse"
+
 
 def _selected_round(request, rounds):
     round_id = request.GET.get("round") or request.POST.get("round_id")
     if round_id:
         return rounds.filter(pk=round_id).first()
     return rounds.first()
+
+
+def _official_raw_progress(evaluation_round):
+    """Return source-row progress for imported AX2 rounds.
+
+    Imported data is a completed historical dataset. Its source rows are the
+    authoritative submission count; canonical evaluator-target rows can be fewer
+    because duplicate source responses are intentionally collapsed for tables with
+    unique constraints.
+    """
+    if RAW_TABLE not in connection.introspection.table_names():
+        return None
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT response_type, COUNT(*)
+            FROM {RAW_TABLE}
+            WHERE evaluation_round_id = %s
+            GROUP BY response_type
+            """,
+            [evaluation_round.id],
+        )
+        counts = {response_type: count for response_type, count in cursor.fetchall()}
+
+    team_count = counts.get("team", 0)
+    personal_count = counts.get("personal", 0)
+    if not team_count and not personal_count:
+        return None
+
+    return {
+        "team_required": team_count,
+        "team_completed": team_count,
+        "personal_required": personal_count,
+        "personal_completed": personal_count,
+    }
 
 
 def _submission_progress(evaluation_round, memberships_qs, active_teams, attendance_map):
@@ -160,7 +199,13 @@ def build_evaluation_results_context(request):
                 student_id__in=[m.student_id for m in memberships_qs],
             ).values_list("student_id", "status")
         )
-        stats.update(_submission_progress(selected_round, memberships_qs, active_teams, attendance_map))
+
+        official_progress = _official_raw_progress(selected_round)
+        if official_progress:
+            stats.update(official_progress)
+        else:
+            stats.update(_submission_progress(selected_round, memberships_qs, active_teams, attendance_map))
+
         required_total = stats["team_required"] + stats["personal_required"]
         completed_total = min(stats["team_completed"], stats["team_required"]) + min(
             stats["personal_completed"], stats["personal_required"]
