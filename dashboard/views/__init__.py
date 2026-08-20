@@ -62,3 +62,7 @@ from .admin_home import admin_dashboard
 # Prefer the thin dedicated Seed-management view while retaining the legacy
 # implementation in admin_evaluations.py for staged compatibility.
 from .admin_seed import admin_seed_management
+
+# Prefer the thin dedicated evaluation-results view. The legacy implementation
+# remains in admin_evaluations.py during the staged refactor.
+from .admin_results import admin_evaluation_results
