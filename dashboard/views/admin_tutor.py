@@ -15,7 +15,7 @@ from ..models import (
     TeamEvaluation,
     TeamEvaluationScore,
 )
-from ..services.result_service import _recalculate_round_results
+from ..services.result_service import recalculate_round_results
 from ..services.scoring_policy import (
     DEFAULT_PERSONAL_WEIGHT,
     DEFAULT_TEAM_WEIGHT,
@@ -149,7 +149,7 @@ def admin_tutor_evaluations(request):
                     defaults={"score": score_values[criterion.id]},
                 )
 
-            _recalculate_round_results(selected_round)
+            recalculate_round_results(selected_round)
             messages.success(request, f"{team.name} 튜터 평가와 코멘트를 저장했습니다.")
             return redirect(f"/management/tutor-evaluations/?round={selected_round.id}#team-{team.id}")
 
@@ -228,7 +228,7 @@ def admin_result_weights_save(request):
     round_obj.personal_weight = values["personal_weight"]
     round_obj.save(update_fields=["team_weight", "personal_weight", "updated_at"])
 
-    _recalculate_round_results(round_obj)
+    recalculate_round_results(round_obj)
     messages.success(
         request,
         f"가중치를 팀 {values['team_weight']}% / 개인 {values['personal_weight']}% / "
