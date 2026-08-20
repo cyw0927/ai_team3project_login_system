@@ -70,6 +70,9 @@
       <li class="nav-item {% if request.resolver_match.url_name == 'admin_missing_evaluations' %}active{% endif %}">
         <a class="nav-link" href="{% url 'admin_missing_evaluations' %}"><i class="bi bi-clipboard-check"></i><span class="menu-title">평가 진행 관리</span></a>
       </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'admin_tutor_evaluations' %}active{% endif %}">
+        <a class="nav-link" href="{% url 'admin_tutor_evaluations' %}"><i class="bi bi-person-workspace"></i><span class="menu-title">튜터 평가</span></a>
+      </li>
 
       <li class="ax-sidebar-section">결과</li>
       <li class="nav-item {% if 'score' in request.resolver_match.url_name or 'ranking' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or request.resolver_match.url_name == 'admin_seed_management' %}active{% endif %}">
