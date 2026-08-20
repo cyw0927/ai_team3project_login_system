@@ -183,8 +183,116 @@
   border-radius: 999px !important;
 }
 
+/* Result page: keep the overview row as a clean 2-column layout. */
+.result-overview-grid.result-overview-two-column {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: stretch;
+}
+.result-overview-two-column > .ax-work-card {
+  min-width: 0;
+  height: 100%;
+}
+.result-toolbar-buttons {
+  align-items: end;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.result-publish-shortcut {
+  white-space: nowrap;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Evaluation template page: lock the columns/rows so the workspace reads as one grid. */
+.template-layout {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+}
+.template-list-panel,
+.template-editor-panel {
+  min-width: 0;
+  height: 100%;
+}
+.template-list-panel {
+  border-right: 1px solid #ece8f5;
+}
+.template-list-item {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  column-gap: .75rem !important;
+}
+.template-list-copy {
+  min-width: 0;
+}
+.template-list-copy b,
+.template-list-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: stretch;
+}
+.template-mini-stats > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.criterion-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.criterion-table th,
+.criterion-table td {
+  vertical-align: middle;
+}
+.criterion-table .drag-col { width: 42px; }
+.criterion-table th:nth-child(2) { width: 70px; }
+.criterion-table th:nth-child(3) { width: 24%; }
+.criterion-table th:nth-child(4) { width: auto; }
+.criterion-table th:nth-child(5) { width: 120px; }
+.criterion-table th:nth-child(6) { width: 85px; }
+.criterion-table th:nth-child(7) { width: 130px; }
+.criterion-actions {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .4rem;
+  flex-wrap: nowrap !important;
+}
+.criterion-actions form { margin: 0; }
+.criterion-description {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .template-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .template-list-panel {
+    border-right: 0;
+    border-bottom: 1px solid #ece8f5;
+  }
+}
+
 @media (max-width: 900px) {
   .ax-student-sort-wrap { width: 100%; margin-left: 0; }
   .ax-student-sort-wrap select { flex: 1; }
   .result-highlight-row > div { padding: 0 10px; }
+  .result-overview-grid.result-overview-two-column {
+    grid-template-columns: 1fr !important;
+  }
+  .template-mini-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
