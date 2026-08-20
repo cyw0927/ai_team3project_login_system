@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Avg
@@ -46,8 +44,13 @@ def admin_tutor_evaluations(request):
     rows = []
     completed_count = 0
     can_edit = False
+    tutor_weight = 0
 
     if selected_round:
+        tutor_weight = max(
+            0,
+            100 - int(selected_round.team_weight or 0) - int(selected_round.personal_weight or 0),
+        )
         teams = list(
             Team.objects.filter(evaluation_round=selected_round, is_active=True).order_by("name")
         )
@@ -148,7 +151,10 @@ def admin_tutor_evaluations(request):
             rows.append({
                 "team": team,
                 "evaluation": evaluation,
-                "score_map": score_map,
+                "criterion_rows": [
+                    {"criterion": criterion, "value": score_map.get(criterion.id)}
+                    for criterion in criteria
+                ],
                 "team_tutor_average": all_tutor_averages.get(team.id),
             })
 
@@ -163,6 +169,7 @@ def admin_tutor_evaluations(request):
             completed_count=completed_count,
             team_count=len(teams),
             can_edit=can_edit,
+            tutor_weight=tutor_weight,
         ),
     )
 
@@ -170,12 +177,12 @@ def admin_tutor_evaluations(request):
 @admin_required
 @transaction.atomic
 def admin_result_weights_save(request):
-    """Student team + peer personal + tutor team weights must total 100%."""
+    """Team + personal + tutor weights must total 100%. Tutor is the remainder."""
     round_obj = get_object_or_404(EvaluationRound, id=request.POST.get("round_id"))
     try:
         personal_weight = int(request.POST.get("personal_weight", 30))
         team_weight = int(request.POST.get("team_weight", 40))
-        tutor_weight = int(request.POST.get("tutor_weight", 30))
+        tutor_weight = int(request.POST.get("tutor_weight", 100 - team_weight - personal_weight))
     except (TypeError, ValueError):
         messages.error(request, "가중치는 숫자로 입력해 주세요.")
         return redirect(request.POST.get("next") or "admin_evaluation_results")
@@ -188,14 +195,17 @@ def admin_result_weights_save(request):
         messages.error(request, "팀·개인·튜터 평가 가중치 합계는 100%여야 합니다.")
         return redirect(request.POST.get("next") or "admin_evaluation_results")
 
-    # Existing columns keep the student-side weights; tutor weight is the remainder.
+    # tutor_weight is persisted as the remainder so no schema migration is needed.
+    # Example: team=40, personal=30 => tutor=30.
+    if tutor_weight != 100 - team_weight - personal_weight:
+        messages.error(request, "튜터 가중치는 100%에서 팀·개인 가중치를 뺀 값과 같아야 합니다.")
+        return redirect(request.POST.get("next") or "admin_evaluation_results")
+
     round_obj.team_weight = team_weight
     round_obj.personal_weight = personal_weight
     round_obj.save(update_fields=["team_weight", "personal_weight", "updated_at"])
-    request.session[f"tutor_weight_round_{round_obj.id}"] = tutor_weight
-    request.session.modified = True
 
-    _recalculate_round_results(round_obj, tutor_weight=tutor_weight)
+    _recalculate_round_results(round_obj)
     messages.success(
         request,
         f"가중치를 팀 {team_weight}% / 개인 {personal_weight}% / 튜터 {tutor_weight}%로 저장하고 재계산했습니다.",
