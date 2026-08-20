@@ -16,6 +16,13 @@ from ..models import (
     TeamEvaluationScore,
 )
 from ..services.result_service import _recalculate_round_results
+from ..services.scoring_policy import (
+    DEFAULT_PERSONAL_WEIGHT,
+    DEFAULT_TEAM_WEIGHT,
+    DEFAULT_TUTOR_WEIGHT,
+    tutor_weight_for,
+    validate_score_weights,
+)
 
 
 def _selected_round(request):
@@ -26,14 +33,13 @@ def _selected_round(request):
 
 
 def _tutor_profile(user):
-    """Reuse the evaluation tables without mixing tutors into active students."""
+    """Temporary compatibility bridge until tutor evaluations get a dedicated model."""
     profile, created = Student.objects.get_or_create(
         user=user,
         defaults={"is_active": False, "affiliation": "튜터"},
     )
     if created:
         return profile
-    # Existing staff/student accounts are left untouched; staff status is the tutor discriminator.
     return profile
 
 
@@ -41,7 +47,7 @@ def _tutor_profile(user):
 @require_POST
 @transaction.atomic
 def admin_round_create(request):
-    """Create new rounds with the new default scoring policy: 40/30/30."""
+    """Create new rounds with the default 40/30/30 scoring policy."""
     form = EvaluationRoundForm(request.POST)
     if not form.is_valid():
         for errors in form.errors.values():
@@ -52,12 +58,13 @@ def admin_round_create(request):
     evaluation_round = form.save(commit=False)
     evaluation_round.status = EvaluationRound.Status.SCHEDULED
     evaluation_round.evaluation_started = False
-    evaluation_round.team_weight = 40
-    evaluation_round.personal_weight = 30
+    evaluation_round.team_weight = DEFAULT_TEAM_WEIGHT
+    evaluation_round.personal_weight = DEFAULT_PERSONAL_WEIGHT
     evaluation_round.save()
     messages.success(
         request,
-        f"{evaluation_round.name} 회차를 생성했습니다. 기본 가중치는 학생 팀 40% / 동료 개인 30% / 튜터 팀 30%입니다.",
+        f"{evaluation_round.name} 회차를 생성했습니다. 기본 가중치는 학생 팀 {DEFAULT_TEAM_WEIGHT}% / "
+        f"동료 개인 {DEFAULT_PERSONAL_WEIGHT}% / 튜터 팀 {DEFAULT_TUTOR_WEIGHT}%입니다.",
     )
     return redirect("admin_rounds")
 
@@ -74,10 +81,7 @@ def admin_tutor_evaluations(request):
     tutor_weight = 0
 
     if selected_round:
-        tutor_weight = max(
-            0,
-            100 - int(selected_round.team_weight or 0) - int(selected_round.personal_weight or 0),
-        )
+        tutor_weight = tutor_weight_for(selected_round)
         teams = list(
             Team.objects.filter(evaluation_round=selected_round, is_active=True).order_by("name")
         )
@@ -179,11 +183,7 @@ def admin_tutor_evaluations(request):
                 "team": team,
                 "evaluation": evaluation,
                 "criterion_rows": [
-                    {
-                        "criterion": criterion,
-                        "value": score_map.get(criterion.id),
-                        "options": range(1, criterion.max_score + 1),
-                    }
+                    {"criterion": criterion, "value": score_map.get(criterion.id)}
                     for criterion in criteria
                 ],
                 "team_tutor_average": all_tutor_averages.get(team.id),
@@ -206,39 +206,32 @@ def admin_tutor_evaluations(request):
 
 
 @admin_required
+@require_POST
 @transaction.atomic
 def admin_result_weights_save(request):
-    """Team + personal + tutor weights must total 100%. Tutor is the remainder."""
     round_obj = get_object_or_404(EvaluationRound, id=request.POST.get("round_id"))
-    try:
-        personal_weight = int(request.POST.get("personal_weight", 30))
-        team_weight = int(request.POST.get("team_weight", 40))
-        tutor_weight = int(request.POST.get("tutor_weight", 100 - team_weight - personal_weight))
-    except (TypeError, ValueError):
-        messages.error(request, "가중치는 숫자로 입력해 주세요.")
+    values, error = validate_score_weights(
+        request.POST.get("team_weight", DEFAULT_TEAM_WEIGHT),
+        request.POST.get("personal_weight", DEFAULT_PERSONAL_WEIGHT),
+        request.POST.get("tutor_weight", DEFAULT_TUTOR_WEIGHT),
+    )
+    if error:
+        messages.error(request, error)
         return redirect(request.POST.get("next") or "admin_evaluation_results")
 
-    weights = (team_weight, personal_weight, tutor_weight)
-    if any(weight < 0 or weight > 100 for weight in weights):
-        messages.error(request, "가중치는 0~100 사이여야 합니다.")
-        return redirect(request.POST.get("next") or "admin_evaluation_results")
-    if sum(weights) != 100:
-        messages.error(request, "팀·개인·튜터 평가 가중치 합계는 100%여야 합니다.")
-        return redirect(request.POST.get("next") or "admin_evaluation_results")
-
-    # tutor_weight is persisted as the remainder so no schema migration is needed.
-    # Example: team=40, personal=30 => tutor=30.
-    if tutor_weight != 100 - team_weight - personal_weight:
+    expected_tutor = 100 - values["team_weight"] - values["personal_weight"]
+    if values["tutor_weight"] != expected_tutor:
         messages.error(request, "튜터 가중치는 100%에서 팀·개인 가중치를 뺀 값과 같아야 합니다.")
         return redirect(request.POST.get("next") or "admin_evaluation_results")
 
-    round_obj.team_weight = team_weight
-    round_obj.personal_weight = personal_weight
+    round_obj.team_weight = values["team_weight"]
+    round_obj.personal_weight = values["personal_weight"]
     round_obj.save(update_fields=["team_weight", "personal_weight", "updated_at"])
 
     _recalculate_round_results(round_obj)
     messages.success(
         request,
-        f"가중치를 팀 {team_weight}% / 개인 {personal_weight}% / 튜터 {tutor_weight}%로 저장하고 재계산했습니다.",
+        f"가중치를 팀 {values['team_weight']}% / 개인 {values['personal_weight']}% / "
+        f"튜터 {values['tutor_weight']}%로 저장하고 재계산했습니다.",
     )
     return redirect(request.POST.get("next") or "admin_evaluation_results")
