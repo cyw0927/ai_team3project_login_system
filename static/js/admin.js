@@ -189,6 +189,89 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 관리자 > 자동 팀 편성: A/B/C/D 누적 경계값을 직접 조정한다.
+  const autoPreviewForm = document.getElementById("autoPreviewForm");
+  const potGuide = autoPreviewForm?.querySelector(".pot-rule-guide");
+  if (autoPreviewForm && potGuide) {
+    const totalText = autoPreviewForm.querySelector(".static-value strong")?.textContent?.trim();
+    const totalStudents = Number.parseInt(totalText || "0", 10) || 0;
+    const storageKey = `ax-pot-cutoffs-${autoPreviewForm.querySelector("input[name='round_id']")?.value || "default"}`;
+    let saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+    } catch (_) {
+      saved = null;
+    }
+    const initial = Array.isArray(saved) && saved.length === 3 ? saved : [20, 50, 80];
+
+    potGuide.innerHTML = `
+      <div class="w-100 mb-2">
+        <strong class="d-block mb-1">포트 경계 직접 설정</strong>
+        <small class="text-muted">숫자는 누적 상한입니다. 예: 20 / 50 / 80 → A 0~20%, B 20~50%, C 50~80%, D 80~100%.</small>
+      </div>
+      <div class="d-flex gap-2 flex-wrap w-100" id="potCutoffControls">
+        <label class="input-group input-group-sm" style="max-width:150px"><span class="input-group-text pot-a">A 끝</span><input class="form-control" type="number" id="potACutoff" min="1" max="97" value="${initial[0]}"><span class="input-group-text">%</span></label>
+        <label class="input-group input-group-sm" style="max-width:150px"><span class="input-group-text pot-b">B 끝</span><input class="form-control" type="number" id="potBCutoff" min="2" max="98" value="${initial[1]}"><span class="input-group-text">%</span></label>
+        <label class="input-group input-group-sm" style="max-width:150px"><span class="input-group-text pot-c">C 끝</span><input class="form-control" type="number" id="potCCutoff" min="3" max="99" value="${initial[2]}"><span class="input-group-text">%</span></label>
+      </div>
+      <div class="w-100 mt-2 d-flex gap-2 flex-wrap" id="potBandSummary"></div>
+      <small class="w-100 mt-1" id="potCountSummary"></small>`;
+
+    ["pot_a_cutoff", "pot_b_cutoff", "pot_c_cutoff"].forEach((name, index) => {
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.name = name;
+      hidden.value = initial[index];
+      autoPreviewForm.appendChild(hidden);
+    });
+
+    const aInput = document.getElementById("potACutoff");
+    const bInput = document.getElementById("potBCutoff");
+    const cInput = document.getElementById("potCCutoff");
+    const bandSummary = document.getElementById("potBandSummary");
+    const countSummary = document.getElementById("potCountSummary");
+    const potRuleCopy = autoPreviewForm.querySelector(".pot-rule-option small");
+
+    const calculateCounts = (a, b, c) => {
+      const aCount = Math.ceil(totalStudents * a / 100);
+      const bCount = Math.max(Math.ceil(totalStudents * b / 100) - aCount, 0);
+      const cCount = Math.max(Math.ceil(totalStudents * c / 100) - Math.ceil(totalStudents * b / 100), 0);
+      const dCount = Math.max(totalStudents - Math.ceil(totalStudents * c / 100), 0);
+      return { A: aCount, B: bCount, C: cCount, D: dCount };
+    };
+
+    const refreshPotUi = () => {
+      const a = Number.parseInt(aInput.value, 10);
+      const b = Number.parseInt(bInput.value, 10);
+      const c = Number.parseInt(cInput.value, 10);
+      const valid = Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && 0 < a && a < b && b < c && c < 100;
+      [aInput, bInput, cInput].forEach((input) => input.classList.toggle("is-invalid", !valid));
+      autoPreviewForm.querySelector("button[type='submit']").disabled = !valid;
+      if (!valid) {
+        bandSummary.innerHTML = '<span class="text-danger small fw-semibold">0 &lt; A &lt; B &lt; C &lt; 100 순서로 입력하세요.</span>';
+        countSummary.textContent = "";
+        return;
+      }
+      const counts = calculateCounts(a, b, c);
+      bandSummary.innerHTML = `
+        <span class="badge bg-light text-dark border">A 0~${a}%</span>
+        <span class="badge bg-light text-dark border">B ${a}~${b}%</span>
+        <span class="badge bg-light text-dark border">C ${b}~${c}%</span>
+        <span class="badge bg-light text-dark border">D ${c}~100%</span>`;
+      countSummary.textContent = totalStudents
+        ? `활성 ${totalStudents}명에 모두 Seed가 있다고 가정하면 A ${counts.A}명 · B ${counts.B}명 · C ${counts.C}명 · D ${counts.D}명입니다. 실제 첫 회차에는 이전 Seed가 없어 랜덤으로 대체될 수 있습니다.`
+        : "활성 수강생 수를 확인할 수 없습니다.";
+      if (potRuleCopy) potRuleCopy.textContent = `A ${a}% · B ${b}% · C ${c}% 누적 경계로 포트별 랜덤 추첨`;
+      autoPreviewForm.querySelector("input[name='pot_a_cutoff']").value = a;
+      autoPreviewForm.querySelector("input[name='pot_b_cutoff']").value = b;
+      autoPreviewForm.querySelector("input[name='pot_c_cutoff']").value = c;
+      sessionStorage.setItem(storageKey, JSON.stringify([a, b, c]));
+    };
+
+    [aInput, bInput, cInput].forEach((input) => input.addEventListener("input", refreshPotUi));
+    refreshPotUi();
+  }
+
   // 관리자 > 평가 결과: 학생 공개 설정을 상단 액션으로 이동하고 요약 줄은 2열로 정리한다.
   const resultToolbarButtons = document.querySelector(".result-toolbar-buttons");
   const publishCard = document.querySelector(".result-publish-card");

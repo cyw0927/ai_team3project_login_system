@@ -4,6 +4,38 @@ import math
 import random
 
 
+DEFAULT_POT_CUTOFFS = (20, 50, 80)
+
+
+def normalize_pot_cutoffs(pot_cutoffs=None):
+    """Return validated cumulative A/B/C cutoffs.
+
+    Cutoffs are cumulative percentages: A=0~A, B=A~B, C=B~C, D=C~100.
+    """
+    cutoffs = pot_cutoffs or DEFAULT_POT_CUTOFFS
+    try:
+        a_cutoff, b_cutoff, c_cutoff = (int(value) for value in cutoffs)
+    except (TypeError, ValueError):
+        raise ValueError("포트 구간은 숫자로 입력해야 합니다.")
+    if not (1 <= a_cutoff < b_cutoff < c_cutoff < 100):
+        raise ValueError("포트 구간은 0 < A < B < C < 100 순서여야 합니다.")
+    return a_cutoff, b_cutoff, c_cutoff
+
+
+def pot_count_preview(total, pot_cutoffs=None):
+    """Return the exact A/B/C/D head counts produced by the rank cutoffs."""
+    a_pct, b_pct, c_pct = normalize_pot_cutoffs(pot_cutoffs)
+    a_cut = math.ceil(total * a_pct / 100) if total else 0
+    b_cut = math.ceil(total * b_pct / 100) if total else 0
+    c_cut = math.ceil(total * c_pct / 100) if total else 0
+    return {
+        "A": a_cut,
+        "B": max(b_cut - a_cut, 0),
+        "C": max(c_cut - b_cut, 0),
+        "D": max(total - c_cut, 0),
+    }
+
+
 def snake_seed_assignment(students, team_count, seed_scores):
     ordered = sorted(
         students,
@@ -19,8 +51,15 @@ def snake_seed_assignment(students, team_count, seed_scores):
     return buckets
 
 
-def pot_seed_assignment(students, team_count, seed_scores, previous_team_map=None):
+def pot_seed_assignment(
+    students,
+    team_count,
+    seed_scores,
+    previous_team_map=None,
+    pot_cutoffs=None,
+):
     previous_team_map = previous_team_map or {}
+    a_pct, b_pct, c_pct = normalize_pot_cutoffs(pot_cutoffs)
     seeded = [student for student in students if student.id in seed_scores]
     unseeded = [student for student in students if student.id not in seed_scores]
     ordered = sorted(
@@ -32,9 +71,9 @@ def pot_seed_assignment(students, team_count, seed_scores, previous_team_map=Non
 
     grade_map = {student.id: "U" for student in unseeded}
     pots = {"A": [], "B": [], "C": [], "D": []}
-    a_cut = math.ceil(total * 0.20) if total else 0
-    b_cut = math.ceil(total * 0.30) if total else 0
-    c_cut = math.ceil(total * 0.80) if total else 0
+    a_cut = math.ceil(total * a_pct / 100) if total else 0
+    b_cut = math.ceil(total * b_pct / 100) if total else 0
+    c_cut = math.ceil(total * c_pct / 100) if total else 0
 
     for rank, student in enumerate(ordered, start=1):
         if rank <= a_cut:
@@ -86,7 +125,10 @@ def pot_seed_assignment(students, team_count, seed_scores, previous_team_map=Non
         place(student, "U")
 
     return buckets, grade_map, {
-        "A": len(pots["A"]), "B": len(pots["B"]), "C": len(pots["C"]), "D": len(pots["D"]),
+        "A": len(pots["A"]),
+        "B": len(pots["B"]),
+        "C": len(pots["C"]),
+        "D": len(pots["D"]),
         "U": len(unseeded),
     }
 
