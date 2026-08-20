@@ -26,6 +26,7 @@ from .admin_result_export import admin_evaluation_results_excel_export
 from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
 from .admin_students_filtered import admin_students
 from .admin_team_assignment_configurable import admin_auto_preview
+from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
 
 # Tutor evaluates whole teams after evaluation start and owns the three-part
 # scoring controls for newly created rounds.
