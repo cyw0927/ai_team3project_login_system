@@ -58,3 +58,7 @@ from .student_results import student_results
 # Prefer the thin dedicated admin dashboard view. The legacy implementation
 # remains in admin_dashboard.py during the staged refactor.
 from .admin_home import admin_dashboard
+
+# Prefer the thin dedicated Seed-management view while retaining the legacy
+# implementation in admin_evaluations.py for staged compatibility.
+from .admin_seed import admin_seed_management
