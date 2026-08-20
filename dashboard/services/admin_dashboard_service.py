@@ -17,6 +17,7 @@ from dashboard.models import (
     TeamEvaluation,
     TeamMembership,
 )
+from dashboard.services.official_import_service import official_response_counts
 
 
 def build_admin_dashboard_context(current_round):
@@ -65,6 +66,14 @@ def build_admin_dashboard_context(current_round):
         personal_submission_count = PersonalEvaluation.objects.filter(
             evaluation_round=current_round, evaluator__is_active=True, is_submitted=True
         ).count()
+
+        # 공식 CSV import 회차는 canonical 조합 수가 아니라 raw 원본 응답 수가 진짜 제출 수다.
+        official_counts = official_response_counts(current_round)
+        if official_counts:
+            team_submission_count = official_counts["team"]
+            personal_submission_count = official_counts["personal"]
+            team_required = official_counts["team"]
+            personal_required = official_counts["personal"]
 
     required_total = team_required + personal_required
     submitted_total = min(team_submission_count, team_required) + min(personal_submission_count, personal_required)
