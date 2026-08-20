@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from .views.student_assignment_compat import student_assignment_info as student_assignment_info_compat
 
 
 urlpatterns = [
@@ -12,7 +11,7 @@ urlpatterns = [
     # 학생
     path("", views.student_home, name="student_home"),
     path("team-info/", views.student_team_info, name="student_team_info"),
-    path("assignment-info/", student_assignment_info_compat, name="student_assignment_info"),
+    path("assignment-info/", views.student_assignment_info, name="student_assignment_info"),
     path("attachments/assignments/<int:assignment_id>/download/", views.assignment_attachment_download, name="assignment_attachment_download"),
     path("attachments/submissions/<int:submission_id>/download/", views.submission_attachment_download, name="submission_attachment_download"),
     path("attachments/student-submissions/<int:submission_id>/download/", views.student_submission_attachment_download, name="student_submission_attachment_download"),
