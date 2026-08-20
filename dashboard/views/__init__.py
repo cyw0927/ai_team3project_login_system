@@ -1,7 +1,6 @@
 from ..services.seed_service import cumulative_seed_scores_before
 
 from .auth import *
-from .admin_dashboard import *
 from .admin_rounds import *
 from .admin_evaluations import *
 from .admin_system import *
@@ -42,6 +41,7 @@ from .student_hr import (
 
 # Dedicated admin views.
 from .admin_home import admin_dashboard
+from .admin_operations import admin_attendance, admin_operations
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
 from .admin_missing import admin_missing_evaluations
