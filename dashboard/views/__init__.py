@@ -63,3 +63,7 @@ from .admin_students_filtered import admin_students
 
 # FIFA-style team assignment uses administrator-adjustable A/B/C/D boundaries.
 from .admin_team_assignment_configurable import admin_auto_preview
+
+# Tutor evaluates whole teams after evaluation start. This import is intentionally
+# last because it also replaces the old two-part result-weight save handler.
+from .admin_tutor import admin_result_weights_save, admin_tutor_evaluations
