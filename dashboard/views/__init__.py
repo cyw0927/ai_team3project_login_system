@@ -1,15 +1,4 @@
-# Legacy views still import _recalculate_round_results from common via wildcard.
-# Keep this single compatibility binding until those large legacy modules are split.
-# Seed/team-assignment helpers are no longer monkey-patched: dedicated views import
-# their services directly.
-from . import common as _common_module
-from ..services.result_service import recalculate_round_results
 from ..services.seed_service import cumulative_seed_scores_before
-
-_common_module._recalculate_round_results = recalculate_round_results
-
-# Public helper alias retained for existing tests/tools during the refactor.
-_recalculate_round_results = recalculate_round_results
 
 from .auth import *
 from .student import *
@@ -26,6 +15,7 @@ from .admin_hr_dashboard import *
 
 # Dedicated thin views override legacy implementations imported above.
 from .student_results import student_results
+from .student_evaluations import student_personal_evaluation, student_team_evaluation
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
