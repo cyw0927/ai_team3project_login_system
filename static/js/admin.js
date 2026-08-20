@@ -36,6 +36,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const emptyRow = tbody?.querySelector("td[colspan]");
 
     if (tbody && headingToolbar && !emptyRow) {
+      const rows = () => Array.from(tbody.querySelectorAll("tr"));
+      const text = (row, index) => (row.children[index]?.textContent || "").trim();
+
+      // AX2 공식 익명화 데이터는 완료된 과거 응답을 import한 회차다.
+      // canonical unique 제약 때문에 중복 원본이 합쳐져도 '미제출'로 표시하지 않는다.
+      const visibleRows = rows();
+      const officialRows = visibleRows.filter((row) =>
+        text(row, 4).includes("AX2 공식 익명화 데이터")
+      );
+      officialRows.forEach((row) => {
+        const statusCell = row.children[6];
+        if (!statusCell) return;
+        statusCell.querySelectorAll(".text-bg-danger").forEach((badge) => badge.remove());
+        if (!statusCell.querySelector(".text-bg-success")) {
+          const badge = document.createElement("span");
+          badge.className = "badge text-bg-success ms-1";
+          badge.textContent = "평가 완료";
+          statusCell.appendChild(badge);
+        }
+        const checkbox = row.querySelector(".student-select-checkbox");
+        if (checkbox) checkbox.dataset.missing = "0";
+      });
+
+      if (officialRows.length && officialRows.length === visibleRows.length) {
+        const missingButton = document.getElementById("selectMissingStudents");
+        if (missingButton) {
+          missingButton.disabled = true;
+          const badge = missingButton.querySelector(".badge");
+          if (badge) badge.textContent = "0";
+        }
+      }
+
       const sortWrap = document.createElement("div");
       sortWrap.className = "ax-student-sort-wrap";
       sortWrap.innerHTML = `
@@ -52,8 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
       headingToolbar.appendChild(sortWrap);
 
       const select = sortWrap.querySelector("select");
-      const rows = () => Array.from(tbody.querySelectorAll("tr"));
-      const text = (row, index) => (row.children[index]?.textContent || "").trim();
       const missingCount = (row) => {
         const match = text(row, 6).match(/미제출\s*(\d+)건/);
         return match ? Number(match[1]) : 0;
