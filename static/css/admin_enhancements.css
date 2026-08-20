@@ -188,12 +188,89 @@
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-items: stretch !important;
-  gap: 18px !important;
+  gap: 26px !important;
+  margin-top: 8px;
 }
 .result-overview-two-column > .ax-work-card {
   min-width: 0;
   height: 100%;
 }
+
+/* Submission + Summary cards: match the breathing room used elsewhere in the admin UI. */
+.result-overview-two-column .result-progress-card,
+.result-overview-two-column .result-highlight-card {
+  min-height: 190px;
+  padding: 26px 28px !important;
+  overflow: hidden;
+}
+.result-overview-two-column .section-eyebrow {
+  margin-bottom: 6px;
+}
+.result-overview-two-column .section-heading-row {
+  margin-bottom: 24px;
+  align-items: flex-start;
+}
+.result-overview-two-column .section-heading-row h5 {
+  margin: 0;
+  font-size: 1.12rem;
+}
+.result-progress-number {
+  padding-top: 2px;
+  font-size: 1.45rem !important;
+  line-height: 1;
+}
+.result-progress-track {
+  margin: 6px 0 18px !important;
+  height: 10px !important;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #edf1f8;
+}
+.result-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.result-progress-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #667085;
+  font-size: .82rem;
+}
+.result-highlight-card > .section-eyebrow {
+  margin-bottom: 20px;
+}
+.result-highlight-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  min-height: 62px;
+  margin: 0 -4px;
+}
+.result-highlight-row > div {
+  min-width: 0;
+  padding: 0 24px;
+}
+.result-highlight-row > div:first-child {
+  padding-left: 4px;
+}
+.result-highlight-row > div:last-child {
+  padding-right: 4px;
+}
+.result-highlight-row span,
+.result-highlight-row strong {
+  display: block;
+}
+.result-highlight-row span {
+  margin-bottom: 8px;
+}
+.result-top-student {
+  margin-top: 24px !important;
+  padding: 10px 14px;
+}
+
 .result-toolbar-buttons {
   align-items: end;
   flex-wrap: wrap;
@@ -325,6 +402,12 @@
   .result-highlight-row > div { padding: 0 10px; }
   .result-overview-grid.result-overview-two-column {
     grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .result-overview-two-column .result-progress-card,
+  .result-overview-two-column .result-highlight-card {
+    min-height: auto;
+    padding: 22px !important;
   }
   .template-mini-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
