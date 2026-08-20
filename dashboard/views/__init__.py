@@ -52,6 +52,7 @@ from .admin_result_adjustments import admin_student_result_adjust
 from .admin_result_export import admin_evaluation_results_excel_export
 from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
 from .admin_student_list import admin_students
+from .admin_student_excel import admin_students_excel_export, admin_students_excel_upload
 from .admin_skills import (
     admin_skill_create,
     admin_skill_delete,
