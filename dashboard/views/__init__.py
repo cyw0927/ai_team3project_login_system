@@ -1,7 +1,7 @@
 from ..services.seed_service import cumulative_seed_scores_before
 
 from .auth import login_page, logout_view
-from .errors import *
+from .errors import error_403, error_404, error_500
 from .admin_rounds import (
     admin_round_apply_templates,
     admin_round_detail,
