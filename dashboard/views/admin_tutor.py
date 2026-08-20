@@ -3,8 +3,10 @@ from django.db import transaction
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .common import _base_context, _current_round, admin_required
+from ..forms import EvaluationRoundForm
 from ..models import (
     EvaluationRound,
     EvaluationTemplate,
@@ -33,6 +35,31 @@ def _tutor_profile(user):
         return profile
     # Existing staff/student accounts are left untouched; staff status is the tutor discriminator.
     return profile
+
+
+@admin_required
+@require_POST
+@transaction.atomic
+def admin_round_create(request):
+    """Create new rounds with the new default scoring policy: 40/30/30."""
+    form = EvaluationRoundForm(request.POST)
+    if not form.is_valid():
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+        return redirect("admin_rounds")
+
+    evaluation_round = form.save(commit=False)
+    evaluation_round.status = EvaluationRound.Status.SCHEDULED
+    evaluation_round.evaluation_started = False
+    evaluation_round.team_weight = 40
+    evaluation_round.personal_weight = 30
+    evaluation_round.save()
+    messages.success(
+        request,
+        f"{evaluation_round.name} 회차를 생성했습니다. 기본 가중치는 학생 팀 40% / 동료 개인 30% / 튜터 팀 30%입니다.",
+    )
+    return redirect("admin_rounds")
 
 
 @admin_required
