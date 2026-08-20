@@ -127,7 +127,7 @@ def build_seed_management_context(selected_round, page_number=None):
         pot_counts = {"A": 0, "B": 0, "C": 0, "D": 0}
         total_seed_rows = len(seed_rows)
         a_cut = math.ceil(total_seed_rows * 0.20) if total_seed_rows else 0
-        b_cut = math.ceil(total_seed_rows * 0.30) if total_seed_rows else 0
+        b_cut = math.ceil(total_seed_rows * 0.50) if total_seed_rows else 0
         c_cut = math.ceil(total_seed_rows * 0.80) if total_seed_rows else 0
 
         for index, row in enumerate(seed_rows, start=1):
@@ -147,8 +147,8 @@ def build_seed_management_context(selected_round, page_number=None):
 
         for grade, label, range_label in [
             ("A", "최상위 포트", "상위 20%"),
-            ("B", "상위 포트", "20~30%"),
-            ("C", "중간 포트", "30~80%"),
+            ("B", "상위 포트", "20~50%"),
+            ("C", "중간 포트", "50~80%"),
             ("D", "하위 포트", "80~100%"),
         ]:
             count = pot_counts[grade]
