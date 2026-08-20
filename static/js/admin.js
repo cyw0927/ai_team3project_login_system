@@ -39,33 +39,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const rows = () => Array.from(tbody.querySelectorAll("tr"));
       const text = (row, index) => (row.children[index]?.textContent || "").trim();
 
-      // AX2 공식 익명화 데이터는 완료된 과거 응답을 import한 회차다.
-      // canonical unique 제약 때문에 중복 원본이 합쳐져도 '미제출'로 표시하지 않는다.
-      const visibleRows = rows();
-      const officialRows = visibleRows.filter((row) =>
-        text(row, 4).includes("AX2 공식 익명화 데이터")
+      // 목록 상단의 '전체/현재' 표시는 과거 템플릿의 paginator 접근 때문에
+      // 0명으로 보일 수 있었다. 카드의 실제 DB 전체 수강생 수를 기준으로
+      // '전체 등록 / 현재 페이지' 의미가 명확하도록 보정한다.
+      const statCards = Array.from(document.querySelectorAll(".ax-mini-stat"));
+      const totalCard = statCards.find((card) =>
+        (card.textContent || "").includes("전체 수강생")
       );
-      officialRows.forEach((row) => {
-        const statusCell = row.children[6];
-        if (!statusCell) return;
-        statusCell.querySelectorAll(".text-bg-danger").forEach((badge) => badge.remove());
-        if (!statusCell.querySelector(".text-bg-success")) {
-          const badge = document.createElement("span");
-          badge.className = "badge text-bg-success ms-1";
-          badge.textContent = "평가 완료";
-          statusCell.appendChild(badge);
-        }
-        const checkbox = row.querySelector(".student-select-checkbox");
-        if (checkbox) checkbox.dataset.missing = "0";
-      });
-
-      if (officialRows.length && officialRows.length === visibleRows.length) {
-        const missingButton = document.getElementById("selectMissingStudents");
-        if (missingButton) {
-          missingButton.disabled = true;
-          const badge = missingButton.querySelector(".badge");
-          if (badge) badge.textContent = "0";
-        }
+      const totalValue = totalCard?.querySelector(".ax-mini-stat-value")?.textContent?.trim();
+      const countBadge = headingToolbar.querySelector(".badge.bg-light.text-primary.border");
+      if (countBadge && totalValue && /^\d+$/.test(totalValue)) {
+        countBadge.textContent = `전체 등록 ${totalValue}명 · 현재 페이지 ${rows().length}명`;
       }
 
       const sortWrap = document.createElement("div");
