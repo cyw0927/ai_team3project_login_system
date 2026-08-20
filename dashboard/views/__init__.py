@@ -54,7 +54,7 @@ from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
 
 # Prefer the thin dedicated missing-evaluations view. The legacy implementation
-# remains in admin_evaluations.py during the staged refactor.
+# remains in admin_evaluations.py for staged compatibility.
 from .admin_missing import admin_missing_evaluations
 
 # Student management now supports whole-result filtering by evaluation status,
@@ -65,5 +65,5 @@ from .admin_students_filtered import admin_students
 from .admin_team_assignment_configurable import admin_auto_preview
 
 # Tutor evaluates whole teams after evaluation start. This import is intentionally
-# last because it also replaces the old two-part result-weight save handler.
-from .admin_tutor import admin_result_weights_save, admin_tutor_evaluations
+# last because it replaces old handlers with the three-part scoring policy.
+from .admin_tutor import admin_result_weights_save, admin_round_create, admin_tutor_evaluations
