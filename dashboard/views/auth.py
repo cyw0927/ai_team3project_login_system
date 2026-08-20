@@ -107,7 +107,9 @@ def signup_page(request):
     form = StudentSignupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        login(request, user)
+        # ModelBackend와 allauth backend를 함께 쓰므로 신규 User를 직접 login()할 때
+        # 어떤 backend로 세션을 만들지 명시해야 한다.
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         request.session.set_expiry(0)
         messages.success(request, "회원가입이 완료되었습니다. 수강생 계정으로 로그인했습니다.")
         return redirect("student_home")
