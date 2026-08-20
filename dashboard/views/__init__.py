@@ -15,7 +15,11 @@ from .admin_hr_dashboard import *
 
 # Dedicated thin views override legacy implementations imported above.
 from .student_results import student_results
-from .student_evaluations import student_personal_evaluation, student_team_evaluation
+from .student_evaluations import (
+    student_evaluation_status,
+    student_personal_evaluation,
+    student_team_evaluation,
+)
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
