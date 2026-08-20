@@ -183,8 +183,154 @@
   border-radius: 999px !important;
 }
 
+/* Result overview: after moving student publish to the toolbar, keep two equal columns. */
+.result-overview-grid.result-overview-two-column {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 18px !important;
+}
+.result-overview-two-column > .ax-work-card {
+  min-width: 0;
+  height: 100%;
+}
+.result-toolbar-buttons {
+  align-items: end;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.result-publish-shortcut {
+  white-space: nowrap;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Evaluation template workspace: consistent rows and columns. */
+.template-layout {
+  display: grid !important;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+}
+.template-list-panel,
+.template-editor-panel {
+  min-width: 0;
+  height: 100%;
+}
+.template-list-panel {
+  border-right: 1px solid #ece8f5;
+}
+.template-list-head {
+  min-height: 72px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+.template-list-item {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: .75rem !important;
+  min-height: 76px;
+}
+.template-list-copy {
+  min-width: 0;
+}
+.template-list-copy b,
+.template-list-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-editor-head {
+  min-height: 96px;
+  align-items: center !important;
+}
+.template-head-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: .5rem !important;
+  flex-wrap: nowrap !important;
+}
+.template-head-actions form { margin: 0; }
+.template-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+}
+.template-mini-stats > div {
+  min-width: 0;
+  min-height: 76px;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+}
+.criterion-toolbar {
+  align-items: center !important;
+}
+.criterion-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.criterion-table th,
+.criterion-table td {
+  vertical-align: middle !important;
+}
+.criterion-table .drag-col { width: 42px; }
+.criterion-table th:nth-child(2) { width: 70px; }
+.criterion-table th:nth-child(3) { width: 24%; }
+.criterion-table th:nth-child(4) { width: auto; }
+.criterion-table th:nth-child(5) { width: 118px; }
+.criterion-table th:nth-child(6) { width: 82px; }
+.criterion-table th:nth-child(7) { width: 132px; }
+.criterion-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: .4rem !important;
+  flex-wrap: nowrap !important;
+}
+.criterion-actions form { margin: 0; }
+.criterion-actions .btn {
+  min-width: 52px;
+  white-space: nowrap;
+}
+.criterion-description {
+  overflow-wrap: anywhere;
+}
+.criterion-order-footer,
+.template-danger-zone {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+}
+
+@media (max-width: 1100px) {
+  .template-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .template-list-panel {
+    border-right: 0;
+    border-bottom: 1px solid #ece8f5;
+  }
+}
+
 @media (max-width: 900px) {
   .ax-student-sort-wrap { width: 100%; margin-left: 0; }
   .ax-student-sort-wrap select { flex: 1; }
   .result-highlight-row > div { padding: 0 10px; }
+  .result-overview-grid.result-overview-two-column {
+    grid-template-columns: 1fr !important;
+  }
+  .template-mini-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .criterion-table {
+    table-layout: auto;
+    min-width: 900px;
+  }
 }
