@@ -4,7 +4,7 @@ RAW_TABLE = "dashboard_officialevaluationresponse"
 
 
 def official_response_counts(evaluation_round):
-    """Return raw official-import response counts for a round, or None if not imported."""
+    """Return legacy completed-import counts, or None for corrected source archives."""
     if not evaluation_round:
         return None
 
@@ -24,12 +24,14 @@ def official_response_counts(evaluation_round):
         )
         counts = {response_type: count for response_type, count in cursor.fetchall()}
 
-    total = sum(counts.values())
+    team_count = counts.get("team", 0)
+    personal_count = counts.get("personal", 0)
+    total = team_count + personal_count
     if total <= 0:
         return None
 
     return {
-        "team": counts.get("team", 0),
-        "personal": counts.get("personal", 0),
+        "team": team_count,
+        "personal": personal_count,
         "total": total,
     }
