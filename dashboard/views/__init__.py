@@ -32,6 +32,8 @@ from .admin_results import admin_evaluation_results
 from .admin_missing import admin_missing_evaluations
 from .admin_result_settings import admin_result_settings
 from .admin_result_adjustments import admin_student_result_adjust
+from .admin_result_export import admin_evaluation_results_excel_export
+from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
 from .admin_students_filtered import admin_students
 from .admin_team_assignment_configurable import admin_auto_preview
 
