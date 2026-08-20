@@ -1,12 +1,46 @@
 from ..services.seed_service import cumulative_seed_scores_before
 
-from .auth import *
-from .admin_rounds import *
-from .admin_evaluations import *
-from .admin_system import *
+from .auth import login_page, logout_view
 from .errors import *
-from .admin_hr_tasks import *
-from .admin_hr_dashboard import *
+from .admin_rounds import (
+    admin_round_apply_templates,
+    admin_round_detail,
+    admin_rounds,
+    admin_submission_comment,
+)
+from .admin_evaluations import (
+    admin_evaluation_criteria_reorder,
+    admin_evaluation_criterion_create,
+    admin_evaluation_criterion_delete,
+    admin_evaluation_criterion_move,
+    admin_evaluation_criterion_update,
+    admin_evaluation_template_create,
+    admin_evaluation_template_delete,
+    admin_evaluation_template_toggle,
+    admin_evaluation_template_update,
+    admin_evaluation_templates,
+)
+from .admin_system import (
+    admin_activity_logs,
+    admin_announcements,
+    admin_data_backup_download,
+    admin_data_management,
+    admin_data_restore,
+    admin_media_cleanup,
+    admin_messages,
+)
+from .admin_hr_tasks import (
+    admin_hr_task_assign_recommended,
+    admin_hr_task_delete,
+    admin_hr_task_evaluate,
+    admin_hr_task_request_revision,
+    admin_hr_task_save,
+    admin_hr_task_step_add,
+    admin_hr_task_step_delete,
+    admin_hr_task_step_update,
+    admin_hr_tasks,
+)
+from .admin_hr_dashboard import admin_hr_dashboard
 
 # Dedicated student views.
 from .student_core import student_home, student_team_info
