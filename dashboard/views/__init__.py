@@ -3,7 +3,6 @@ from ..services.seed_service import cumulative_seed_scores_before
 from .auth import *
 from .admin_dashboard import *
 from .admin_rounds import *
-from .admin_teams import *
 from .admin_evaluations import *
 from .admin_system import *
 from .errors import *
@@ -84,6 +83,14 @@ from .admin_team_management import (
     admin_team_update,
     admin_teams,
     admin_teams_excel_export,
+)
+from .admin_team_assignment import (
+    admin_auto_confirm,
+    admin_manual_assign,
+    admin_manual_unassign,
+    admin_team_assignment,
+    admin_team_dissolve_all,
+    admin_team_member_role_update,
 )
 from .admin_team_assignment_configurable import admin_auto_preview
 from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
