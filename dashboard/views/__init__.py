@@ -66,3 +66,7 @@ from .admin_seed import admin_seed_management
 # Prefer the thin dedicated evaluation-results view. The legacy implementation
 # remains in admin_evaluations.py during the staged refactor.
 from .admin_results import admin_evaluation_results
+
+# Prefer the thin dedicated missing-evaluations view. The legacy implementation
+# remains in admin_evaluations.py during the staged refactor.
+from .admin_missing import admin_missing_evaluations
