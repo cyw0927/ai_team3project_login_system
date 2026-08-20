@@ -3,7 +3,7 @@ from django.shortcuts import redirect, render
 
 from .common import _base_context, admin_required
 from ..services.evaluation_results_service import build_evaluation_results_context
-from ..services.result_service import _recalculate_round_results
+from ..services.result_service import recalculate_round_results
 from ..services.scoring_policy import tutor_weight_for
 
 
@@ -16,7 +16,7 @@ def admin_evaluation_results(request):
         context["tutor_weight"] = tutor_weight_for(selected_round)
 
     if request.method == "POST" and selected_round:
-        _recalculate_round_results(selected_round)
+        recalculate_round_results(selected_round)
         tutor_weight = context["tutor_weight"]
         messages.success(
             request,
