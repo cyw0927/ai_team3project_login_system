@@ -110,6 +110,7 @@ urlpatterns = [
     path("management/evaluation-criteria/<int:criterion_id>/delete/", views.admin_evaluation_criterion_delete, name="admin_evaluation_criterion_delete"),
     path("management/evaluation-criteria/<int:criterion_id>/move/<str:direction>/", views.admin_evaluation_criterion_move, name="admin_evaluation_criterion_move"),
     path("management/evaluation-templates/<int:template_id>/criteria/reorder/", views.admin_evaluation_criteria_reorder, name="admin_evaluation_criteria_reorder"),
+    path("management/tutor-evaluations/", views.admin_tutor_evaluations, name="admin_tutor_evaluations"),
 
     path(
         "management/evaluation-results/",
