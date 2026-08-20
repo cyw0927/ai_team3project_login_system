@@ -3,13 +3,13 @@
 # Seed/team-assignment helpers are no longer monkey-patched: dedicated views import
 # their services directly.
 from . import common as _common_module
-from ..services.result_service import _recalculate_round_results as _service_recalculate_round_results
+from ..services.result_service import recalculate_round_results
 from ..services.seed_service import cumulative_seed_scores_before
 
-_common_module._recalculate_round_results = _service_recalculate_round_results
+_common_module._recalculate_round_results = recalculate_round_results
 
 # Public helper alias retained for existing tests/tools during the refactor.
-_recalculate_round_results = _service_recalculate_round_results
+_recalculate_round_results = recalculate_round_results
 
 from .auth import *
 from .student import *
