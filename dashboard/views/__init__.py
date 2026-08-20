@@ -28,7 +28,7 @@ from .admin_result_settings import admin_result_settings
 from .admin_result_adjustments import admin_student_result_adjust
 from .admin_result_export import admin_evaluation_results_excel_export
 from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
-from .admin_students_filtered import admin_students
+from .admin_student_list import admin_students
 from .admin_team_assignment_configurable import admin_auto_preview
 from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
 from .admin_assignments import (
