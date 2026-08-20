@@ -1,7 +1,7 @@
-"""Student team/personal evaluation views.
+"""Student evaluation submission and status views.
 
-Evaluation submission now calls the result service directly, so these routes no
-longer depend on the legacy result-calculation symbol exported from views.common.
+Evaluation submission calls the result service directly, so these routes no
+longer depend on legacy result-calculation symbols exported from views.common.
 """
 
 from django.contrib import messages
@@ -16,11 +16,13 @@ from .common import (
     _criteria_complete,
     _current_round_for_evaluation,
     _save_scores,
+    _student_progress,
     _student_team,
     _template_for,
     student_required,
 )
 from ..models import (
+    EvaluationRound,
     EvaluationTemplate,
     PersonalEvaluation,
     PersonalEvaluationScore,
@@ -381,5 +383,98 @@ def student_personal_evaluation(request):
             selected_evaluation=selected_evaluation,
             attendance=attendance,
             absent_from_team_eval=absent_from_team_eval,
+        ),
+    )
+
+
+@student_required
+def student_evaluation_status(request):
+    evaluation_round = _current_round_for_evaluation() or EvaluationRound.objects.order_by("-start_at").first()
+    if not evaluation_round:
+        return render(
+            request,
+            "student/evaluation_status.html",
+            _base_context(
+                evaluation_round=None,
+                team_statuses=[],
+                personal_statuses=[],
+                progress=_student_progress(request.student, None, None),
+            ),
+        )
+
+    evaluation_round.status_display = evaluation_round.get_status_display()
+    my_team = _student_team(request.student, evaluation_round)
+    attendance = _attendance_for(request.student, evaluation_round)
+    absent_from_team_eval = bool(
+        attendance
+        and attendance.status in {RoundAttendance.Status.ABSENT, RoundAttendance.Status.EXCUSED}
+    )
+    target_teams = [] if absent_from_team_eval else (
+        list(
+            Team.objects.filter(evaluation_round=evaluation_round, is_active=True)
+            .exclude(pk=getattr(my_team, "pk", None))
+            .annotate(member_count=Count("memberships"))
+            .order_by("name")
+        ) if my_team else []
+    )
+    team_eval_map = {
+        evaluation.target_team_id: evaluation
+        for evaluation in TeamEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            evaluator=request.student,
+        )
+    }
+    team_statuses = []
+    for team in target_teams:
+        evaluation = team_eval_map.get(team.id)
+        if evaluation and evaluation.is_submitted:
+            status_display = "제출 완료"
+        elif evaluation:
+            status_display = "임시 저장"
+        else:
+            status_display = "미평가"
+        team_statuses.append({
+            "team_name": team.name,
+            "project_title": team.project_title or "-",
+            "status_display": status_display,
+            "submitted": bool(evaluation and evaluation.is_submitted),
+            "updated_at": evaluation.updated_at if evaluation else None,
+        })
+
+    target_members = []
+    if my_team:
+        target_members = list(
+            Student.objects.filter(team_memberships__team=my_team)
+            .exclude(pk=request.student.pk)
+            .select_related("user")
+            .distinct()
+        )
+    personal_eval_map = {
+        evaluation.target_student_id: evaluation
+        for evaluation in PersonalEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            evaluator=request.student,
+        )
+    }
+    personal_statuses = []
+    for member in target_members:
+        evaluation = personal_eval_map.get(member.id)
+        personal_statuses.append({
+            "student_name": member.name,
+            "status_display": "제출 완료" if evaluation and evaluation.is_submitted else "미평가",
+            "submitted": bool(evaluation and evaluation.is_submitted),
+            "updated_at": evaluation.updated_at if evaluation else None,
+        })
+
+    progress = _student_progress(request.student, evaluation_round, my_team)
+    return render(
+        request,
+        "student/evaluation_status.html",
+        _base_context(
+            evaluation_round=evaluation_round,
+            my_team=my_team,
+            team_statuses=team_statuses,
+            personal_statuses=personal_statuses,
+            progress=progress,
         ),
     )

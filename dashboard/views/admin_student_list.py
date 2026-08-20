@@ -1,6 +1,17 @@
-"""Enhanced student list filters for evaluation completion status."""
+"""Admin student list with team and evaluation-completion filters."""
 
-from .common import *
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.shortcuts import render
+
+from .common import (
+    _base_context,
+    _current_round,
+    _round_teams,
+    _student_progress,
+    admin_required,
+)
+from ..models import Skill, Student, StudentBadge, TeamMembership
 
 
 @admin_required

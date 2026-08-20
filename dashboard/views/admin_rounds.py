@@ -1,4 +1,21 @@
-from .common import *
+from django.contrib import messages
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from .common import _base_context, _sync_round_statuses, admin_required
+from ..models import (
+    Assignment,
+    EvaluationCriterion,
+    EvaluationRound,
+    EvaluationTemplate,
+    Student,
+    StudentAssignmentSubmission,
+    Team,
+    TeamAssignmentSubmission,
+)
+
 
 @admin_required
 def admin_round_detail(request, round_id):
@@ -91,8 +108,6 @@ def admin_round_detail(request, round_id):
     can_end = evaluation_round.status == EvaluationRound.Status.IN_PROGRESS and evaluation_round.evaluation_started
     can_template_apply = evaluation_round.status != EvaluationRound.Status.ENDED and not evaluation_round.evaluation_started
 
-    # 템플릿 관리 화면에서 만든 템플릿을 회차에 복사 적용할 수 있도록 목록을 제공한다.
-    # 공용 원본 템플릿(evaluation_round가 없는 템플릿)만 선택지에 노출한다.
     team_template_options = list(
         EvaluationTemplate.objects.filter(
             is_active=True,
@@ -126,6 +141,7 @@ def admin_round_detail(request, round_id):
         applied_team_template=applied_team_template, applied_personal_template=applied_personal_template,
     ))
 
+
 @admin_required
 @require_POST
 @transaction.atomic
@@ -153,7 +169,6 @@ def admin_round_apply_templates(request, round_id):
             evaluation_round__isnull=True,
             is_active=True,
         )
-        # 같은 회차에 이미 적용된 템플릿을 다시 선택해도 안전하도록 삭제 전에 원본을 스냅샷한다.
         source_name = source.name
         criterion_rows = [
             {
@@ -166,7 +181,6 @@ def admin_round_apply_templates(request, round_id):
             for criterion in source.criteria.all().order_by("order", "id")
         ]
 
-        # 평가 시작 전이므로 기존 회차 전용 동일 유형 템플릿은 교체해도 안전하다.
         EvaluationTemplate.objects.filter(
             evaluation_round=evaluation_round,
             evaluation_type=evaluation_type,
@@ -189,6 +203,7 @@ def admin_round_apply_templates(request, round_id):
         messages.warning(request, "적용할 템플릿을 하나 이상 선택해 주세요.")
     return redirect("admin_round_detail", round_id=evaluation_round.id)
 
+
 @admin_required
 @require_POST
 def admin_submission_comment(request, submission_id):
@@ -205,6 +220,7 @@ def admin_submission_comment(request, submission_id):
     else:
         messages.success(request, f"{submission.team.name} 제출물의 관리자 코멘트를 삭제했습니다.")
     return redirect("admin_round_detail", round_id=submission.assignment.evaluation_round_id)
+
 
 @admin_required
 def admin_rounds(request):
@@ -231,341 +247,3 @@ def admin_rounds(request):
         "ended": sum(r.status == EvaluationRound.Status.ENDED for r in rounds),
     }
     return render(request, "admin_ui/rounds.html", _base_context(rounds=rounds, stats=stats, current_round=current_round))
-
-@admin_required
-@require_POST
-@transaction.atomic
-def admin_round_create(request):
-    if request.method != "POST":
-        return _redirect_back(request, "admin_rounds")
-    form = EvaluationRoundForm(request.POST)
-    if not form.is_valid():
-        for errors in form.errors.values():
-            for error in errors:
-                messages.error(request, error)
-        return _redirect_back(request, "admin_rounds")
-    evaluation_round = form.save(commit=False)
-    evaluation_round.status = EvaluationRound.Status.SCHEDULED
-    evaluation_round.evaluation_started = False
-    evaluation_round.save()
-    messages.success(request, f"{evaluation_round.name} 회차를 생성했습니다.")
-    return _redirect_back(request, "admin_rounds")
-
-@admin_required
-@require_POST
-@transaction.atomic
-def admin_round_update(request, round_id):
-    evaluation_round = get_object_or_404(EvaluationRound, pk=round_id)
-    _sync_round_statuses()
-    evaluation_round.refresh_from_db()
-    if evaluation_round.status != EvaluationRound.Status.SCHEDULED:
-        messages.error(request, "시작된 평가 회차는 기간과 회차명을 수정할 수 없습니다.")
-        return _redirect_back(request, "admin_rounds")
-    if request.method != "POST":
-        return _redirect_back(request, "admin_rounds")
-    form = EvaluationRoundForm(request.POST, instance=evaluation_round)
-    if not form.is_valid():
-        for errors in form.errors.values():
-            for error in errors:
-                messages.error(request, error)
-        return _redirect_back(request, "admin_rounds")
-    evaluation_round = form.save(commit=False)
-    evaluation_round.status = EvaluationRound.Status.SCHEDULED
-    evaluation_round.evaluation_started = False
-    evaluation_round.save()
-    messages.success(request, f"{evaluation_round.name} 회차를 수정했습니다.")
-    return _redirect_back(request, "admin_rounds")
-
-@admin_required
-@require_POST
-@transaction.atomic
-def admin_round_delete(request, round_id):
-    """회차와 연결 데이터를 안전하게 실제 삭제한다."""
-    evaluation_round = get_object_or_404(EvaluationRound, pk=round_id)
-    name = evaluation_round.name
-    was_current = evaluation_round.is_current
-
-    # 평가 점수의 criterion FK가 PROTECT이므로 회차 템플릿이 삭제되기 전에
-    # 해당 회차 평가 점수 행을 먼저 지워야 회차 CASCADE 삭제가 막히지 않는다.
-    TeamEvaluationScore.objects.filter(
-        evaluation__evaluation_round=evaluation_round
-    ).delete()
-    PersonalEvaluationScore.objects.filter(
-        evaluation__evaluation_round=evaluation_round
-    ).delete()
-
-    deleted_count, _ = EvaluationRound.objects.filter(pk=evaluation_round.pk).delete()
-    if deleted_count <= 0 or EvaluationRound.objects.filter(pk=round_id).exists():
-        messages.error(request, f"{name} 회차 삭제에 실패했습니다. 다시 시도해주세요.")
-        return _redirect_back(request, "admin_rounds")
-
-    # 현재 회차를 지웠다면 남은 진행중 회차 → 최신 회차 순으로 하나를 자동 지정한다.
-    if was_current:
-        replacement = (
-            EvaluationRound.objects.filter(status=EvaluationRound.Status.IN_PROGRESS)
-            .order_by("-start_at")
-            .first()
-            or EvaluationRound.objects.order_by("-start_at").first()
-        )
-        if replacement:
-            EvaluationRound.objects.filter(pk=replacement.pk).update(is_current=True)
-
-    messages.success(request, f"{name} 회차와 연결 데이터를 삭제했습니다.")
-    return _redirect_back(request, "admin_rounds")
-
-@admin_required
-@require_POST
-@transaction.atomic
-def admin_round_action(request, round_id, action):
-    evaluation_round = get_object_or_404(EvaluationRound, pk=round_id)
-    now = timezone.now()
-
-    if action == "set_current":
-        EvaluationRound.objects.filter(is_current=True).exclude(pk=evaluation_round.pk).update(is_current=False)
-        if not evaluation_round.is_current:
-            evaluation_round.is_current = True
-            evaluation_round.save(update_fields=["is_current", "updated_at"])
-        messages.success(request, f"{evaluation_round.name}을(를) 현재 회차로 지정했습니다.")
-        return _redirect_back(request, "admin_rounds")
-
-    if action in {"start", "round_start"}:
-        if evaluation_round.status != EvaluationRound.Status.SCHEDULED:
-            messages.error(request, "예정 상태의 회차만 시작할 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-        evaluation_round.status = EvaluationRound.Status.IN_PROGRESS
-        evaluation_round.evaluation_started = False
-        evaluation_round.is_locked = False
-        if evaluation_round.start_at > now:
-            evaluation_round.start_at = now
-        messages.success(request, f"{evaluation_round.name} 회차를 시작했습니다. 평가 시작 전까지 과제 등록·수정과 학생 제출이 가능합니다.")
-
-    elif action in {"evaluation_start", "eval_start"}:
-        if evaluation_round.status != EvaluationRound.Status.IN_PROGRESS or evaluation_round.evaluation_started:
-            messages.error(request, "진행 중이며 아직 평가를 시작하지 않은 회차에서만 평가를 시작할 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-
-        assignment_exists = Assignment.objects.filter(evaluation_round=evaluation_round).exists()
-        team_exists = Team.objects.filter(evaluation_round=evaluation_round, is_active=True).exists()
-        team_template_exists = evaluation_round.evaluation_templates.filter(
-            is_active=True, evaluation_type=EvaluationTemplate.EvaluationType.TEAM
-        ).exists()
-        personal_template_exists = evaluation_round.evaluation_templates.filter(
-            is_active=True, evaluation_type=EvaluationTemplate.EvaluationType.PERSONAL
-        ).exists()
-        missing = []
-        if not assignment_exists:
-            missing.append("과제")
-        if not team_exists:
-            missing.append("팀 편성")
-        if not team_template_exists:
-            missing.append("팀 평가 템플릿")
-        if not personal_template_exists:
-            missing.append("개인 평가 템플릿")
-        if missing:
-            messages.error(request, "평가 시작 전 준비가 필요합니다: " + ", ".join(missing))
-            return _redirect_back(request, "admin_rounds")
-
-        evaluation_round.evaluation_started = True
-        evaluation_round.is_reopened = True
-        evaluation_round.is_locked = False
-        messages.success(request, f"{evaluation_round.name} 평가를 시작했습니다. 과제 등록·수정·제출은 이제 마감되고 평가 입력이 열립니다.")
-
-    elif action in {"lock", "pause"}:
-        if evaluation_round.status != EvaluationRound.Status.IN_PROGRESS or not evaluation_round.evaluation_started:
-            messages.error(request, "평가가 시작된 진행 중 회차만 일시 중단할 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-        if evaluation_round.is_locked:
-            messages.info(request, f"{evaluation_round.name} 평가는 이미 중단된 상태입니다.")
-            return _redirect_back(request, "admin_rounds")
-        evaluation_round.is_locked = True
-        messages.success(request, f"{evaluation_round.name} 평가를 일시 중단했습니다. 기존 임시저장·제출 데이터는 그대로 유지됩니다.")
-
-    elif action in {"unlock", "resume"}:
-        if evaluation_round.status != EvaluationRound.Status.IN_PROGRESS or not evaluation_round.evaluation_started:
-            messages.error(request, "평가가 시작된 진행 중 회차만 재개할 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-        if not evaluation_round.is_locked:
-            messages.info(request, f"{evaluation_round.name} 평가는 이미 진행 중입니다.")
-            return _redirect_back(request, "admin_rounds")
-        evaluation_round.is_locked = False
-        messages.success(request, f"{evaluation_round.name} 평가를 재개했습니다. 학생들이 다시 임시저장·제출할 수 있습니다.")
-
-    elif action == "end":
-        if evaluation_round.status != EvaluationRound.Status.IN_PROGRESS or not evaluation_round.evaluation_started:
-            messages.error(request, "평가가 시작된 진행 중 회차만 종료할 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-        evaluation_round.status = EvaluationRound.Status.ENDED
-        evaluation_round.evaluation_started = False
-        evaluation_round.is_reopened = False
-        evaluation_round.is_locked = True
-        if evaluation_round.end_at > now:
-            evaluation_round.end_at = now
-        messages.success(request, f"{evaluation_round.name} 평가를 종료했습니다.")
-
-    elif action == "reopen":
-        if evaluation_round.status != EvaluationRound.Status.ENDED:
-            messages.error(request, "종료된 회차만 다시 열 수 있습니다.")
-            return _redirect_back(request, "admin_rounds")
-        evaluation_round.status = EvaluationRound.Status.IN_PROGRESS
-        evaluation_round.evaluation_started = True
-        evaluation_round.is_reopened = True
-        evaluation_round.is_locked = False
-        if evaluation_round.end_at <= now:
-            evaluation_round.end_at = now + timedelta(days=1)
-        messages.success(request, f"{evaluation_round.name} 평가를 다시 열었습니다.")
-    else:
-        messages.error(request, "지원하지 않는 회차 작업입니다.")
-        return _redirect_back(request, "admin_rounds")
-
-    evaluation_round.save()
-    return _redirect_back(request, "admin_rounds")
-
-def _assignment_skill_payload(request):
-    skill_ids = request.POST.getlist("skill_id")
-    weights = request.POST.getlist("skill_weight")
-    parsed = []
-    used = set()
-    errors = []
-
-    for raw_skill_id, raw_weight in zip(skill_ids, weights):
-        raw_skill_id = (raw_skill_id or "").strip()
-        raw_weight = (raw_weight or "").strip()
-        if not raw_skill_id:
-            continue
-        try:
-            skill_id = int(raw_skill_id)
-            weight = int(raw_weight)
-        except (TypeError, ValueError):
-            errors.append("역량과 중요도는 올바른 숫자로 입력해주세요.")
-            continue
-        if skill_id in used:
-            errors.append("같은 역량을 중복으로 선택할 수 없습니다.")
-            continue
-        if weight < 1 or weight > 100:
-            errors.append("역량 중요도는 1~100 사이여야 합니다.")
-            continue
-        used.add(skill_id)
-        parsed.append((skill_id, weight))
-
-    if parsed and sum(weight for _, weight in parsed) != 100:
-        errors.append("필요 역량 중요도의 합계는 100%여야 합니다.")
-
-    existing_ids = set(Skill.objects.filter(id__in=[sid for sid, _ in parsed]).values_list("id", flat=True))
-    if len(existing_ids) != len(parsed):
-        errors.append("선택한 역량 중 존재하지 않는 항목이 있습니다.")
-
-    return parsed, errors
-
-
-def _save_assignment_skills(assignment, parsed):
-    AssignmentSkill.objects.filter(assignment=assignment).delete()
-    AssignmentSkill.objects.bulk_create([
-        AssignmentSkill(assignment=assignment, skill_id=skill_id, weight=weight)
-        for skill_id, weight in parsed
-    ])
-
-
-@admin_required
-def admin_assignments(request):
-    _sync_round_statuses()
-    assignments = list(
-        Assignment.objects.select_related("evaluation_round").prefetch_related("required_skills__skill").order_by("-evaluation_round__start_at")
-    )
-    for assignment in assignments:
-        assignment.round_name = assignment.evaluation_round.name
-        assignment.deadline = assignment.evaluation_round.end_at
-        assignment.status_display = assignment.evaluation_round.get_status_display()
-        assignment.can_edit = _assignment_editable(assignment)
-        assignment.can_delete = assignment.can_edit
-        assignment.skill_items = list(assignment.required_skills.all())
-        assignment.skill_weight_total = sum(item.weight for item in assignment.skill_items)
-        if assignment.attachment:
-            assignment.attachment_url = assignment.attachment.url
-            assignment.attachment_name = assignment.attachment.name.rsplit("/", 1)[-1]
-        else:
-            assignment.attachment_url = ""
-            assignment.attachment_name = ""
-
-    rounds = EvaluationRound.objects.filter(
-        Q(status=EvaluationRound.Status.SCHEDULED) | Q(status=EvaluationRound.Status.IN_PROGRESS, evaluation_started=False)
-    ).order_by("-start_at")
-    return render(
-        request,
-        "admin_ui/assignments.html",
-        _base_context(assignments=assignments, rounds=rounds, skills=Skill.objects.all()),
-    )
-
-@admin_required
-@transaction.atomic
-def admin_assignment_create(request):
-    if request.method != "POST":
-        return redirect(f"{reverse('admin_assignments')}?open=create")
-    available_rounds = EvaluationRound.objects.filter(
-        Q(status=EvaluationRound.Status.SCHEDULED) | Q(status=EvaluationRound.Status.IN_PROGRESS, evaluation_started=False)
-    )
-    form = AssignmentForm(request.POST, request.FILES, rounds=available_rounds)
-    if not form.is_valid():
-        for errors in form.errors.values():
-            for error in errors:
-                messages.error(request, error)
-        return _redirect_back(request, "admin_assignments")
-    evaluation_round = form.cleaned_data["evaluation_round"]
-    if evaluation_round.status not in {EvaluationRound.Status.SCHEDULED, EvaluationRound.Status.IN_PROGRESS} or evaluation_round.evaluation_started:
-        messages.error(request, "과제는 회차 시작 전부터 진행 중 평가 시작 전까지만 등록할 수 있습니다.")
-        return _redirect_back(request, "admin_assignments")
-    parsed_skills, skill_errors = _assignment_skill_payload(request)
-    if skill_errors:
-        for error in skill_errors:
-            messages.error(request, error)
-        return _redirect_back(request, "admin_assignments")
-    assignment = form.save()
-    _save_assignment_skills(assignment, parsed_skills)
-    messages.success(request, f"{assignment.title} 과제를 등록했습니다.")
-    return _redirect_back(request, "admin_assignments")
-
-@admin_required
-@transaction.atomic
-def admin_assignment_update(request, assignment_id):
-    assignment = get_object_or_404(Assignment.objects.select_related("evaluation_round"), pk=assignment_id)
-    if request.method != "POST":
-        return redirect(f"{reverse('admin_assignments')}?edit={assignment.id}")
-    if not _assignment_editable(assignment):
-        messages.error(request, "과제는 회차 시작 전부터 진행 중 평가 시작 전까지만 수정할 수 있습니다.")
-        return _redirect_back(request, "admin_assignments")
-    available_rounds = EvaluationRound.objects.filter(
-        Q(status=EvaluationRound.Status.SCHEDULED) | Q(status=EvaluationRound.Status.IN_PROGRESS, evaluation_started=False)
-    ).distinct()
-    form = AssignmentForm(request.POST, request.FILES, instance=assignment, rounds=available_rounds)
-    if not form.is_valid():
-        for errors in form.errors.values():
-            for error in errors:
-                messages.error(request, error)
-        return _redirect_back(request, "admin_assignments")
-    target_round = form.cleaned_data["evaluation_round"]
-    if target_round.status not in {EvaluationRound.Status.SCHEDULED, EvaluationRound.Status.IN_PROGRESS} or target_round.evaluation_started:
-        messages.error(request, "과제는 회차 시작 전부터 진행 중 평가 시작 전 상태에서만 수정할 수 있습니다.")
-        return _redirect_back(request, "admin_assignments")
-    parsed_skills, skill_errors = _assignment_skill_payload(request)
-    if skill_errors:
-        for error in skill_errors:
-            messages.error(request, error)
-        return _redirect_back(request, "admin_assignments")
-    assignment = form.save()
-    _save_assignment_skills(assignment, parsed_skills)
-    messages.success(request, f"{assignment.title} 과제를 수정했습니다.")
-    return _redirect_back(request, "admin_assignments")
-
-@admin_required
-@require_POST
-@transaction.atomic
-def admin_assignment_delete(request, assignment_id):
-    assignment = get_object_or_404(Assignment.objects.select_related("evaluation_round"), pk=assignment_id)
-    if request.method != "POST":
-        return _redirect_back(request, "admin_assignments")
-    if not _assignment_editable(assignment):
-        messages.error(request, "과제는 회차 시작 전부터 진행 중 평가 시작 전까지만 삭제할 수 있습니다.")
-        return _redirect_back(request, "admin_assignments")
-    title = assignment.title
-    assignment.delete()
-    messages.success(request, f"{title} 과제를 삭제했습니다.")
-    return _redirect_back(request, "admin_assignments")
