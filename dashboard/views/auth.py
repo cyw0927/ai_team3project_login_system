@@ -1,4 +1,6 @@
 from .common import *
+from ..signup_forms import StudentSignupForm
+
 
 def login_page(request):
     if request.user.is_authenticated:
@@ -95,6 +97,30 @@ def login_page(request):
             **_social_login_context(),
         ),
     )
+
+
+def signup_page(request):
+    """수강생이 직접 아이디/비밀번호를 만드는 일반 회원가입."""
+    if request.user.is_authenticated:
+        return redirect(_default_destination(request.user))
+
+    form = StudentSignupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        login(request, user)
+        request.session.set_expiry(0)
+        messages.success(request, "회원가입이 완료되었습니다. 수강생 계정으로 로그인했습니다.")
+        return redirect("student_home")
+
+    return render(
+        request,
+        "signup.html",
+        _base_context(
+            signup_form=form,
+            **_social_login_context(),
+        ),
+    )
+
 
 @login_required
 @require_POST
