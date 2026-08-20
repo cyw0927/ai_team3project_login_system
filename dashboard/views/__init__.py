@@ -11,6 +11,7 @@ from .errors import *
 from .admin_hr_tasks import *
 from .admin_hr_dashboard import *
 
+# Dedicated student views.
 from .student_core import student_home, student_team_info
 from .student_results import student_results
 from .student_evaluations import (
@@ -41,7 +42,7 @@ from .student_hr import (
     student_hr_tasks,
 )
 
-# Dedicated admin views override legacy implementations imported above.
+# Dedicated admin views override remaining legacy implementations imported above.
 from .admin_home import admin_dashboard
 from .admin_seed import admin_seed_management
 from .admin_results import admin_evaluation_results
@@ -51,6 +52,13 @@ from .admin_result_adjustments import admin_student_result_adjust
 from .admin_result_export import admin_evaluation_results_excel_export
 from .admin_scores import admin_personal_scores, admin_rankings, admin_team_scores
 from .admin_student_list import admin_students
+from .admin_skills import (
+    admin_skill_create,
+    admin_skill_delete,
+    admin_skill_sync_all,
+    admin_skill_update,
+    admin_skills,
+)
 from .admin_team_assignment_configurable import admin_auto_preview
 from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
 from .admin_assignments import (
