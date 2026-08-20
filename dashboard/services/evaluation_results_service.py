@@ -47,8 +47,10 @@ def _official_raw_progress(evaluation_round):
         )
         counts = {response_type: count for response_type, count in cursor.fetchall()}
 
-    team_count = counts.get("team", 0)
-    personal_count = counts.get("personal", 0)
+    # Older imports used team/personal while the corrected raw archive uses
+    # team_source/personal_source. Support both without double-counting a row.
+    team_count = counts.get("team_source", counts.get("team", 0))
+    personal_count = counts.get("personal_source", counts.get("personal", 0))
     if not team_count and not personal_count:
         return None
 
@@ -67,8 +69,11 @@ def _submission_progress(evaluation_round, memberships_qs, active_teams, attenda
         members_by_team.setdefault(membership.team_id, []).append(membership.student_id)
 
     submitted_team_pairs = set(
-        TeamEvaluation.objects.filter(evaluation_round=evaluation_round, is_submitted=True)
-        .values_list("evaluator_id", "target_team_id")
+        TeamEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            is_submitted=True,
+            evaluator__user__is_staff=False,
+        ).values_list("evaluator_id", "target_team_id")
     )
     submitted_personal_pairs = set(
         PersonalEvaluation.objects.filter(evaluation_round=evaluation_round, is_submitted=True)
@@ -105,6 +110,11 @@ def _submission_progress(evaluation_round, memberships_qs, active_teams, attenda
 
 
 def _evaluation_review_flags(evaluation_round):
+    """Return peer-evaluation score patterns worth a quick admin review.
+
+    Tutor/staff team reviews are intentionally excluded here because they are a
+    separate scoring component, not student peer-evaluation activity.
+    """
     flags = []
 
     def add_flag(kind, evaluator, target, scores):
@@ -129,7 +139,11 @@ def _evaluation_review_flags(evaluation_round):
             })
 
     team_evaluations = (
-        TeamEvaluation.objects.filter(evaluation_round=evaluation_round, is_submitted=True)
+        TeamEvaluation.objects.filter(
+            evaluation_round=evaluation_round,
+            is_submitted=True,
+            evaluator__user__is_staff=False,
+        )
         .select_related("evaluator__user", "target_team")
         .prefetch_related("scores")
     )
@@ -259,8 +273,14 @@ def build_evaluation_results_context(request):
             stats["top_student"] = top_result.student.name
 
         team_eval_counts = dict(
-            TeamEvaluation.objects.filter(evaluation_round=selected_round, is_submitted=True)
-            .values("target_team_id").annotate(c=Count("id")).values_list("target_team_id", "c")
+            TeamEvaluation.objects.filter(
+                evaluation_round=selected_round,
+                is_submitted=True,
+                evaluator__user__is_staff=False,
+            )
+            .values("target_team_id")
+            .annotate(c=Count("id"))
+            .values_list("target_team_id", "c")
         )
         team_result_map = {result.team_id: result for result in TeamResult.objects.filter(evaluation_round=selected_round)}
         for team in active_teams:
