@@ -78,6 +78,13 @@ from .admin_skills import (
     admin_skills,
     admin_students_bulk_skill_save,
 )
+from .admin_team_management import (
+    admin_team_create,
+    admin_team_delete,
+    admin_team_update,
+    admin_teams,
+    admin_teams_excel_export,
+)
 from .admin_team_assignment_configurable import admin_auto_preview
 from .admin_round_lifecycle import admin_round_action, admin_round_delete, admin_round_update
 from .admin_assignments import (
