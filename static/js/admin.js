@@ -111,4 +111,20 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
+
+  // 관리자 > 평가 결과: 학생 공개 설정을 상단 액션으로 이동하고 요약 줄은 2열로 정리한다.
+  const resultToolbarButtons = document.querySelector(".result-toolbar-buttons");
+  const publishCard = document.querySelector(".result-publish-card");
+  const resultOverview = document.querySelector(".result-overview-grid");
+  if (resultToolbarButtons && publishCard) {
+    const publishLink = publishCard.querySelector("a[href*='result_settings']");
+    if (publishLink) {
+      const shortcut = publishLink.cloneNode(true);
+      shortcut.className = "btn btn-outline-primary result-publish-shortcut";
+      shortcut.innerHTML = '<i class="bi bi-eye me-1"></i> 학생 공개';
+      resultToolbarButtons.appendChild(shortcut);
+    }
+    publishCard.remove();
+    resultOverview?.classList.add("result-overview-two-column");
+  }
 });
