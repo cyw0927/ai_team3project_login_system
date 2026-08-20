@@ -72,13 +72,11 @@ AX2 데이터 기준으로 관리 명령을 이용해 개인평가 101건 + 팀�
 
 관리자는 활성 수강생 수와 예정 팀 수를 확인한 뒤 **Z식 성적 균형 / FIFA 포트 추첨 / 균등 랜덤** 중 하나를 선택할 수 있습니다. FIFA 방식은 A/B/C/D 포트 누적 경계를 직접 조정할 수 있고, 직전 팀원 중복 최소화 옵션도 제공합니다.
 
-![자동 편성 조건과 포트 설정](docs/images/team_assignment_controls.jpg)
+> 아래 이미지는 README용 시연 캡처입니다. 실제 원본은 `docs/images/`에 저장합니다.
 
 ### 세 알고리즘 결과 비교
 
 같은 28명을 대상으로 세 가지 방식을 각각 미리보기한 뒤 팀별 Seed 분포와 편성 결과를 비교할 수 있습니다. 현재 데이터에서는 Z식이 Seed 보유자의 팀 간 분산이 가장 균일해 우선 선택 대상으로 판단했습니다.
-
-![Z식 FIFA 포트 완전랜덤 비교](docs/images/team_assignment_comparison.jpg)
 
 자동 편성은 결과를 즉시 저장하지 않고 **미리보기 → 비교 → 관리자 선택 → 확정** 흐름으로 운영합니다.
 
@@ -324,96 +322,6 @@ Service
 Model / Query
 ```
 
-주요 구조:
-
-```text
-config/
-  settings.py
-  urls.py
-
-dashboard/
-  models.py
-  forms.py
-  urls.py
-
-  views/
-    auth.py
-
-    student_core.py
-    student_assignments.py
-    student_evaluations.py
-    student_results.py
-    student_account.py
-    student_hr.py
-
-    admin_home.py
-    admin_operations.py
-    admin_student_list.py
-    admin_student_crud.py
-    admin_student_detail.py
-    admin_student_excel.py
-    admin_student_messages.py
-    admin_skills.py
-    admin_team_management.py
-    admin_team_assignment.py
-    admin_team_assignment_configurable.py
-    admin_rounds.py
-    admin_round_lifecycle.py
-    admin_assignments.py
-    admin_evaluations.py
-    admin_tutor.py
-    admin_results.py
-    admin_scores.py
-    admin_missing.py
-    admin_result_settings.py
-    admin_result_adjustments.py
-    admin_result_export.py
-    admin_seed.py
-    admin_hr_tasks.py
-    admin_hr_dashboard.py
-    admin_system.py
-
-  services/
-    admin_dashboard_service.py
-    assignment_service.py
-    evaluation_completion_service.py
-    evaluation_results_service.py
-    missing_evaluations_service.py
-    result_service.py
-    result_support_service.py
-    result_adjustment_service.py
-    result_export_service.py
-    result_publication_service.py
-    round_lifecycle_service.py
-    score_read_service.py
-    scoring_policy.py
-    seed_service.py
-    team_assignment_service.py
-    tutor_evaluation_service.py
-    official_import_service.py
-
-  management/commands/
-    rebuild_ax2_corrected.py
-    audit_ax2_consistency.py
-    prepare_postgres.py
-    ...
-
-  templates/
-    admin_ui/
-    student/
-    common/
-
-static/
-  css/
-  js/
-
-media/
-docs/
-manage.py
-requirements.txt
-.env.example
-```
-
 대형 legacy View를 기능별 View와 Service로 분리해 유지보수성과 테스트 가능성을 높였습니다.
 
 ---
@@ -422,141 +330,36 @@ requirements.txt
 
 AX2 공식 익명화 CSV를 PostgreSQL에 재구축할 수 있는 관리 명령을 제공합니다.
 
-### Dry-run
-
-DB를 변경하지 않고 먼저 데이터 구조를 확인합니다.
-
 ```powershell
 python manage.py rebuild_ax2_corrected .\data\ax2_personal.csv .\data\ax2_team.csv
-```
-
-### 실제 반영
-
-```powershell
 python manage.py rebuild_ax2_corrected .\data\ax2_personal.csv .\data\ax2_team.csv --apply
-```
-
-`--apply` 실행 시 기존 dashboard 업무 데이터를 초기화한 뒤 공식 데이터를 재구축합니다. staff/superuser 계정은 보존합니다.
-
-### 일관성 감사
-
-```powershell
 python manage.py audit_ax2_consistency
 ```
-
-검사 항목에는 다음이 포함됩니다.
-
-- 학생 / 팀 배정 일관성
-- 중복 팀 배정
-- 평가 필요량과 실제 제출량
-- 자기 팀 평가 여부
-- 개인평가 대상 규칙
-- 결과 건수
-- 평가 템플릿 / 문항 상태
-- 과제 제출 상태
-- raw archive 보존 상태
-- 학생 표시명 충돌
 
 ---
 
 ## 11. 설치 및 실행
 
-### 가상환경
-
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-### 패키지 설치
-
-```powershell
 pip install -r requirements.txt
-```
-
-주요 기술:
-
-- Python
-- Django
-- PostgreSQL / psycopg
-- django-allauth
-- Bootstrap
-- Vanilla JavaScript
-- openpyxl
-
-### 환경변수
-
-`.env.example`을 참고해 `.env`를 작성합니다.
-
-```env
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=...
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_SCHEMA=practice
-```
-
-OAuth 사용 시 Google/Kakao 설정도 추가합니다.
-
-> `.env`에는 비밀번호와 Secret이 포함될 수 있으므로 Git에 커밋하지 않습니다.
-
-### DB 준비
-
-```powershell
 python manage.py prepare_postgres
 python manage.py migrate
 python manage.py check
-```
-
-### 서버 실행
-
-```powershell
 python manage.py runserver
-```
-
-내부망 테스트:
-
-```powershell
-python manage.py runserver 0.0.0.0:8000
-```
-
-기본 주소:
-
-```text
-http://127.0.0.1:8000/
-http://127.0.0.1:8000/management/
 ```
 
 ---
 
 ## 12. 테스트와 CI
 
-기본 시스템 점검:
-
 ```powershell
 python manage.py check
-```
-
-Dashboard 테스트:
-
-```powershell
 python manage.py test dashboard
 ```
 
-테스트에는 평가 정책뿐 아니라 View 라우팅과 구조 경계 검증도 포함됩니다. 특히 서비스 레이어가 View를 역참조하지 않도록 구조 경계를 검사해, 리팩터링 이후 다시 거대한 View 중심 구조로 회귀하는 것을 방지합니다.
-
-GitHub Actions 워크플로도 포함되어 있어 push/PR 시 Django 기본 점검과 핵심 테스트가 자동 실행됩니다.
-
-```text
-Git push / Pull Request
-        ↓
-GitHub Actions
-        ↓
-의존성 설치
-        ↓
-Django check + 핵심 테스트
-```
+테스트에는 평가 정책뿐 아니라 View 라우팅과 구조 경계 검증도 포함됩니다. GitHub Actions 워크플로가 push/PR 시 Django 기본 점검과 핵심 테스트를 자동 실행합니다.
 
 ---
 
@@ -578,8 +381,6 @@ Django check + 핵심 테스트
 
 ## 14. 향후 개선
 
-현재 구조에서 추가로 발전시킬 수 있는 항목입니다.
-
 - Tutor 전용 평가 모델 분리
 - 권한별 통합 테스트 확대
 - 비동기 작업 / 알림
@@ -593,5 +394,3 @@ Django check + 핵심 테스트
 이 프로젝트는 **평가 → 결과 → Seed → 다음 팀 편성**을 하나의 사이클로 연결합니다.
 
 학생 평가뿐 아니라 **튜터 평가, 결과 공개, 관리자 보정, 실제 CSV 데이터 정제, 세 가지 자동 팀 편성, 역량 성장 관리**까지 포함하며, 운영 규칙을 View 코드에 흩뿌리지 않고 Service 계층으로 분리하는 방향으로 리팩터링했습니다.
-
-핵심 목표는 단순한 점수 기록기가 아니라 **교육 운영에서 반복적으로 사용할 수 있는 평가·편성 시스템**을 만드는 것입니다.
