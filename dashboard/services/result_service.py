@@ -18,6 +18,7 @@ from ..views.common import (
     _complete_personal_evaluator_ids,
     _complete_team_evaluator_ids,
 )
+from .scoring_policy import tutor_weight_for
 
 
 def _recalculate_round_results(evaluation_round, tutor_weight=None):
@@ -42,10 +43,7 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
 
     team_weight_percent = int(evaluation_round.team_weight or 0)
     personal_weight_percent = int(evaluation_round.personal_weight or 0)
-    if tutor_weight is None:
-        tutor_weight_percent = max(0, 100 - team_weight_percent - personal_weight_percent)
-    else:
-        tutor_weight_percent = max(0, int(tutor_weight))
+    tutor_weight_percent = tutor_weight_for(evaluation_round) if tutor_weight is None else max(0, int(tutor_weight))
 
     total_weight = team_weight_percent + personal_weight_percent + tutor_weight_percent
     if total_weight <= 0:
@@ -160,7 +158,6 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
         if not excluded:
             result_rows.append(result)
 
-    # 공동 점수는 같은 등수, 다음 등수는 건너뛰는 competition ranking.
     ordered = sorted(
         result_rows,
         key=lambda r: (float(r.final_score), float(r.personal_score)),
@@ -177,16 +174,9 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
             result.rank = current_rank
             result.save(update_fields=["rank", "updated_at"])
 
-    # 종료된 기본 과제의 결과를 역량 프로필에 반영한다.
     _apply_assignment_skill_impacts(evaluation_round, ordered)
-
-    # 배지 산정은 공식 최종점수와 분리한다.
-    # 역량 과제가 회차에 연결되어 평가 완료된 경우:
-    #   배지점수 = 기존 평가 최종점수 80% + 역량 과제 평균점수 20%
-    # 연결된 과제 평가가 없는 수강생은 기존 평가 최종점수를 그대로 사용한다.
     current_badge_ranks = _badge_rank_map(evaluation_round, ordered)
 
-    # MVP: 배지 전용 순위 1위. 동점은 공동 수상.
     mvp_student_ids = [
         student_id
         for student_id, rank in current_badge_ranks.items()
@@ -213,7 +203,6 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
     )
     previous_badge_ranks = _badge_rank_map(previous_round) if previous_round else {}
 
-    # 성장왕: 직전 회차 대비 배지 전용 순위가 가장 많이 상승한 학생.
     growth_student_ids = []
     improvements = []
     for student_id, current_rank in current_badge_ranks.items():
@@ -242,7 +231,6 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
             badge_type=StudentBadge.BadgeType.GROWTH,
         )
 
-    # 연속 우수: 직전/현재 회차의 배지 전용 순위가 모두 Top 3.
     current_top3_ids = {
         student_id
         for student_id, rank in current_badge_ranks.items()
