@@ -22,7 +22,7 @@ from .result_support_service import (
 from .scoring_policy import tutor_weight_for
 
 
-def _recalculate_round_results(evaluation_round, tutor_weight=None):
+def recalculate_round_results(evaluation_round, tutor_weight=None):
     """평가 결과를 회차 가중치에 따라 다시 계산한다.
 
     핵심 규칙:
@@ -266,3 +266,8 @@ def _recalculate_round_results(evaluation_round, tutor_weight=None):
         if result.rank != current_rank:
             result.rank = current_rank
             result.save(update_fields=["rank", "updated_at"])
+
+
+# Temporary compatibility alias for legacy modules. New code must import the
+# public service name above. Remove this alias after the legacy view split.
+_recalculate_round_results = recalculate_round_results
