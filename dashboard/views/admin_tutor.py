@@ -179,7 +179,11 @@ def admin_tutor_evaluations(request):
                 "team": team,
                 "evaluation": evaluation,
                 "criterion_rows": [
-                    {"criterion": criterion, "value": score_map.get(criterion.id)}
+                    {
+                        "criterion": criterion,
+                        "value": score_map.get(criterion.id),
+                        "options": range(1, criterion.max_score + 1),
+                    }
                     for criterion in criteria
                 ],
                 "team_tutor_average": all_tutor_averages.get(team.id),
