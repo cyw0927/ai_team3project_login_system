@@ -54,3 +54,7 @@ _admin_teams_module._balanced_random_assignment = _service_balanced_random_assig
 # Prefer the thin dedicated view for result pages. The legacy function remains
 # in student.py temporarily so existing imports outside the package do not break.
 from .student_results import student_results
+
+# Prefer the thin dedicated admin dashboard view. The legacy implementation
+# remains in admin_dashboard.py during the staged refactor.
+from .admin_home import admin_dashboard
