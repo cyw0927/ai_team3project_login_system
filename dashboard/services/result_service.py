@@ -4,6 +4,7 @@ Score aggregation, ranking and result-side post processing live in the service
 layer. HTTP views only trigger this service and render its results.
 """
 
+from django.db import transaction
 from django.db.models import Avg
 
 from ..models import (
@@ -22,6 +23,7 @@ from .result_support_service import (
 from .scoring_policy import tutor_weight_for
 
 
+@transaction.atomic
 def recalculate_round_results(evaluation_round, tutor_weight=None):
     """평가 결과를 회차 가중치에 따라 다시 계산한다.
 
