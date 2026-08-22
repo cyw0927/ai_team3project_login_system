@@ -1,4 +1,10 @@
+from ..services.result_service import recalculate_round_results
 from ..services.seed_service import cumulative_seed_scores_before
+
+# Compatibility exports for legacy tests and callers. New code should import
+# the public service functions directly from dashboard.services.
+_recalculate_round_results = recalculate_round_results
+_cumulative_seed_scores_before = cumulative_seed_scores_before
 
 from .auth import login_page, logout_view
 from .errors import error_403, error_404, error_500
