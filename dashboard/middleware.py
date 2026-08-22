@@ -1,25 +1,36 @@
+import logging
+
 from django.db import OperationalError, ProgrammingError
 
 from .models import AdminActivityLog
 
 
-SENSITIVE_KEYS = {
-    "csrfmiddlewaretoken", "password", "password1", "password2",
-    "current_password", "new_password", "new_password1", "new_password2",
-    "client_secret", "secret", "token",
+logger = logging.getLogger(__name__)
+
+# 감사 로그에는 업무 식별에 필요한 최소 필드만 남긴다. 평가 코멘트,
+# 피드백, 메시지 본문 등 개인정보/자유서술 필드는 복제하지 않는다.
+AUDIT_METADATA_KEYS = {
+    "action",
+    "round_id",
+    "team_id",
+    "student_id",
+    "template_id",
+    "criterion_id",
+    "result_id",
+    "announcement_id",
+    "assignment_id",
+    "status",
 }
 
 
 def _safe_payload(post):
     payload = {}
-    for key in post.keys():
-        lowered = key.lower()
-        if lowered in SENSITIVE_KEYS or "password" in lowered or "secret" in lowered or "token" in lowered:
-            payload[key] = "[REDACTED]"
-            continue
+    for key in AUDIT_METADATA_KEYS:
         values = post.getlist(key)
-        cleaned = [str(value)[:180] for value in values[:20]]
-        payload[key] = cleaned if len(cleaned) > 1 else (cleaned[0] if cleaned else "")
+        if not values:
+            continue
+        cleaned = [str(value)[:80] for value in values[:20]]
+        payload[key] = cleaned if len(cleaned) > 1 else cleaned[0]
     return payload
 
 
@@ -79,7 +90,6 @@ def _target_info(path, post):
         if value:
             return target_type, str(value)[:80]
 
-    # URL 안의 숫자 PK를 보조적으로 기록한다.
     parts = [p for p in path.split("/") if p]
     for part in reversed(parts):
         if part.isdigit():
@@ -88,7 +98,7 @@ def _target_info(path, post):
 
 
 class AdminActivityLogMiddleware:
-    """성공적으로 처리된 관리자 POST 요청을 자동 기록한다."""
+    """성공적으로 처리된 관리자 POST 요청을 최소 정보로 자동 기록한다."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -112,7 +122,7 @@ class AdminActivityLogMiddleware:
             target_type, target_id = _target_info(request.path, request.POST)
             payload = _safe_payload(request.POST)
             summary_bits = []
-            for key in ("name", "title", "action", "round_id", "team_id", "student_id"):
+            for key in ("action", "round_id", "team_id", "student_id"):
                 value = request.POST.get(key)
                 if value:
                     summary_bits.append(f"{key}={str(value)[:60]}")
@@ -129,10 +139,9 @@ class AdminActivityLogMiddleware:
                 metadata=payload,
             )
         except (OperationalError, ProgrammingError):
-            # migrate 전에도 기존 관리자 기능 자체는 계속 동작해야 한다.
-            pass
+            logger.debug("Activity log table is unavailable during startup/migration", exc_info=True)
         except Exception:
-            # 감사 로그 실패가 실제 업무 작업을 깨뜨리지 않게 한다.
-            pass
+            # 감사 로그 실패가 실제 업무 작업을 깨뜨리지는 않되 원인은 운영 로그에 남긴다.
+            logger.exception("Failed to persist admin activity log")
 
         return response
