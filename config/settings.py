@@ -8,32 +8,55 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-change-this-key-before-production",
-)
-DEBUG = os.getenv("DJANGO_DEBUG", "1").lower() in {"1", "true", "yes", "on"}
+
+def _env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Security -------------------------------------------------------------------
+# Production-safe defaults: DEBUG is off unless explicitly enabled and a
+# secret key is mandatory in every environment.
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    raise RuntimeError("DJANGO_SECRET_KEY environment variable is required.")
+
+DEBUG = _env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
     if host.strip()
 ]
 
-# 개발용 Cloudflare Quick Tunnel 허용.
-# .trycloudflare.com은 하위 도메인을 모두 허용하므로 터널 주소가 바뀌어도
-# settings.py를 다시 수정할 필요가 없습니다.
-if ".trycloudflare.com" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(".trycloudflare.com")
+# Cloudflare Quick Tunnel is a development-only opt-in. Never trust forwarded
+# HTTPS headers or wildcard tunnel origins unless explicitly enabled.
+DEV_TUNNEL = _env_bool("DJANGO_DEV_TUNNEL", False)
+TRUST_X_FORWARDED_PROTO = _env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", DEV_TUNNEL)
 
-# Cloudflare가 외부 HTTPS 요청을 로컬 Django HTTP 서버로 전달할 때
-# Django가 원래 요청을 HTTPS로 인식하도록 합니다.
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if DEV_TUNNEL:
+    if ".trycloudflare.com" not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(".trycloudflare.com")
 
-# Cloudflare Quick Tunnel에서 들어오는 POST 요청(로그인/로그아웃 등)의
-# CSRF 검증을 허용합니다. Django 4+는 와일드카드 origin을 지원합니다.
+if TRUST_X_FORWARDED_PROTO:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://*.trycloudflare.com",
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
+if DEV_TUNNEL and "https://*.trycloudflare.com" not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append("https://*.trycloudflare.com")
+
+# Harden production by default while keeping explicit opt-outs for local/CI.
+SECURE_SSL_REDIRECT = _env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = _env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = _env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
+SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
+SECURE_HSTS_PRELOAD = _env_bool("DJANGO_SECURE_HSTS_PRELOAD", not DEBUG)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
