@@ -17,8 +17,6 @@ def _env_bool(name, default=False):
 
 
 # Security -------------------------------------------------------------------
-# Production-safe defaults: DEBUG is off unless explicitly enabled and a
-# secret key is mandatory in every environment.
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
 if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY environment variable is required.")
@@ -30,14 +28,11 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
-# Cloudflare Quick Tunnel is a development-only opt-in. Never trust forwarded
-# HTTPS headers or wildcard tunnel origins unless explicitly enabled.
 DEV_TUNNEL = _env_bool("DJANGO_DEV_TUNNEL", False)
 TRUST_X_FORWARDED_PROTO = _env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", DEV_TUNNEL)
 
-if DEV_TUNNEL:
-    if ".trycloudflare.com" not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(".trycloudflare.com")
+if DEV_TUNNEL and ".trycloudflare.com" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".trycloudflare.com")
 
 if TRUST_X_FORWARDED_PROTO:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -50,7 +45,6 @@ CSRF_TRUSTED_ORIGINS = [
 if DEV_TUNNEL and "https://*.trycloudflare.com" not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append("https://*.trycloudflare.com")
 
-# Harden production by default while keeping explicit opt-outs for local/CI.
 SECURE_SSL_REDIRECT = _env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
 SESSION_COOKIE_SECURE = _env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = _env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
@@ -106,8 +100,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database -------------------------------------------------------------------
-# 교육과정 기준 PostgreSQL 사용. 실제 접속 정보는 .env에서 읽습니다.
-# 기본 스키마는 practice이며, ORM이 practice -> public 순서로 검색합니다.
 DB_NAME = os.getenv("DB_NAME", "postgres").strip() or "postgres"
 DB_USER = os.getenv("DB_USER", "postgres").strip() or "postgres"
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
@@ -158,15 +150,44 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
+# Logging --------------------------------------------------------------------
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "dashboard": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
 # Social OAuth ---------------------------------------------------------------
-# 이 프로젝트는 OAuth 자격증명을 Django admin SocialApp이 아니라 .env -> settings.py 방식으로 관리합니다.
-# 같은 provider를 SocialApp에도 중복 등록하면 allauth가 어떤 앱을 써야 할지 결정하지 못할 수 있으므로
-# Google/Kakao SocialApp 레코드는 별도로 만들지 않는 것을 원칙으로 합니다.
-# 외부 OAuth 콘솔에서 발급받은 값을 .env에 넣으면 실제 소셜 로그인이 동작합니다.
 GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
-
-# Kakao의 client_id에는 "REST API 키", secret에는 "Client secret"을 넣습니다.
 KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "").strip()
 KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET", "").strip()
 
@@ -178,7 +199,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "EMAIL_AUTHENTICATION": True,
         "EMAIL_AUTHENTICATION_AUTO_CONNECT": True,
     },
-    # 카카오는 UID 기반 인증만 사용합니다. 별도 개인정보 scope를 요청하지 않습니다.
     "kakao": {},
 }
 
@@ -204,5 +224,4 @@ SOCIALACCOUNT_ADAPTER = "dashboard.adapters.ExistingUserOnlySocialAccountAdapter
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
-# 소셜 로그인 시작은 POST 요청으로 수행합니다. login.html의 provider_login_url form과 짝을 이룹니다.
 SOCIALACCOUNT_LOGIN_ON_GET = False
