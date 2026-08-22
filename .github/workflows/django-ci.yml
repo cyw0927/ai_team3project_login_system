@@ -26,11 +26,14 @@ jobs:
           --health-retries 5
 
     env:
-      DJANGO_SECRET_KEY: ci-only-secret-key-that-is-long-enough-for-tests
+      DJANGO_SECRET_KEY: ci-only-9x7Vn2kP4mQ8rT6wY1zA5cD3fG0hJ7sL9uB2eN6pR4vX8kM1
       DJANGO_DEBUG: "0"
       DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
       DJANGO_DEV_TUNNEL: "0"
       DJANGO_SECURE_SSL_REDIRECT: "0"
+      DJANGO_SESSION_COOKIE_SECURE: "0"
+      DJANGO_CSRF_COOKIE_SECURE: "0"
+      DJANGO_SECURE_HSTS_SECONDS: "0"
       DB_NAME: postgres
       DB_USER: postgres
       DB_PASSWORD: postgres
@@ -56,11 +59,25 @@ jobs:
       - name: Prepare PostgreSQL schema
         run: python manage.py prepare_postgres
 
+      - name: Check migration drift
+        run: python manage.py makemigrations --check --dry-run
+
       - name: Apply migrations
         run: python manage.py migrate --noinput
 
       - name: Django system check
-        run: python manage.py check
+        run: python manage.py check --fail-level WARNING
+
+      - name: Production deploy security check
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_SECURE_SSL_REDIRECT: "1"
+          DJANGO_SESSION_COOKIE_SECURE: "1"
+          DJANGO_CSRF_COOKIE_SECURE: "1"
+          DJANGO_SECURE_HSTS_SECONDS: "31536000"
+          DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: "1"
+          DJANGO_SECURE_HSTS_PRELOAD: "1"
+        run: python manage.py check --deploy --fail-level WARNING
 
       - name: Full dashboard test suite
         run: python manage.py test dashboard --verbosity 2
