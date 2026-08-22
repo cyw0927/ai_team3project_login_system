@@ -26,9 +26,11 @@ jobs:
           --health-retries 5
 
     env:
-      DJANGO_SECRET_KEY: ci-only-secret-key
+      DJANGO_SECRET_KEY: ci-only-secret-key-that-is-long-enough-for-tests
       DJANGO_DEBUG: "0"
       DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      DJANGO_DEV_TUNNEL: "0"
+      DJANGO_SECURE_SSL_REDIRECT: "0"
       DB_NAME: postgres
       DB_USER: postgres
       DB_PASSWORD: postgres
@@ -60,10 +62,5 @@ jobs:
       - name: Django system check
         run: python manage.py check
 
-      - name: Core architecture and scoring tests
-        run: |
-          python manage.py test \
-            dashboard.test_architecture_boundaries \
-            dashboard.test_scoring_policy \
-            dashboard.test_view_routing_smoke \
-            --verbosity 2
+      - name: Full dashboard test suite
+        run: python manage.py test dashboard --verbosity 2
