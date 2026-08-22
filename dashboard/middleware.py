@@ -1,11 +1,49 @@
 import logging
+from pathlib import Path
 
 from django.db import OperationalError, ProgrammingError
+from django.http import HttpResponseBadRequest
 
 from .models import AdminActivityLog
 
 
 logger = logging.getLogger(__name__)
+
+# 일반 과제/제출물에서 허용할 파일 유형. 브라우저에서 실행될 수 있는
+# HTML/JS/쉘/실행 파일은 애초에 업로드 단계에서 차단한다.
+ALLOWED_UPLOAD_EXTENSIONS = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".csv",
+    ".ppt",
+    ".pptx",
+    ".txt",
+    ".md",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".py",
+    ".ipynb",
+    ".json",
+}
+BLOCKED_UPLOAD_CONTENT_TYPES = {
+    "text/html",
+    "application/xhtml+xml",
+    "application/javascript",
+    "text/javascript",
+    "application/x-javascript",
+    "application/x-sh",
+    "application/x-msdownload",
+}
+DEFAULT_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
+EXCEL_UPLOAD_MAX_BYTES = 5 * 1024 * 1024
+BACKUP_RESTORE_MAX_BYTES = 100 * 1024 * 1024
 
 # 감사 로그에는 업무 식별에 필요한 최소 필드만 남긴다. 평가 코멘트,
 # 피드백, 메시지 본문 등 개인정보/자유서술 필드는 복제하지 않는다.
@@ -21,6 +59,61 @@ AUDIT_METADATA_KEYS = {
     "assignment_id",
     "status",
 }
+
+
+def _upload_limit_for_path(path):
+    if "/data/restore/" in path:
+        return BACKUP_RESTORE_MAX_BYTES
+    if "/students/excel-upload/" in path:
+        return EXCEL_UPLOAD_MAX_BYTES
+    return DEFAULT_UPLOAD_MAX_BYTES
+
+
+def _validate_uploaded_files(request):
+    """요청의 모든 첨부파일을 공통 정책으로 검사한다.
+
+    반환값이 None이면 통과, 문자열이면 사용자에게 보여줄 오류 사유다.
+    """
+    if request.method not in {"POST", "PUT", "PATCH"} or not request.FILES:
+        return None
+
+    max_bytes = _upload_limit_for_path(request.path)
+    for uploaded in request.FILES.values():
+        filename = Path(uploaded.name or "").name
+        extension = Path(filename).suffix.lower()
+        content_type = (getattr(uploaded, "content_type", "") or "").lower()
+
+        if not filename or extension not in ALLOWED_UPLOAD_EXTENSIONS:
+            return (
+                "허용되지 않은 첨부파일 형식입니다. "
+                "PDF, Office 문서, CSV, 텍스트, ZIP, 이미지, Python/Notebook 파일만 업로드할 수 있습니다."
+            )
+        if content_type in BLOCKED_UPLOAD_CONTENT_TYPES:
+            return "브라우저에서 실행될 수 있는 파일 형식은 업로드할 수 없습니다."
+        if uploaded.size > max_bytes:
+            limit_mb = max_bytes // (1024 * 1024)
+            return f"첨부파일은 {limit_mb}MB 이하만 업로드할 수 있습니다."
+
+    return None
+
+
+class UploadValidationMiddleware:
+    """모든 파일 업로드 엔드포인트에 동일한 보안 정책을 적용한다."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        error = _validate_uploaded_files(request)
+        if error:
+            logger.warning(
+                "Rejected unsafe upload path=%s ip=%s reason=%s",
+                request.path,
+                _client_ip(request),
+                error,
+            )
+            return HttpResponseBadRequest(error, content_type="text/plain; charset=utf-8")
+        return self.get_response(request)
 
 
 def _safe_payload(post):
@@ -141,7 +234,6 @@ class AdminActivityLogMiddleware:
         except (OperationalError, ProgrammingError):
             logger.debug("Activity log table is unavailable during startup/migration", exc_info=True)
         except Exception:
-            # 감사 로그 실패가 실제 업무 작업을 깨뜨리지는 않되 원인은 운영 로그에 남긴다.
             logger.exception("Failed to persist admin activity log")
 
         return response
