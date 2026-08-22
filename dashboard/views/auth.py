@@ -1,5 +1,39 @@
+from django.contrib.auth.models import User
+from django.core.cache import cache
+
 from .common import *
 from ..signup_forms import StudentSignupForm
+
+
+LOGIN_MAX_FAILURES = 5
+LOGIN_LOCK_SECONDS = 300
+
+
+def _login_rate_key(request, login_id):
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    remote_addr = request.META.get("REMOTE_ADDR", "unknown")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else remote_addr
+    normalized_login = (login_id or "").strip().lower()
+    return f"login-failures:{client_ip}:{normalized_login}"
+
+
+def _login_is_limited(request, login_id):
+    return int(cache.get(_login_rate_key(request, login_id), 0) or 0) >= LOGIN_MAX_FAILURES
+
+
+def _record_login_failure(request, login_id):
+    key = _login_rate_key(request, login_id)
+    try:
+        failures = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, LOGIN_LOCK_SECONDS)
+        failures = 1
+    if failures == 1:
+        cache.touch(key, LOGIN_LOCK_SECONDS)
+
+
+def _clear_login_failures(request, login_id):
+    cache.delete(_login_rate_key(request, login_id))
 
 
 def login_page(request):
@@ -24,19 +58,41 @@ def login_page(request):
                 ),
             )
 
+        if _login_is_limited(request, login_id):
+            return render(
+                request,
+                "login.html",
+                _base_context(
+                    form_data=form_data,
+                    error_message="로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+                    **_social_login_context(),
+                ),
+                status=429,
+            )
+
         # Django 기본 로그인은 username을 사용한다.
-        # 이메일이 입력되면 해당 이메일의 username을 찾아 인증한다.
+        # 이메일 로그인은 중복 이메일이 없는 경우에만 허용한다.
         auth_username = login_id
         if "@" in login_id:
-            from django.contrib.auth.models import User
-
-            matched_user = User.objects.filter(email__iexact=login_id).first()
-            if matched_user:
-                auth_username = matched_user.username
+            matches = list(User.objects.filter(email__iexact=login_id).only("username")[:2])
+            if len(matches) > 1:
+                _record_login_failure(request, login_id)
+                return render(
+                    request,
+                    "login.html",
+                    _base_context(
+                        form_data=form_data,
+                        error_message="동일 이메일 계정이 여러 개 존재합니다. 아이디로 로그인해주세요.",
+                        **_social_login_context(),
+                    ),
+                )
+            if matches:
+                auth_username = matches[0].username
 
         user = authenticate(request, username=auth_username, password=password)
 
         if user is None:
+            _record_login_failure(request, login_id)
             return render(
                 request,
                 "login.html",
@@ -48,6 +104,7 @@ def login_page(request):
             )
 
         if not user.is_active:
+            _record_login_failure(request, login_id)
             return render(
                 request,
                 "login.html",
@@ -61,6 +118,7 @@ def login_page(request):
         if not (user.is_staff or user.is_superuser):
             student = getattr(user, "student_profile", None)
             if not student or not student.is_active:
+                _record_login_failure(request, login_id)
                 return render(
                     request,
                     "login.html",
@@ -71,6 +129,7 @@ def login_page(request):
                     ),
                 )
 
+        _clear_login_failures(request, login_id)
         login(request, user)
 
         # 로그인 상태 유지 체크 시 14일간 세션을 유지하고, 미체크 시 브라우저 종료 때 만료한다.
