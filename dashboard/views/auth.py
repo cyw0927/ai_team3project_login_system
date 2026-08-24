@@ -1,7 +1,14 @@
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
-from .common import *
+from .common import _base_context, _default_destination, _social_login_context
 from ..signup_forms import StudentSignupForm
 
 
@@ -9,10 +16,18 @@ LOGIN_MAX_FAILURES = 5
 LOGIN_LOCK_SECONDS = 300
 
 
-def _login_rate_key(request, login_id):
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+def _client_ip(request):
+    """로그인 제한에 사용할 클라이언트 IP를 안전한 신뢰 정책으로 결정한다."""
     remote_addr = request.META.get("REMOTE_ADDR", "unknown")
-    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else remote_addr
+    if getattr(settings, "LOGIN_TRUST_X_FORWARDED_FOR", False):
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip() or remote_addr
+    return remote_addr
+
+
+def _login_rate_key(request, login_id):
+    client_ip = _client_ip(request)
     normalized_login = (login_id or "").strip().lower()
     return f"login-failures:{client_ip}:{normalized_login}"
 
