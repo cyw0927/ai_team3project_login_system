@@ -30,6 +30,7 @@ ALLOWED_HOSTS = [
 
 DEV_TUNNEL = _env_bool("DJANGO_DEV_TUNNEL", False)
 TRUST_X_FORWARDED_PROTO = _env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", DEV_TUNNEL)
+LOGIN_TRUST_X_FORWARDED_FOR = _env_bool("DJANGO_LOGIN_TRUST_X_FORWARDED_FOR", False)
 
 if DEV_TUNNEL and ".trycloudflare.com" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(".trycloudflare.com")
