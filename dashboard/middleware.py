@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+from django.conf import settings
 from django.db import OperationalError, ProgrammingError
 from django.http import HttpResponseBadRequest
 
@@ -128,10 +129,12 @@ def _safe_payload(post):
 
 
 def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:64]
-    return request.META.get("REMOTE_ADDR", "")[:64]
+    remote_addr = request.META.get("REMOTE_ADDR", "")
+    if getattr(settings, "LOGIN_TRUST_X_FORWARDED_FOR", False):
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()[:64]
+    return remote_addr[:64]
 
 
 def _action_info(path, post):
